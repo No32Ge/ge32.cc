@@ -1,0 +1,429 @@
+:::: 快速测试：
+
+// Ge32 DeepSeeker - 控制台版
+// 直接复制到浏览器控制台运行（需在 chat.deepseek.com 页面）
+
+(function() {
+    'use strict';
+
+    // ==========================================
+    // 1. 配置与状态
+    // ==========================================
+    const CONFIG = {
+        cooldownMin: 3000,
+        cooldownMax: 6000,
+        responseTimeout: 300000,      // 5分钟超时
+        stabilityChecks: 3,            // 连续多少次内容相同视为完成
+        checkInterval: 1000,
+    };
+
+    const STATE = {
+        isRunning: false,
+        queue: [],
+        currentIndex: 0,
+        lastMessageCount: 0,
+    };
+
+    // ==========================================
+    // 2. UI 创建 (暗黑可拖动)
+    // ==========================================
+    function createUI() {
+        if (document.getElementById('ge32-dashboard')) return;
+
+        // 添加暗黑样式
+        const style = document.createElement('style');
+        style.textContent = `
+            #ge32-dashboard {
+                position: fixed !important;
+                top: 80px !important;
+                right: 20px !important;
+                width: 400px !important;
+                height: 350px !important;
+                background: #1e1e2f !important;
+                border: 1px solid #3e3e5e !important;
+                border-radius: 8px !important;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+                color: #e0e0ff !important;
+                font-family: 'Segoe UI', 'Roboto', monospace !important;
+                font-size: 13px !important;
+                z-index: 9999999 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                padding: 0 !important;
+                resize: none !important;      /* 固定大小 */
+                overflow: hidden !important;
+                cursor: grab !important;
+                user-select: none !important;
+            }
+            #ge32-dashboard:active {
+                cursor: grabbing !important;
+            }
+            #ge32-header {
+                background: #2a2a3c !important;
+                padding: 8px 12px !important;
+                border-bottom: 1px solid #3e3e5e !important;
+                font-weight: bold !important;
+                font-size: 14px !important;
+                color: #a0a0ff !important;
+                border-radius: 8px 8px 0 0 !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                cursor: grab !important;
+            }
+            #ge32-header span {
+                cursor: grab !important;
+            }
+            #ge32-content {
+                flex: 1 !important;
+                padding: 12px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 10px !important;
+                background: #1e1e2f !important;
+                overflow: hidden !important;
+                cursor: default !important;
+            }
+            .ge32-label {
+                color: #b0b0ff !important;
+                font-size: 12px !important;
+                margin-bottom: 2px !important;
+            }
+            #ge32-queue-input {
+                width: 100% !important;
+                height: 80px !important;
+                background: #2a2a3c !important;
+                border: 1px solid #3e3e5e !important;
+                border-radius: 4px !important;
+                color: #e0e0ff !important;
+                font-family: monospace !important;
+                font-size: 12px !important;
+                padding: 6px !important;
+                resize: none !important;
+                box-sizing: border-box !important;
+            }
+            #ge32-queue-input:focus {
+                outline: 1px solid #6a6aff !important;
+            }
+            .ge32-button-row {
+                display: flex !important;
+                gap: 8px !important;
+                margin-top: 4px !important;
+            }
+            .ge32-btn {
+                background: #2a2a3c !important;
+                border: 1px solid #4a4a6a !important;
+                color: #d0d0ff !important;
+                padding: 6px 0 !important;
+                border-radius: 4px !important;
+                font-family: inherit !important;
+                font-size: 12px !important;
+                font-weight: 500 !important;
+                cursor: pointer !important;
+                flex: 1 !important;
+                transition: 0.2s !important;
+            }
+            .ge32-btn:hover {
+                background: #3a3a50 !important;
+                border-color: #6a6aff !important;
+            }
+            .ge32-btn.primary {
+                background: #3a3a6a !important;
+                border-color: #8a8aff !important;
+                color: white !important;
+            }
+            .ge32-btn.primary:hover {
+                background: #4a4a7a !important;
+            }
+            #ge32-logger {
+                background: #11111f !important;
+                border: 1px solid #3e3e5e !important;
+                border-radius: 4px !important;
+                padding: 6px !important;
+                height: 120px !important;
+                overflow-y: auto !important;
+                font-family: monospace !important;
+                font-size: 11px !important;
+                color: #80ff80 !important;
+                line-height: 1.4 !important;
+                white-space: pre-wrap !important;
+                word-break: break-word !important;
+                margin-top: 4px !important;
+            }
+            #ge32-logger div {
+                margin-bottom: 2px !important;
+                border-bottom: 1px dotted #2a2a3c !important;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 面板HTML
+        const panel = document.createElement('div');
+        panel.id = 'ge32-dashboard';
+        panel.innerHTML = `
+            <div id="ge32-header">
+                <span>⚡ Ge32 DeepSeeker</span>
+                <span style="font-size:10px; opacity:0.5;">拖动</span>
+            </div>
+            <div id="ge32-content">
+                <div>
+                    <div class="ge32-label">📦 JSON 任务列表</div>
+                    <textarea id="ge32-queue-input" placeholder='["提示词1", "提示词2", ...]'></textarea>
+                </div>
+                <div class="ge32-button-row">
+                    <button id="ge32-start-btn" class="ge32-btn primary">▶ 启动</button>
+                    <button id="ge32-stop-btn" class="ge32-btn">⏹ 停止</button>
+                </div>
+                <div>
+                    <div class="ge32-label">📋 日志</div>
+                    <div id="ge32-logger">就绪</div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(panel);
+
+        // 拖动逻辑
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        const header = document.getElementById('ge32-header');
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            const rect = panel.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            panel.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            panel.style.left = (e.clientX - offsetX) + 'px';
+            panel.style.top = (e.clientY - offsetY) + 'px';
+            panel.style.right = 'auto';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            panel.style.cursor = 'grab';
+        });
+
+        // 绑定按钮事件
+        document.getElementById('ge32-start-btn').onclick = startEngine;
+        document.getElementById('ge32-stop-btn').onclick = () => {
+            STATE.isRunning = false;
+            log('🛑 已停止');
+        };
+    }
+
+    // 日志
+    function log(msg) {
+        const el = document.getElementById('ge32-logger');
+        if (el) {
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            el.innerHTML += `<div>[${time}] ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+    }
+
+    // ==========================================
+    // 3. 核心引擎
+    // ==========================================
+
+    // 工具函数
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // 获取所有消息元素（沿用原脚本的选择器）
+    function getMessages() {
+        return document.querySelectorAll('.ds-markdown, .markdown-body');
+    }
+
+    // 等待消息数量达到目标，超时返回false
+    async function waitForMessageCount(targetCount, timeout = 30000) {
+        const start = Date.now();
+        while (Date.now() - start < timeout) {
+            const count = getMessages().length;
+            if (count >= targetCount) return true;
+            await sleep(CONFIG.checkInterval);
+        }
+        return false;
+    }
+
+    // 等待AI消息内容稳定（连续几次相同）
+    async function waitForContentStable(messageElement, timeout = CONFIG.responseTimeout) {
+        const checkInterval = 800;
+        let lastContent = '';
+        let stableCount = 0;
+        const start = Date.now();
+
+        while (Date.now() - start < timeout) {
+            const current = messageElement.innerText;
+            if (current === lastContent) {
+                stableCount++;
+                if (stableCount >= CONFIG.stabilityChecks) {
+                    return current;  // 稳定，返回内容
+                }
+            } else {
+                stableCount = 0;      // 内容变化，重置计数
+                lastContent = current;
+            }
+            await sleep(checkInterval);
+        }
+        // 超时后返回最后一次内容
+        return messageElement.innerText;
+    }
+
+    // 发送文本到输入框（原 titaniumSend 逻辑，稍作精简）
+    async function sendPrompt(text) {
+        const MAX_RETRIES = 5;
+        let retries = 0;
+
+        while (retries < MAX_RETRIES && STATE.isRunning) {
+            const textarea = document.querySelector('textarea');
+            if (!textarea) throw new Error('找不到输入框');
+
+            // 强力赋值 (兼容 React)
+            textarea.focus();
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+            nativeSetter.call(textarea, text);
+
+            // 触发事件
+            ['input', 'change', 'keydown', 'keypress', 'keyup'].forEach(evt =>
+                textarea.dispatchEvent(new Event(evt, { bubbles: true }))
+            );
+
+            await sleep(1000);  // 等待UI更新
+
+            // 寻找发送按钮
+            const btns = Array.from(document.querySelectorAll('button, div[role="button"]'));
+            const sendBtn = btns.find(b => {
+                const html = b.innerHTML.toLowerCase();
+                const label = (b.getAttribute('aria-label') || '').toLowerCase();
+                const active = !b.disabled && b.getAttribute('aria-disabled') !== 'true';
+                const match = label.includes('send') || label.includes('发送') || html.includes('path') || html.includes('svg');
+                return active && match && b.clientWidth < 100;
+            });
+
+            if (sendBtn) {
+                sendBtn.click();
+            } else {
+                // 备用：回车
+                textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+            }
+
+            // 验证是否清空（发送成功标志）
+            await sleep(1500);
+            if (textarea.value.trim() === '') {
+                log('🚀 发送成功');
+                return true;
+            } else {
+                log(`⚠️ 发送未响应 (尝试 ${retries+1}/${MAX_RETRIES})`);
+                // 补一刀回车
+                textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+                await sleep(1000);
+                if (textarea.value.trim() === '') return true;
+            }
+            retries++;
+        }
+        throw new Error('发送失败：输入框死锁');
+    }
+
+    // 等待响应（新逻辑：基于消息数量和内容稳定）
+    async function waitForResponse() {
+        const initialCount = getMessages().length;
+        const targetUserCount = initialCount + 1;  // 用户消息出现
+
+        // 1. 等待用户消息出现（发送的提示）
+        const userMsgAppeared = await waitForMessageCount(targetUserCount, 30000);
+        if (!userMsgAppeared) throw new Error('用户消息未出现');
+
+        // 2. 等待AI消息出现（目标数量再+1）
+        const targetAICount = targetUserCount + 1;
+        const aiMsgAppeared = await waitForMessageCount(targetAICount, CONFIG.responseTimeout);
+        if (!aiMsgAppeared) throw new Error('AI响应超时（无新消息）');
+
+        // 3. 获取最新消息（即AI响应）
+        const messages = getMessages();
+        const latestMsg = messages[messages.length - 1];
+
+        // 4. 等待其内容稳定（完成生成）
+        const finalContent = await waitForContentStable(latestMsg, CONFIG.responseTimeout);
+        return finalContent;
+    }
+
+    // 处理下一个任务
+    async function processNext() {
+        if (!STATE.isRunning) return;
+        if (STATE.currentIndex >= STATE.queue.length) {
+            STATE.isRunning = false;
+            log('🎉 所有任务完成');
+            return;
+        }
+
+        const prompt = STATE.queue[STATE.currentIndex];
+        log(`\n>>> [${STATE.currentIndex+1}/${STATE.queue.length}] 发送: ${prompt.substring(0, 50)}${prompt.length>50?'...':''}`);
+
+        try {
+            // 发送
+            await sendPrompt(prompt);
+
+            // 等待响应
+            log('⏳ 等待 AI 响应...');
+            const response = await waitForResponse();
+            log(`💬 收到响应 (${response.length} 字符)`);
+
+            // 这里你可以自定义对响应的处理，目前仅显示在日志中
+            // 如果想提取特定内容（如 <file> 标签），可以自行添加
+            // 示例：简单截取前200字符显示
+            const preview = response.substring(0, 200) + (response.length>200?'...':'');
+            log(`📄 预览: ${preview}`);
+
+            // 冷却
+            STATE.currentIndex++;
+            const cd = Math.floor(Math.random() * (CONFIG.cooldownMax - CONFIG.cooldownMin) + CONFIG.cooldownMin);
+            log(`❄️ 冷却 ${(cd/1000).toFixed(1)}s...`);
+            await sleep(cd);
+            processNext();
+
+        } catch (err) {
+            log(`❌ 错误: ${err.message}`);
+            STATE.currentIndex++;
+            await sleep(3000);
+            processNext();
+        }
+    }
+
+    // 启动引擎
+    function startEngine() {
+        const inputEl = document.getElementById('ge32-queue-input');
+        const raw = inputEl.value.trim();
+        if (!raw) {
+            log('❌ 请输入JSON任务列表');
+            return;
+        }
+
+        let taskArray;
+        try {
+            taskArray = JSON.parse(raw);
+            if (!Array.isArray(taskArray)) throw new Error('不是数组');
+        } catch (e) {
+            log('❌ JSON 解析失败，请确保格式正确，如 ["task1", "task2"]');
+            return;
+        }
+
+        STATE.queue = taskArray.filter(item => typeof item === 'string' && item.trim() !== '');
+        STATE.currentIndex = 0;
+        STATE.isRunning = true;
+
+        log(`🚀 启动，共 ${STATE.queue.length} 个任务`);
+        processNext();
+    }
+
+    // ==========================================
+    // 4. 初始化
+    // ==========================================
+    // 等待页面加载稳定后创建UI
+    setTimeout(createUI, 1500);
+})();
+
+::::
