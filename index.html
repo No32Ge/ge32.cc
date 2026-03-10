@@ -1,338 +1,960 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aliyun AI Coffee Card Gen</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <title>Ge32 Prompt · 分组字段提取器</title>
     <style>
-        /* ———— 咖啡馆主题样式 ———— */
-        :root {
-            --coffee-dark: #3E2723;   /* 深烘焙色 */
-            --coffee-med: #795548;    /* 摩卡色 */
-            --coffee-light: #D7CCC8;  /* 奶泡色 */
-            --accent: #FFAB91;        /* 温暖点缀色 */
-            --bg-color: #ECEFF1;
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
         }
-
-        body { margin: 0; padding: 0; display: flex; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #222; height: 100vh; overflow: hidden; color: #333; }
-        
-        /* 左侧控制区 */
-        .editor { width: 400px; background: #2d2d2d; padding: 20px; display: flex; flex-direction: column; z-index: 10; border-right: 1px solid #444; color: #ddd; box-shadow: 2px 0 10px rgba(0,0,0,0.3); }
-        
-        /* 右侧预览区 */
-        .preview-area { flex: 1; display: flex; flex-direction: column; align-items: center; overflow-y: scroll; padding: 40px; background: var(--bg-color); }
-        
-        #preview-container { width: 375px; margin-bottom: 100px; }
-
-        h2 { color: var(--accent); border-bottom: 1px solid #555; padding-bottom: 10px; margin-top: 0; font-size: 18px; letter-spacing: 1px; display: flex; align-items: center; justify-content: space-between; }
-        
-        .api-input-group { margin-bottom: 15px; background: #333; padding: 10px; border-radius: 6px; border: 1px solid #555; }
-        .api-label { font-size: 12px; color: #aaa; display: block; margin-bottom: 5px; }
-        .api-input { width: 95%; padding: 8px; background: #222; border: 1px solid #444; color: #fff; border-radius: 4px; font-family: monospace; }
-        
-        textarea { 
-            flex: 1; 
-            background: #1e1e1e; color: #ddd; border: 1px solid #444; padding: 15px; 
-            font-family: monospace; font-size: 12px; resize: none; margin-bottom: 15px; 
-            outline: none; border-radius: 4px;
+        body {
+            background: #f0f5fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 20px;
         }
-        
-        button { 
-            padding: 12px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; 
-            margin-bottom: 10px; transition: 0.2s; border-radius: 4px; display: flex; 
-            align-items: center; justify-content: center; gap: 8px; 
+        .card {
+            background: white;
+            max-width: 1300px;
+            width: 100%;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px -10px rgba(16, 42, 80, 0.25);
+            padding: 2rem 2.2rem 2.8rem;
+            transition: all 0.2s;
         }
-        
-        .btn-gen { background: var(--coffee-med); color: #fff; }
-        .btn-gen:hover { background: var(--coffee-dark); }
-        .btn-download-all { background: #27ae60; color: #fff; }
-
-        .card-wrapper { margin-bottom: 40px; position: relative; }
-        .card-actions { display: flex; justify-content: center; margin-top: 10px; gap: 10px; }
-        .btn-mini { background: #555; color: #fff; padding: 6px 15px; font-size: 12px; border-radius: 20px; border:none; cursor: pointer;}
-        .btn-mini:hover { background: #333; transform: translateY(-1px); }
-
-        /* Loading 动画 */
-        .loading-spinner {
-            width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); 
-            border-radius: 50%; border-top-color: var(--coffee-dark); 
-            animation: spin 1s ease-in-out infinite; margin: 20px auto;
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #0a2a44;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 0;
+            margin-bottom: 0.4rem;
+            border-bottom: 3px solid #dde5f0;
+            padding-bottom: 0.8rem;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
+        h1 .brand {
+            background: linear-gradient(145deg, #1e5f9e, #2b3d8f);
+            color: white;
+            font-size: 1.2rem;
+            padding: 0.2rem 1.5rem;
+            border-radius: 60px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 8px rgba(0,40,80,0.2);
+        }
+        .sub {
+            color: #2c4b6f;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+            background: #e9f0f8;
+            padding: 0.6rem 1.5rem;
+            border-radius: 40px;
+            display: inline-block;
+        }
+        .three-col {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 1.8rem;
+        }
+        .config-panel {
+            background: #f8fbfe;
+            border-radius: 24px;
+            padding: 1.5rem 1.8rem;
+            border: 1px solid #cfdeef;
+            flex: 2 1 360px;
+        }
+        .prefix-panel {
+            background: #f3f7fd;
+            border-radius: 24px;
+            padding: 1.5rem 1.8rem;
+            border: 1px solid #c0d4e9;
+            flex: 1 1 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .batch-panel {
+            background: #f3f7fd;
+            border-radius: 24px;
+            padding: 1.5rem 1.8rem;
+            border: 1px solid #c0d4e9;
+            flex: 1 1 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .config-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .config-label label {
+            font-weight: 650;
+            color: #16436e;
+            font-size: 1.2rem;
+        }
+        .config-hint {
+            background: #e2ecf9;
+            color: #0a4a7a;
+            border-radius: 20px;
+            padding: 0.2rem 1rem;
+            font-size: 0.85rem;
+            font-family: 'Fira Code', monospace;
+        }
+        #fieldConfig {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            font-size: 1rem;
+            font-family: 'Fira Code', 'JetBrains Mono', monospace;
+            background: white;
+            border: 2px solid #c2d4e8;
+            border-radius: 18px;
+            resize: vertical;
+            color: #113355;
+            font-weight: 500;
+            transition: 0.15s;
+        }
+        #fieldConfig:focus {
+            border-color: #1e6dc9;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(30,109,201,0.2);
+        }
+        .prefix-box, .batch-box {
+            width: 100%;
+        }
+        .prefix-box label, .batch-box label {
+            font-weight: 650;
+            color: #16436e;
+            font-size: 1.2rem;
+            display: block;
+            margin-bottom: 12px;
+        }
+        #prefixText {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            font-size: 1rem;
+            border: 2px solid #c2d4e8;
+            border-radius: 18px;
+            background: white;
+            transition: 0.15s;
+            color: #113355;
+        }
+        #prefixText:focus {
+            border-color: #1e6dc9;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(30,109,201,0.2);
+        }
+        #batchSize {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            font-size: 1rem;
+            border: 2px solid #c2d4e8;
+            border-radius: 18px;
+            background: white;
+            transition: 0.15s;
+            color: #113355;
+        }
+        #batchSize:focus {
+            border-color: #1e6dc9;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(30,109,201,0.2);
+        }
+        .prefix-sample {
+            font-size: 0.9rem;
+            color: #3b5f83;
+            background: #e9f0f8;
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            margin-top: 12px;
+        }
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin: 20px 0 20px;
+        }
+        .file-input-wrapper {
+            position: relative;
+            flex: 2 1 280px;
+        }
+        .file-input-wrapper input {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            background: white;
+            border: 2px dashed #7e99bb;
+            border-radius: 60px;
+            font-size: 0.95rem;
+            color: #1f3a57;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .file-input-wrapper input:hover {
+            border-color: #1e6dc9;
+            background: #f9fcff;
+        }
+        .file-input-wrapper input::file-selector-button {
+            background: #1f3f60;
+            color: white;
+            border: none;
+            padding: 0.4rem 1.4rem;
+            border-radius: 30px;
+            margin-right: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .file-input-wrapper input::file-selector-button:hover {
+            background: #12314d;
+        }
+        .primary-btn {
+            background: #1a6bb0;
+            border: none;
+            color: white;
+            font-weight: 650;
+            padding: 0.9rem 2.4rem;
+            border-radius: 60px;
+            font-size: 1.1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(26,107,176,0.35);
+            cursor: pointer;
+            transition: 0.15s;
+            border: 1px solid #1a6bb0;
+        }
+        .primary-btn:hover {
+            background: #0f5090;
+            box-shadow: 0 8px 18px rgba(26,107,176,0.45);
+            transform: scale(1.02);
+        }
+        .primary-btn:active {
+            background: #093b68;
+            transform: scale(0.98);
+        }
+        .secondary-btn {
+            background: white;
+            border: 2px solid #b2c9e2;
+            color: #1e3b5c;
+            font-weight: 600;
+            padding: 0.7rem 2rem;
+            border-radius: 60px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .secondary-btn:hover {
+            background: #e1ecf7;
+            border-color: #7e99bb;
+        }
+        .download-btn {
+            background: #2e7d32;
+            border-color: #1f6324;
+            box-shadow: 0 4px 12px rgba(46,125,50,0.25);
+            color: white;
+        }
+        .download-btn:hover {
+            background: #1f6423;
+        }
+        .html-btn {
+            background: #9c27b0;
+            border-color: #7b1fa2;
+            box-shadow: 0 4px 12px rgba(156,39,176,0.3);
+            color: white;
+        }
+        .html-btn:hover {
+            background: #7b1fa2;
+        }
+        .json-btn {
+            background: #d95c2b;
+            border-color: #b44a1f;
+            box-shadow: 0 4px 12px rgba(217,92,43,0.3);
+            color: white;
+        }
+        .json-btn:hover {
+            background: #b44a1f;
+        }
+        .result-area {
+            background: #1e2f3f;
+            color: #e1eefb;
+            border-radius: 24px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border: 1px solid #2c4b70;
+            box-shadow: inset 0 0 0 1px #3c5f86;
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: 500;
+            color: #b6d2f0;
+        }
+        #outputText {
+            background: #142433;
+            border: none;
+            width: 100%;
+            min-height: 250px;
+            max-height: 450px;
+            padding: 1rem 1.3rem;
+            border-radius: 20px;
+            color: #d7e9ff;
+            font-family: 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            resize: vertical;
+            white-space: pre;
+            overflow-x: auto;
+            border: 1px solid #355b80;
+        }
+        #outputText:focus {
+            outline: 2px solid #618fc7;
+        }
+        .stats {
+            font-size: 0.9rem;
+            margin-top: 15px;
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            color: #a6c2e2;
+        }
+        .error-message {
+            background: #ffeef2;
+            color: #ac0450;
+            padding: 0.8rem 1.8rem;
+            border-radius: 60px;
+            border-left: 5px solid #c1004e;
+            font-weight: 500;
+            margin: 15px 0 0;
+        }
+        .footer-note {
+            margin-top: 1.8rem;
+            text-align: center;
+            color: #557599;
+            font-size: 0.9rem;
+        }
+        .flex-icon {
+            font-size: 1.3rem;
+        }
     </style>
 </head>
 <body>
+<div class="card">
+    <h1>
+        <span class="brand">Ge32 Prompt</span> 字段提取器 · 分组合并+换行
+        <span>支持 JSON / TXT / HTML</span>
+    </h1>
+    <div class="sub">🔍 每个字段独立一行，支持将多条记录合并为一组，下载JSON数组格式</div>
 
-<div class="editor">
-    <h2>
-        <span>☕ 阿里 AI 绘图版</span>
-        <span style="font-size:10px; background:#4CAF50; padding:2px 6px; border-radius:4px; color:white;">Turbo</span>
-    </h2>
-    
-    <div class="api-input-group">
-        <label class="api-label">🔑 输入阿里 DashScope API Key:</label>
-        <input type="password" id="apiKey" class="api-input" placeholder="sk-xxxxxxxx..." onchange="saveKey()">
+    <!-- 三列布局: 字段配置, 提示词, 匹配数量 -->
+    <div class="three-col">
+        <!-- 左侧 JSON 配置区 -->
+        <div class="config-panel">
+            <div class="config-label">
+                <label>⚙️ 字段配置 (JSON数组)</label>
+                <div class="config-hint">必须为合法JSON</div>
+            </div>
+            <textarea id="fieldConfig" rows="2" placeholder='["SKU","产品标题","亚马逊描述","沃尔玛描述","五点1","五点2","五点3","五点4","五点5"]'>["SKU","产品标题","亚马逊描述","沃尔玛描述","五点1","五点2","五点3","五点4","五点5"]</textarea>
+            <div style="margin-top: 10px; color:#38658f; font-size:0.9rem;">
+                ⚡ 示例: <code>["SKU","产品标题"]</code> &nbsp; <code>["五点1","五点2"]</code>
+            </div>
+        </div>
+
+        <!-- 中间 提示词输入框 -->
+        <div class="prefix-panel">
+            <div class="prefix-box">
+                <label>🔖 提示词 (每组开头)</label>
+                <input type="text" id="prefixText" placeholder="例如：请根据以下商品信息" value="">
+                <div class="prefix-sample">
+                    ✨ 预览: <span id="prefixPreview">(无提示词)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧 匹配数量输入框 -->
+        <div class="batch-panel">
+            <div class="batch-box">
+                <label>🔢 匹配数量 (每组几条记录)</label>
+                <input type="number" id="batchSize" min="1" value="1" step="1">
+                <div class="prefix-sample" style="margin-top: 12px;">
+                    📦 组数 = 总记录数 ÷ 数量 (向上取整)
+                </div>
+            </div>
+        </div>
     </div>
 
-    <textarea id="jsonInput">
-{
-  "title": "Coffee Shop Menu",
-  "paragraphs": [
-    {
-      "en": "I'd like a medium Latte with oat milk, please.",
-      "cn": "我要一杯中杯的燕麦奶拿铁。",
-      "img_keyword": "latte art heart shape in white ceramic cup on wooden table, cozy cafe sunlight, high quality",
-      "vocab": [
-        {"word": "Latte", "meaning": "拿铁"},
-        {"word": "oat milk", "meaning": "燕麦奶"}
-      ]
-    },
-    {
-      "en": "An Americano is basically espresso diluted with hot water.",
-      "cn": "美式咖啡基本上就是用热水稀释过的浓缩咖啡。",
-      "img_keyword": "black american coffee in white cup steam rising, minimalistic, clean background",
-      "vocab": [
-        {"word": "diluted", "meaning": "稀释"},
-        {"word": "Espresso", "meaning": "浓缩咖啡"}
-      ]
-    },
-    {
-      "en": "Cappuccinos are famous for their thick layer of milk foam.",
-      "cn": "卡布奇诺以其厚厚的奶泡层而闻名。",
-      "img_keyword": "cappuccino with thick foam and cocoa powder sprinkle, side view, close up",
-      "vocab": [
-        {"word": "foam", "meaning": "奶泡"},
-        {"word": "layer", "meaning": "层"}
-      ]
-    }
-  ]
-}</textarea>
-    <button class="btn-gen" onclick="startGeneration()">⚡ 调用阿里 AI 生成 (Cost: Turbo)</button>
-    <button class="btn-download-all" onclick="downloadAll()">📦 一键打包下载</button>
-    
-    <div style="font-size:12px; color:#888; margin-top:10px;">
-        ⚠️ <b>注意：</b><br>
-        1. 必须填写 API Key 才能生成图片。<br>
-        2. 若图片无法加载，请检查是否安装了 Allow CORS 插件。<br>
-        3. 图片链接24小时后失效，请及时保存。
+    <!-- 操作区域 (增加JSON下载按钮) -->
+    <div class="btn-row">
+        <div class="file-input-wrapper">
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" />
+        </div>
+        <button class="primary-btn" id="processBtn">
+            <span class="flex-icon">⚡</span> 转换并预览
+        </button>
+        <button class="secondary-btn download-btn" id="downloadTxtBtn" disabled>
+            <span class="flex-icon">📄</span> 下载 .txt
+        </button>
+        <button class="secondary-btn html-btn" id="downloadHtmlBtn" disabled>
+            <span class="flex-icon">🌐</span> 下载 .html
+        </button>
+        <button class="secondary-btn json-btn" id="downloadJsonBtn" disabled>
+            <span class="flex-icon">📋</span> 下载 .json
+        </button>
+    </div>
+
+    <!-- 预览 / 结果输出区 (分组 + 换行) -->
+    <div class="result-area">
+        <div class="result-header">
+            <span>📄 提取结果 (每组 ====== 组号 ======，字段换行)</span>
+            <span id="groupCount">0 组</span>
+        </div>
+        <textarea id="outputText" readonly placeholder="点击「转换并预览」生成分组换行文本……"></textarea>
+        <div class="stats" id="statsInfo">
+            <span>📌 字段列表：等待处理</span>
+            <span id="prefixStat"></span>
+            <span id="batchStat"></span>
+        </div>
+    </div>
+
+    <!-- 错误容器 -->
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <div class="footer-note">
+        * 表头匹配忽略大小写与前后空格。提示词置于每组开头。<br>
+        每组内每条记录的字段之间换行，记录之间用空行隔开。JSON下载为["问题1..","问题2..",...] 格式。
     </div>
 </div>
 
-<div class="preview-area">
-    <div id="preview-container"></div>
-</div>
-
+<!-- SheetJS 解析库 -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script>
-    // ———— 全局配置 ————
-    const COLORS = {
-        primary: "#3E2723",    
-        accent: "#8D6E63",     
-        bg: "#FFFFFF",         
-        paper: "#FDFBF7",      
-        text: "#2C2C2C",
-        tagBg: "#EFEBE9"
-    };
+(function() {
+    // DOM 元素
+    const fieldConfigTextarea = document.getElementById('fieldConfig');
+    const prefixInput = document.getElementById('prefixText');
+    const prefixPreviewSpan = document.getElementById('prefixPreview');
+    const batchSizeInput = document.getElementById('batchSize');
+    const fileInput = document.getElementById('excelFileInput');
+    const processBtn = document.getElementById('processBtn');
+    const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+    const downloadHtmlBtn = document.getElementById('downloadHtmlBtn');
+    const downloadJsonBtn = document.getElementById('downloadJsonBtn');
+    const outputTextarea = document.getElementById('outputText');
+    const groupCountSpan = document.getElementById('groupCount');
+    const statsInfo = document.getElementById('statsInfo');
+    const prefixStatSpan = document.getElementById('prefixStat');
+    const batchStatSpan = document.getElementById('batchStat');
+    const errorDiv = document.getElementById('errorMessage');
 
-    // 本地存储 Key，方便测试
-    window.onload = function() {
-        const savedKey = localStorage.getItem('dashscope_key');
-        if(savedKey) document.getElementById('apiKey').value = savedKey;
+    // 存储当前生成的结果
+    let currentResultText = '';            // 带组分隔的完整文本 (用于txt下载和预览)
+    let currentGroupContents = [];          // 每组的内容文本 (包含提示词+所有记录,字段换行) 用于HTML和JSON下载
+    let currentFieldList = [];
+    let currentRawPrefix = '';
+    let currentBatchSize = 1;
+
+    // 实时更新前缀预览
+    function updatePrefixPreview() {
+    const prefix = prefixInput.value;
+    
+    if (prefix) {
+        // 按空白字符分割单词（过滤空字符串）
+        const words = prefix.trim().split(/\s+/);
+        let displayText = prefix;
+        
+        if (words.length > 10) {
+            // 取前十个单词并用空格连接，再加上省略号
+            const firstTenWords = words.slice(0, 10).join(' ');
+            displayText = firstTenWords + '...';
+        }
+        
+        prefixPreviewSpan.innerText = `“${displayText}”`;
+    } else {
+        prefixPreviewSpan.innerText = '(无提示词)';
     }
-    function saveKey() {
-        localStorage.setItem('dashscope_key', document.getElementById('apiKey').value);
+}
+    prefixInput.addEventListener('input', updatePrefixPreview);
+    updatePrefixPreview();
+
+    // 显示/隐藏错误
+    function showError(msg) {
+        errorDiv.style.display = 'block';
+        errorDiv.innerText = '❌ ' + msg;
+        outputTextarea.value = '';
+        groupCountSpan.innerText = '0 组';
+        statsInfo.innerHTML = `<span>⚠️ 错误: ${msg}</span>`;
+        if (prefixStatSpan) prefixStatSpan.innerText = '';
+        if (batchStatSpan) batchStatSpan.innerText = '';
+        downloadTxtBtn.disabled = true;
+        downloadHtmlBtn.disabled = true;
+        downloadJsonBtn.disabled = true;
+        currentResultText = '';
+        currentGroupContents = [];
     }
 
-    // ———— 核心逻辑：分两步 ————
-    // 1. 先渲染骨架 (Render Skeleton)
-    // 2. 再异步请求阿里 API 填充图片
-    async function startGeneration() {
-        const apiKey = document.getElementById('apiKey').value;
-        if (!apiKey) { alert("请先填写 DashScope API Key！"); return; }
+    function hideError() {
+        errorDiv.style.display = 'none';
+        errorDiv.innerText = '';
+    }
 
+    // 更新统计
+    function updateStats(groupCount, usedFields, prefixUsed, batchSize) {
+        groupCountSpan.innerText = groupCount + (groupCount === 1 ? ' 组' : ' 组');
+        if (usedFields && usedFields.length) {
+            let fieldStr = usedFields.map(f => `“${f}”`).join(', ');
+            statsInfo.innerHTML = `<span>📋 有效字段: ${fieldStr}</span>`;
+        } else {
+            statsInfo.innerHTML = `<span>📋 无匹配字段或数据为空</span>`;
+        }
+        const prefixShow = prefixUsed ? `“${prefixUsed}”` : '无';
+        prefixStatSpan.innerText = `🔖 提示词: ${prefixShow}`;
+        batchStatSpan.innerText = `🔢 匹配数量: ${batchSize}`;
+    }
+
+    // 解析字段配置 JSON
+    function parseFieldConfig(jsonStr) {
         try {
-            const data = JSON.parse(document.getElementById('jsonInput').value);
-            const container = document.getElementById('preview-container');
-            let html = '';
+            const parsed = JSON.parse(jsonStr);
+            if (!Array.isArray(parsed)) {
+                throw new Error('配置必须是数组，例如 ["SKU","产品标题"]');
+            }
+            const trimmed = parsed.map(item => (typeof item === 'string' ? item.trim() : String(item).trim())).filter(s => s !== '');
+            return trimmed;
+        } catch (e) {
+            throw new Error('JSON 解析失败: ' + e.message);
+        }
+    }
 
-            // 1. 渲染标题
-            html += `
-                <section style="margin-bottom: 40px; text-align: center; padding: 40px 20px; background: ${COLORS.paper}; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #D7CCC8;">
-                    <div style="font-size: 13px; color: ${COLORS.accent}; letter-spacing: 3px; margin-bottom: 10px; font-weight: 800; text-transform: uppercase;">Barista Vocabulary</div>
-                    <h1 style="font-size: 28px; font-family: 'Georgia', serif; font-weight: bold; color: ${COLORS.primary}; margin: 0; line-height: 1.2;">${data.title}</h1>
-                    <div style="width: 40px; height: 3px; background: ${COLORS.primary}; margin: 20px auto 0; opacity: 0.8;"></div>
-                </section>
-            `;
+    // ---------- 核心处理: 读取文件、提取字段、分组合并、字段换行 ----------
+    function processExcel(file) {
+        hideError();
+        if (!file) {
+            showError('请先选择 Excel / CSV 文件');
+            return;
+        }
 
-            // 2. 渲染卡片骨架（图片处先放 Loading）
-            data.paragraphs.forEach((para, index) => {
-                const cardId = `card-node-${index}`;
-                const imgId = `img-content-${index}`; // 用于后续替换图片
-                
-                // 英文高亮
-                let enText = para.en;
-                if (para.vocab) {
-                    para.vocab.sort((a, b) => b.word.length - a.word.length);
-                    para.vocab.forEach(v => {
-                        const regex = new RegExp(`\\b(${v.word})\\b`, 'gi');
-                        enText = enText.replace(regex, `<span style="color: ${COLORS.primary}; font-weight: bold; border-bottom: 2px solid ${COLORS.accent};">${v.word}</span>`);
-                    });
+        // 1. 解析配置字段
+        let configFields;
+        try {
+            configFields = parseFieldConfig(fieldConfigTextarea.value);
+            if (configFields.length === 0) {
+                showError('配置字段列表不能为空，请填入至少一个字段名');
+                return;
+            }
+            currentFieldList = configFields.slice();
+        } catch (err) {
+            showError(err.message);
+            return;
+        }
+
+        // 2. 获取前缀和匹配数量
+        let rawPrefix = prefixInput.value;  // 原样保留
+        currentRawPrefix = rawPrefix;
+        const hasPrefix = rawPrefix.length > 0;
+
+        let batchSize = parseInt(batchSizeInput.value, 10);
+        if (isNaN(batchSize) || batchSize < 1) batchSize = 1;
+        currentBatchSize = batchSize;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellText: false, cellDates: true });
+
+                const firstSheetName = workbook.SheetNames[0];
+                if (!firstSheetName) {
+                    showError('Excel 文件没有工作表');
+                    return;
+                }
+                const sheet = workbook.Sheets[firstSheetName];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                if (rows.length === 0) {
+                    showError('Excel 表格为空');
+                    return;
                 }
 
-                // 单词标签
-                let vocabHtml = (para.vocab || []).map(v => 
-                    `<span style="display:inline-block; border: 1px solid #D7CCC8; color: ${COLORS.primary}; font-size: 12px; padding: 4px 10px; margin: 0 6px 6px 0; border-radius: 20px; background: ${COLORS.tagBg};">
-                        <b style="font-weight:700">${v.word}</b> <span style="opacity:0.7; font-size: 11px;">| ${v.meaning}</span>
-                    </span>`
-                ).join('');
+                // 表头行 trim 处理
+                const headerRow = rows[0].map(cell => (cell === undefined || cell === null ? '' : String(cell).trim()));
+                if (headerRow.length === 0) {
+                    showError('表头行为空');
+                    return;
+                }
 
-                html += `
-                    <div class="card-wrapper">
-                        <div id="${cardId}" style="background: #fff; box-shadow: 0 10px 30px rgba(62, 39, 35, 0.15); border-radius: 8px; overflow: hidden; position: relative;">
-                            
-                            <!-- 图片区域 -->
-                            <div style="width: 100%; height: 320px; overflow: hidden; position: relative; background: #eee; display:flex; align-items:center; justify-content:center;">
-                                <img id="${imgId}" src="" crossorigin="anonymous" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
-                                <!-- Loading 占位符 -->
-                                <div id="loading-${index}" style="text-align:center; color:#888;">
-                                    <div class="loading-spinner"></div>
-                                    <div style="font-size:12px;">AI Generating...</div>
-                                </div>
-                            </div>
+                // 构建表头索引 (trim后精确匹配) 及小写映射
+                const headerIndexMap = new Map();
+                headerRow.forEach((colName, idx) => {
+                    if (colName !== '') headerIndexMap.set(colName, idx);
+                });
 
-                            <div style="padding: 30px 25px;">
-                                <div style="font-size: 12px; color: ${COLORS.accent}; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px;">ITEM ${String(index+1).padStart(2,'0')}</div>
-                                <div style="font-size: 19px; line-height: 1.5; color: ${COLORS.text}; margin-bottom: 20px; font-family: 'Georgia', serif;">${enText}</div>
-                                <div style="margin-bottom: 25px;">${vocabHtml}</div>
-                                <div style="border-top: 1px solid #EFEBE9; padding-top: 15px; display: flex; align-items: flex-start;">
-                                    <span style="background:${COLORS.primary}; color:#fff; font-size: 10px; padding: 2px 6px; border-radius: 2px; margin-right: 8px; margin-top: 2px;">CN</span>
-                                    <span style="font-size: 14px; color: #5D4037; line-height: 1.6;">${para.cn}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-actions">
-                            <button class="btn-mini" onclick="captureCard('${cardId}', 'Coffee_${index+1}')">⬇️ 保存图片</button>
-                            <button class="btn-mini" onclick="regenerateImage(${index}, '${para.img_keyword}')">🔄 重绘</button>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
+                const lowerToActualHeader = new Map();
+                for (let actualHeader of headerIndexMap.keys()) {
+                    lowerToActualHeader.set(actualHeader.toLowerCase(), actualHeader);
+                }
 
-            // 3. 触发并发请求 (并行生成)
-            data.paragraphs.forEach((para, index) => {
-                callAliyunAPI(para.img_keyword, index, apiKey);
-            });
-
-        } catch (e) {
-            console.error(e);
-            alert("JSON 格式错误");
-        }
-    }
-
-    // ———— 调用阿里 DashScope API (z-image-turbo) ————
-    async function callAliyunAPI(prompt, index, apiKey) {
-        const loadingDiv = document.getElementById(`loading-${index}`);
-        const imgEl = document.getElementById(`img-content-${index}`);
-        
-        // 优化 Prompt：增加电影质感词汇
-        const refinedPrompt = `${prompt}, photorealistic, 8k details, cinematic lighting, shot on 35mm lens, depth of field, professional food photography`;
-
-        try {
-            const response = await fetch('https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json',
-                    // 'X-DashScope-Async': 'enable' // Turbo 模型同步返回更快，不需要 Async
-                },
-                body: JSON.stringify({
-                    "model": "z-image-turbo",
-                    "input": {
-                        "messages": [{
-                            "role": "user",
-                            "content": [{ "text": refinedPrompt }]
-                        }]
-                    },
-                    "parameters": {
-                        "size": "1024*1024", // 生成 1:1 方图方便裁剪，或者 1280*720
-                        "n": 1
+                // 构建待提取字段列表: { configField, actualHeader, colIndex }
+                const fieldsToExtract = [];
+                for (let cfgField of configFields) {
+                    const trimmedCfg = cfgField.trim();
+                    if (trimmedCfg === '') continue;
+                    // 精确匹配
+                    if (headerIndexMap.has(trimmedCfg)) {
+                        fieldsToExtract.push({
+                            configField: cfgField,
+                            actualHeader: trimmedCfg,
+                            colIndex: headerIndexMap.get(trimmedCfg)
+                        });
+                    } 
+                    // 忽略大小写匹配
+                    else {
+                        const lowerCfg = trimmedCfg.toLowerCase();
+                        if (lowerToActualHeader.has(lowerCfg)) {
+                            const actual = lowerToActualHeader.get(lowerCfg);
+                            fieldsToExtract.push({
+                                configField: cfgField,
+                                actualHeader: actual,
+                                colIndex: headerIndexMap.get(actual)
+                            });
+                        }
+                        // 都不匹配则跳过
                     }
-                })
-            });
+                }
 
-            const data = await response.json();
+                if (fieldsToExtract.length === 0) {
+                    showError('配置中的字段无一匹配Excel表头。请检查表头名称或配置');
+                    return;
+                }
 
-            if (data.output && data.output.choices && data.output.choices[0]) {
-                const imgUrl = data.output.choices[0].message.content[0].image;
-                
-                // 成功：显示图片，隐藏 loading
-                imgEl.src = imgUrl;
-                imgEl.onload = () => {
-                    imgEl.style.display = 'block';
-                    loadingDiv.style.display = 'none';
-                };
-            } else {
-                console.error("API Error:", data);
-                loadingDiv.innerHTML = `<span style="color:red">生成失败<br>${data.code || 'Unknown Error'}</span>`;
+                const dataRows = rows.slice(1);
+                if (dataRows.length === 0) {
+                    // 无数据行，生成空结果
+                    currentResultText = '';
+                    currentGroupContents = [];
+                    outputTextarea.value = '';
+                    updateStats(0, fieldsToExtract.map(f => f.actualHeader), rawPrefix, batchSize);
+                    downloadTxtBtn.disabled = false;
+                    downloadHtmlBtn.disabled = false;
+                    downloadJsonBtn.disabled = false;
+                    return;
+                }
+
+                // 构建每条记录的字段列表 (每个字段已格式化为 "字段名: 值")
+                const recordFieldLines = [];   // 每个元素是一个数组，包含该记录的各个字段字符串 (用于换行)
+                for (let r = 0; r < dataRows.length; r++) {
+                    const row = dataRows[r] || [];
+                    const fieldParts = [];
+                    for (let f of fieldsToExtract) {
+                        const colIdx = f.colIndex;
+                        let cellValue = (colIdx < row.length && row[colIdx] !== undefined && row[colIdx] !== null) ? row[colIdx] : '';
+                        if (cellValue instanceof Date) {
+                            try {
+                                cellValue = cellValue.toISOString().split('T')[0];
+                            } catch {
+                                cellValue = String(cellValue);
+                            }
+                        } else {
+                            cellValue = String(cellValue);
+                        }
+                        fieldParts.push(`${f.configField}: ${cellValue}`);
+                    }
+                    recordFieldLines.push(fieldParts);
+                }
+
+                // 按 batchSize 分组
+                const groups = [];
+                for (let i = 0; i < recordFieldLines.length; i += batchSize) {
+                    groups.push(recordFieldLines.slice(i, i + batchSize));
+                }
+
+                // 构建组内容 (用于TXT预览和HTML/JSON下载)
+                const txtGroups = [];
+                const jsonGroupContents = [];
+
+                groups.forEach((group, groupIdx) => {
+                    // 构建该组的文本: 组头 + 提示词(如果有) + 每条记录的字段换行
+                    let groupText = '';
+                    // 组头 (用于TXT分隔)
+                    groupText += `====== 组 ${groupIdx+1} ======\n`;
+                    if (hasPrefix) {
+                        groupText += rawPrefix + '\n';
+                    }
+                    // 组内每条记录: 字段换行，记录之间加空行
+                    group.forEach((fieldParts, recIdx) => {
+                        if (recIdx > 0) groupText += '\n';  // 记录间空行
+                        groupText += fieldParts.join('\n');
+                    });
+
+                    txtGroups.push(groupText);
+
+                    // 构建纯组内容 (用于JSON数组元素，不含组头分隔符，但包含提示词和记录)
+                    let jsonContent = '';
+                    if (hasPrefix) {
+                        jsonContent += rawPrefix + '\n';
+                    }
+                    group.forEach((fieldParts, recIdx) => {
+                        if (recIdx > 0) jsonContent += '\n\n';  // 记录间两个换行，保持可读
+                        jsonContent += fieldParts.join('\n');
+                    });
+                    jsonGroupContents.push(jsonContent);
+                });
+
+                // 组合最终TXT文本 (组间用两个换行分隔)
+                currentResultText = txtGroups.join('\n\n');
+                currentGroupContents = jsonGroupContents.slice();
+
+                outputTextarea.value = currentResultText;
+                updateStats(groups.length, fieldsToExtract.map(f => f.actualHeader), rawPrefix, batchSize);
+                downloadTxtBtn.disabled = false;
+                downloadHtmlBtn.disabled = false;
+                downloadJsonBtn.disabled = false;
+
+            } catch (err) {
+                console.error(err);
+                showError('解析Excel时出错: ' + err.message);
             }
+        };
 
-        } catch (error) {
-            console.error(error);
-            loadingDiv.innerHTML = `<span style="color:red">网络错误<br>Check Console</span>`;
+        reader.onerror = () => {
+            showError('读取文件失败');
+        };
+
+        reader.readAsArrayBuffer(file);
+    }
+
+    // 下载 .txt 文件 (直接使用 currentResultText)
+    function downloadTxt() {
+        if (!currentResultText && currentResultText !== '') {
+            alert('没有可下载的内容，请先转换');
+            return;
         }
+        const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+        const filename = `Ge32_groups_${timestamp}.txt`;
+        const blob = new Blob([currentResultText], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
     }
 
-    // 单张重绘功能
-    function regenerateImage(index, prompt) {
-        const apiKey = document.getElementById('apiKey').value;
-        if(!apiKey) return alert("API Key Missing");
-        
-        document.getElementById(`img-content-${index}`).style.display = 'none';
-        document.getElementById(`loading-${index}`).style.display = 'block';
-        callAliyunAPI(prompt, index, apiKey);
-    }
+    // 生成并下载 HTML 文件 (每组一个卡片，带复制按钮)
+    function downloadHtml() {
+        if (!currentGroupContents.length && currentGroupContents.length !== 0) {
+            alert('没有可下载的内容，请先转换');
+            return;
+        }
 
-    // ———— 截图保存功能 ————
-    async function captureCard(elementId, fileName) {
-        const element = document.getElementById(elementId);
-        const btn = event.currentTarget;
-        const originalText = btn.innerText;
-        btn.innerText = "⏳ 处理中...";
+        const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+        const filename = `Ge32_groups_${timestamp}.html`;
 
-        try {
-            const canvas = await html2canvas(element, {
-                useCORS: true, // 关键：允许跨域图片
-                scale: 2,
-                backgroundColor: "#ffffff",
-                logging: false,
-                allowTaint: true 
+        // 构建 HTML 内容
+        const recordItems = currentGroupContents.map((content, index) => {
+            // 转义内容中的特殊字符 (但保留换行，用 <br> 替换换行以便在HTML中显示)
+            const escapedContent = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            // 将换行符替换为 <br> 以便在 div 中正确换行
+            const htmlContent = escapedContent.replace(/\n/g, '<br>');
+            return `
+            <div class="record-card">
+                <div class="record-header">
+                    <span class="record-num">组 #${index+1}</span>
+                    <button class="copy-btn" data-index="${index}">📋 复制整组</button>
+                </div>
+                <div class="record-content" id="group-${index}">${htmlContent}</div>
+            </div>
+            `;
+        }).join('');
+
+        const htmlTemplate = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ge32 Prompt · 分组记录</title>
+    <style>
+        body {
+            background: #f4f7fc;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            padding: 30px 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h2 {
+            color: #1e3a5f;
+            border-bottom: 2px solid #b0c8e0;
+            padding-bottom: 8px;
+        }
+        .record-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 18px rgba(0,30,60,0.08);
+            padding: 1.2rem 1.8rem;
+            margin-bottom: 20px;
+            border: 1px solid #d4e0f0;
+            transition: 0.1s;
+        }
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .record-num {
+            font-weight: 650;
+            color: #1e5f9e;
+            background: #e1edff;
+            padding: 0.2rem 1.2rem;
+            border-radius: 30px;
+            font-size: 0.9rem;
+        }
+        .copy-btn {
+            background: #2e7d32;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 0.4rem 1.4rem;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(46,125,50,0.3);
+            border: 1px solid #1f6324;
+            transition: 0.1s;
+        }
+        .copy-btn:hover {
+            background: #1f6423;
+        }
+        .record-content {
+            background: #f3f8ff;
+            padding: 1rem 1.4rem;
+            border-radius: 18px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.95rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #113355;
+            border: 1px solid #cbd9ec;
+        }
+        .footer-info {
+            margin-top: 30px;
+            color: #557599;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h2>📋 Ge32 Prompt · 分组记录 (共 ${currentGroupContents.length} 组)</h2>
+    ${recordItems}
+    <div class="footer-info">点击复制按钮可复制对应组的完整内容（含提示词）</div>
+    <script>
+        // 复制功能
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const index = this.dataset.index;
+                const contentElement = document.getElementById('group-' + index);
+                if (!contentElement) return;
+                // 获取原始文本（去除HTML标签）
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = contentElement.innerHTML.replace(/<br>/g, '\\n');
+                const textToCopy = tempDiv.textContent || tempDiv.innerText;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const originalText = this.textContent;
+                    this.textContent = '✅ 已复制!';
+                    setTimeout(() => { this.textContent = originalText; }, 1500);
+                }).catch(err => {
+                    alert('复制失败，请手动选择复制');
+                });
             });
-            const link = document.createElement('a');
-            link.download = `${fileName}.png`;
-            link.href = canvas.toDataURL("image/png");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            btn.innerText = "✅ 已保存";
-            setTimeout(() => btn.innerText = originalText, 2000);
-        } catch (err) {
-            console.error(err);
-            alert("截图失败：请确保安装了'Allow CORS'插件，因为阿里图片服务器不允许直接在浏览器跨域截图。");
-            btn.innerText = "❌ 失败";
-        }
+        });
+    <\/script>
+</body>
+</html>`;
+
+        const blob = new Blob([htmlTemplate], { type: 'text/html;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
     }
 
-    async function downloadAll() {
-        if(!confirm("⚠️ 提示：\n确保所有图片都已加载完毕。\n确定打包下载吗？")) return;
-        const data = JSON.parse(document.getElementById('jsonInput').value);
-        for (let i = 0; i < data.paragraphs.length; i++) {
-            await captureCard(`card-node-${i}`, `Coffee_Series_${i+1}`);
-            await new Promise(r => setTimeout(r, 500)); 
+    // 下载 JSON 文件 (将 currentGroupContents 数组转为 JSON 字符串)
+    function downloadJson() {
+        if (!currentGroupContents.length && currentGroupContents.length !== 0) {
+            alert('没有可下载的内容，请先转换');
+            return;
         }
+        const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+        const filename = `Ge32_prompts_${timestamp}.json`;
+        // 格式化为带缩进的JSON，易于阅读
+        const jsonStr = JSON.stringify(currentGroupContents, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
     }
+
+    // 事件绑定
+    processBtn.addEventListener('click', () => {
+        const file = fileInput.files[0];
+        if (!file) {
+            showError('请先选择 Excel 文件');
+            return;
+        }
+        processExcel(file);
+    });
+
+    downloadTxtBtn.addEventListener('click', downloadTxt);
+    downloadHtmlBtn.addEventListener('click', downloadHtml);
+    downloadJsonBtn.addEventListener('click', downloadJson);
+
+    // 配置更改时禁用下载 (提醒重新转换)
+    fieldConfigTextarea.addEventListener('input', () => {
+        if (currentResultText) {
+            downloadTxtBtn.disabled = true;
+            downloadHtmlBtn.disabled = true;
+            downloadJsonBtn.disabled = true;
+        }
+    });
+
+    prefixInput.addEventListener('input', () => {
+        if (currentResultText) {
+            downloadTxtBtn.disabled = true;
+            downloadHtmlBtn.disabled = true;
+            downloadJsonBtn.disabled = true;
+        }
+        updatePrefixPreview();
+    });
+
+    batchSizeInput.addEventListener('input', () => {
+        if (currentResultText) {
+            downloadTxtBtn.disabled = true;
+            downloadHtmlBtn.disabled = true;
+            downloadJsonBtn.disabled = true;
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        hideError();
+    });
+
+    // 初始状态
+    downloadTxtBtn.disabled = true;
+    downloadHtmlBtn.disabled = true;
+    downloadJsonBtn.disabled = true;
+})();
 </script>
-
 </body>
 </html>
