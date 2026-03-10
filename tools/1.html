@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON 转 Excel 工具（反程序）</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        h2 {
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-weight: 400;
+        }
+        .sub {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+        .upload-area {
+            border: 2px dashed #4a90e2;
+            border-radius: 8px;
+            padding: 40px 20px;
+            background-color: #fafcff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 20px;
+        }
+        .upload-area:hover {
+            background-color: #eef6ff;
+        }
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        .upload-label {
+            font-size: 16px;
+            color: #4a90e2;
+            font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .upload-label svg {
+            width: 40px;
+            height: 40px;
+            fill: #4a90e2;
+        }
+        .file-info {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #333;
+            background: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        button {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #357abd;
+        }
+        button:disabled {
+            background-color: #b0c4de;
+            cursor: not-allowed;
+        }
+        .error {
+            color: #d32f2f;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .success {
+            color: #2e7d32;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .example {
+            margin-top: 25px;
+            font-size: 13px;
+            color: #888;
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: left;
+        }
+        .example pre {
+            margin: 5px 0 0;
+            background: #eee;
+            padding: 8px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+    <!-- 使用 SheetJS 库处理 Excel 生成 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2>📄 JSON 转 Excel (反程序)</h2>
+        <div class="sub">上传单层对象数组的 JSON，直接合成 Excel 文件</div>
+
+        <!-- 上传区域 -->
+        <div class="upload-area" id="dropArea">
+            <input type="file" id="fileInput" accept=".json,application/json" />
+            <label for="fileInput" class="upload-label">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path>
+                </svg>
+                <span>点击选择 JSON 文件 或 拖拽至此</span>
+            </label>
+        </div>
+
+        <!-- 显示选中的文件 -->
+        <div id="fileInfo" class="file-info" style="display: none;"></div>
+
+        <!-- 转换按钮 -->
+        <button id="convertBtn" disabled>⚙️ 转换为 Excel</button>
+
+        <!-- 提示信息 -->
+        <div id="message" class=""></div>
+
+        <!-- JSON 格式示例 -->
+        <div class="example">
+            <strong>✅ 支持的 JSON 格式：</strong> 一个数组，包含若干个单层对象。
+            <pre>[
+  {"姓名":"张三","年龄":30,"部门":"技术部"},
+  {"姓名":"李四","年龄":25,"部门":"市场部"},
+  {"姓名":"王五","年龄":35,"部门":"财务部"}
+]</pre>
+            <p style="margin:5px 0 0;">字段顺序将以 JSON 中第一个对象的键为准。空值将保留为空单元格。</p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const fileInput = document.getElementById('fileInput');
+            const dropArea = document.getElementById('dropArea');
+            const fileInfoDiv = document.getElementById('fileInfo');
+            const convertBtn = document.getElementById('convertBtn');
+            const messageDiv = document.getElementById('message');
+
+            let currentFile = null;
+            let jsonData = null;          // 存储解析后的 JSON 数据
+            let fileName = '';
+
+            // 清除消息样式
+            function clearMessage() {
+                messageDiv.className = '';
+                messageDiv.textContent = '';
+            }
+
+            // 显示错误信息
+            function showError(msg) {
+                messageDiv.className = 'error';
+                messageDiv.textContent = '❌ ' + msg;
+            }
+
+            // 显示成功信息
+            function showSuccess(msg) {
+                messageDiv.className = 'success';
+                messageDiv.textContent = '✅ ' + msg;
+            }
+
+            // 更新文件信息显示
+            function updateFileInfo(file) {
+                if (file) {
+                    fileInfoDiv.textContent = `已选择: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                    fileInfoDiv.style.display = 'inline-block';
+                    convertBtn.disabled = false;
+                } else {
+                    fileInfoDiv.style.display = 'none';
+                    convertBtn.disabled = true;
+                }
+            }
+
+            // 解析 JSON 文件内容
+            function parseJSONFile(file) {
+                clearMessage();
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const content = e.target.result;
+                        const parsed = JSON.parse(content);
+                        
+                        // 验证是否为数组且至少有一个元素
+                        if (!Array.isArray(parsed)) {
+                            throw new Error('JSON 根节点必须是数组');
+                        }
+                        if (parsed.length === 0) {
+                            throw new Error('数组不能为空，至少需要一个对象');
+                        }
+                        // 验证每个元素是否为对象（且不是数组）
+                        for (let i = 0; i < parsed.length; i++) {
+                            if (typeof parsed[i] !== 'object' || parsed[i] === null || Array.isArray(parsed[i])) {
+                                throw new Error(`第 ${i+1} 个元素不是合法的单层对象（不能是数组或 null）`);
+                            }
+                        }
+
+                        jsonData = parsed;
+                        fileName = file.name.replace(/\.json$/i, '') || 'output';
+                        showSuccess(`解析成功，共 ${parsed.length} 行记录`);
+                        convertBtn.disabled = false;  // 确保按钮可用
+                    } catch (err) {
+                        showError('JSON 格式错误：' + err.message);
+                        jsonData = null;
+                        convertBtn.disabled = true;
+                    }
+                };
+                reader.onerror = function() {
+                    showError('读取文件失败');
+                    jsonData = null;
+                    convertBtn.disabled = true;
+                };
+                reader.readAsText(file, 'UTF-8');
+            }
+
+            // 处理文件选择
+            function handleFileSelect(file) {
+                if (!file) return;
+                // 检查文件类型
+                if (!file.type.match('application/json') && !file.name.endsWith('.json')) {
+                    showError('请选择一个 JSON 文件（.json）');
+                    fileInput.value = ''; // 清空
+                    updateFileInfo(null);
+                    return;
+                }
+                currentFile = file;
+                updateFileInfo(file);
+                parseJSONFile(file);
+            }
+
+            // 监听文件选择变化
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                handleFileSelect(file);
+            });
+
+            // 拖拽上传
+            dropArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            // 拖拽事件处理
+            dropArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropArea.style.backgroundColor = '#eef6ff';
+                dropArea.style.borderColor = '#2a6fc9';
+            });
+
+            dropArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                dropArea.style.backgroundColor = '#fafcff';
+                dropArea.style.borderColor = '#4a90e2';
+            });
+
+            dropArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropArea.style.backgroundColor = '#fafcff';
+                dropArea.style.borderColor = '#4a90e2';
+                
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    // 手动设置 input 的文件（因为拖拽不会自动设置）
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelect(file);
+                }
+            });
+
+            // 转换按钮点击：生成 Excel 并下载
+            convertBtn.addEventListener('click', function() {
+                if (!jsonData || jsonData.length === 0) {
+                    showError('没有可用的数据，请先上传正确的 JSON 文件');
+                    return;
+                }
+
+                try {
+                    // 使用 SheetJS 将 JSON 数组转换为工作表
+                    // 注意：json_to_sheet 期望的格式正是 [{col1:val1, col2:val2}, ...]
+                    const ws = XLSX.utils.json_to_sheet(jsonData);
+
+                    // 创建工作簿
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+                    // 导出文件
+                    const excelFileName = `${fileName}.xlsx`;
+                    XLSX.writeFile(wb, excelFileName);
+
+                    showSuccess(`Excel 文件已生成: ${excelFileName}`);
+                } catch (err) {
+                    showError('生成 Excel 时出错：' + err.message);
+                }
+            });
+
+            // 初始状态
+            updateFileInfo(null);
+        })();
+    </script>
+</body>
+</html>
