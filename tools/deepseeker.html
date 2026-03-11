@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek 插件中心 - Ge32 Station</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google 字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- 引入 Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #05070a;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        /* 太空背景动画 */
+        .stars-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at center, #111827 0%, #05070a 100%);
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* 玻璃拟态卡片 */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        /* 霓虹文字效果 */
+        .neon-text {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        /* 代码块专属样式 */
+        .code-container {
+            background: #0d1117;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        pre {
+            margin: 0;
+            padding: 1.5rem;
+            overflow-x: auto;
+            max-height: 400px;
+            color: #a5d6ff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        /* 自定义滚动条 */
+        pre::-webkit-scrollbar { width: 8px; height: 8px; }
+        pre::-webkit-scrollbar-track { background: #0d1117; }
+        pre::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 4px; }
+        pre::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+
+        /* 复制按钮动画 */
+        .copy-btn {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 星空背景 -->
+    <div id="stars" class="stars-container"></div>
+
+    <div class="container mx-auto px-4 py-12 relative z-10 min-h-screen flex flex-col items-center">
+        
+        <!-- 返回主页按钮 -->
+        <div class="w-full max-w-4xl mb-8">
+            <a href="index.html" class="text-blue-400 hover:text-blue-300 transition-colors text-sm font-bold tracking-widest uppercase flex items-center">
+                <i class="fa-solid fa-arrow-left mr-2"></i> 返回主导航
+            </a>
+        </div>
+
+        <!-- 头部 -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter mb-4 neon-text italic uppercase">
+                DeepSeek 增强引擎
+            </h1>
+            <p class="text-gray-400 text-base md:text-lg font-light tracking-widest uppercase">
+                Ge32 工具箱 / 提供两种部署方式，自由选择
+            </p>
+            <div class="w-16 h-1 bg-blue-600 mx-auto mt-6 shadow-[0_0_15px_rgba(37,99,235,0.8)]"></div>
+        </header>
+
+        <!-- 内容区 -->
+        <div class="w-full max-w-4xl space-y-8">
+
+            <!-- 方式一：油猴插件版 -->
+            <div class="glass-card p-6 md:p-8 rounded-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-white flex items-center">
+                        <i class="fa-solid fa-plug text-blue-500 mr-3"></i> 方式一：油猴插件版 (推荐)
+                    </h2>
+                </div>
+                
+                <div class="mb-6 text-gray-400 text-sm space-y-2">
+                    <p><strong class="text-gray-200">特点：</strong>一劳永逸，每次打开 DeepSeek 自动加载。</p>
+                    <p><strong class="text-gray-200">教程：</strong>
+                        1. 浏览器安装 <a href="https://www.tampermonkey.net/" target="_blank" class="text-blue-400 hover:underline">Tampermonkey (油猴)</a> 扩展。<br>
+                        2. 点击复制下方代码，在油猴中点击"添加新脚本"，粘贴并保存。<br>
+                        3. 刷新 <a href="https://chat.deepseek.com/" target="_blank" class="text-blue-400 hover:underline">chat.deepseek.com</a> 页面即可看到控制面板。
+                    </p>
+                </div>
+
+                <div class="code-container">
+                    <button onclick="copyCode('script1', this)" class="copy-btn absolute top-3 right-3 bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded flex items-center gap-2 border border-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.3)] z-10">
+                        <i class="fa-regular fa-copy"></i> <span>复制代码</span>
+                    </button>
+                    <!-- 注意：HTML中需要将 < 和 > 转义为 &lt; 和 &gt; -->
+                    <pre id="script1"><code>// ==UserScript==
+// @name         OrbixMind DeepSeek Harvester (V9.0 - Titanium)
+// @namespace    http://tampermonkey.net/
+// @version      9.0
+// @description  钛金版：保留V8握手协议 + 回滚至V6强力发送内核 + 修复死锁问题
+// @author       Orbix Architect
+// @match        https://chat.deepseek.com/*
+// @grant        GM_addStyle
+// @run-at       document-end
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // ==========================================
+    // 1. 配置与状态 (保留 V8 架构)
+    // ==========================================
+    const CONFIG = {
+        templateSuffix: '_tp.txt',
+        cooldownMin: 3000,
+        cooldownMax: 6000,
+        responseTimeout: 300000, // 5分钟超时
+        pollInterval: 1000,
+    };
+
+    const STATE = {
+        isRunning: false,
+        queue: [],
+        currentIndex: 0,
+        directoryHandle: null,
+        templateCache: new Map(),
+        currentTemplate: "",
+        activeRequestId: null, // 握手ID
+        sentPromptHash: null   // 自读过滤Hash
+    };
+
+    // ==========================================
+    // 2. UI 引擎 (Cyberpunk Style)
+    // ==========================================
+    GM_addStyle(`
+        #orbix-dashboard {
+            position: fixed !important; top: 50px !important; right: 20px !important; width: 350px !important;
+            background: #000 !important; border: 2px solid #00ff00 !important; border-radius: 6px !important;
+            padding: 15px !important; z-index: 9999999 !important; font-family: monospace !important;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2) !important; color: #fff !important;
+        }
+        .orbix-btn {
+            background: #222; border: 1px solid #444; color: #fff; padding: 6px 12px; cursor: pointer;
+            width: 100%; margin-bottom: 5px; font-family: monospace; transition: all 0.2s;
+        }
+        .orbix-btn:hover { background: #333; border-color: #00ff00; }
+        .orbix-primary { background: #004400; border-color: #00ff00; color: #fff; font-weight: bold; }
+        .orbix-logger {
+            height: 120px; overflow-y: auto; background: #111; border: 1px solid #333;
+            font-size: 10px; padding: 5px; margin-top: 10px; color: #0f0; white-space: pre-wrap;
+        }
+        textarea.orbix-input {
+            width: 100%; height: 60px; background: #111; border: 1px solid #333; color: #fff;
+            font-family: monospace; padding: 5px; box-sizing: border-box;
+        }
+    `);
+
+    function initUI() {
+        if (document.getElementById('orbix-dashboard')) return;
+        const panel = document.createElement('div');
+        panel.id = 'orbix-dashboard';
+        panel.innerHTML = `
+            &lt;div style="font-weight:bold; border-bottom:1px solid #333; margin-bottom:10px; padding-bottom:5px;"&gt;
+                ORBIX V9.0 // TITANIUM
+            &lt;/div&gt;
+
+            &lt;button id="orbix-dir-btn" class="orbix-btn"&gt;1. 挂载目录&lt;/button&gt;
+
+            &lt;div style="display:flex; gap:5px; margin-bottom:5px;"&gt;
+                &lt;select id="orbix-tp-select" style="flex:1; background:#111; color:#fff; border:1px solid #333;"&gt;
+                    &lt;option&gt;等待挂载...&lt;/option&gt;
+                &lt;/select&gt;
+                &lt;button id="orbix-refresh-btn" class="orbix-btn" style="width:40px; margin:0;"&gt;↻&lt;/button&gt;
+            &lt;/div&gt;
+
+            &lt;button id="orbix-new-tp-btn" class="orbix-btn" style="font-size:10px;"&gt;📄 新建标准协议模板&lt;/button&gt;
+            &lt;textarea id="orbix-queue-input" class="orbix-input" placeholder="输入任务队列 (每行一个)..."&gt;&lt;/textarea&gt;
+
+            &lt;div style="display:flex; gap:5px; margin-top:5px;"&gt;
+                &lt;button id="orbix-start-btn" class="orbix-btn orbix-primary"&gt;▶ 启动&lt;/button&gt;
+                &lt;button id="orbix-stop-btn" class="orbix-btn"&gt;⏹ 停止&lt;/button&gt;
+            &lt;/div&gt;
+
+            &lt;div id="orbix-logger" class="orbix-logger"&gt;Waiting for command...&lt;/div&gt;
+        `;
+        document.body.appendChild(panel);
+
+        document.getElementById('orbix-dir-btn').onclick = selectDirectory;
+        document.getElementById('orbix-refresh-btn').onclick = refreshTemplates;
+        document.getElementById('orbix-new-tp-btn').onclick = createStandardTemplate;
+        document.getElementById('orbix-start-btn').onclick = startEngine;
+        document.getElementById('orbix-stop-btn').onclick = () =&gt; { STATE.isRunning = false; log('🛑 停止'); };
+        document.getElementById('orbix-tp-select').onchange = (e) =&gt; {
+            if (STATE.templateCache.has(e.target.value)) STATE.currentTemplate = STATE.templateCache.get(e.target.value);
+        };
+    }
+
+    function log(msg) {
+        const el = document.getElementById('orbix-logger');
+        if (el) {
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            el.innerHTML += `&lt;div&gt;[${time}] ${msg}&lt;/div&gt;`;
+            el.scrollTop = el.scrollHeight;
+        }
+    }
+
+    // ==========================================
+    // 3. 文件系统 (V8逻辑)
+    // ==========================================
+    async function selectDirectory() {
+        try {
+            STATE.directoryHandle = await window.showDirectoryPicker();
+            log(`✅ 目录: ${STATE.directoryHandle.name}`);
+            await refreshTemplates();
+        } catch (e) { log(`❌ ${e.message}`); }
+    }
+
+    async function refreshTemplates() {
+        if (!STATE.directoryHandle) return;
+        const select = document.getElementById('orbix-tp-select');
+        select.innerHTML = '&lt;option&gt;-- 选择模板 --&lt;/option&gt;';
+        STATE.templateCache.clear();
+        for await (const entry of STATE.directoryHandle.values()) {
+            if (entry.name.endsWith(CONFIG.templateSuffix)) {
+                const f = await (await STATE.directoryHandle.getFileHandle(entry.name)).getFile();
+                STATE.templateCache.set(entry.name, await f.text());
+                const opt = document.createElement('option');
+                opt.value = entry.name;
+                opt.textContent = entry.name;
+                select.appendChild(opt);
+            }
+        }
+        log('📋 模板刷新完毕');
+    }
+
+    async function createStandardTemplate() {
+        if (!STATE.directoryHandle) return alert("先挂载目录");
+        const content = `Topic: "{{topic}}"
+
+REQUIREMENTS:
+1. Output in Markdown.
+2. WRAP OUTPUT IN &lt;file&gt; TAGS.
+3. INCLUDE THE ID PROVIDED IN THE TAG.
+
+&lt;file name="{{topic}}_res.md"&gt;
+# {{topic}}
+[Content...]
+&lt;/file&gt;`;
+        try {
+            const h = await STATE.directoryHandle.getFileHandle(`V9_Standard${CONFIG.templateSuffix}`, { create: true });
+            const w = await h.createWritable();
+            await w.write(content);
+            await w.close();
+            await refreshTemplates();
+            log('✅ 标准模板已创建');
+        } catch (e) { log(e.message); }
+    }
+
+    // ==========================================
+    // 4. 核心引擎 (Titanium Core)
+    // ==========================================
+
+    // 工具：生成ID
+    const genId = () =&gt; 'req_' + Math.random().toString(36).substr(2, 6);
+    // 工具：Hash
+    const calcHash = (s) =&gt; s.split('').reduce((a, b) =&gt; { a = ((a &lt;&lt; 5) - a) + b.charCodeAt(0); return a &amp; a }, 0);
+    // 工具：注入ID
+    const injectId = (p, id) =&gt; p.includes('&lt;file') ? p.replace(/&lt;file/i, `&lt;file id="${id}"`) : p + `\n\n&lt;file id="${id}" name="out.md"&gt;...&lt;/file&gt;`;
+
+    async function startEngine() {
+        if (!STATE.directoryHandle) return alert("未挂载目录");
+        const input = document.getElementById('orbix-queue-input').value.trim();
+        if (!input) return alert("队列为空");
+
+        STATE.queue = input.split('\n').map(s =&gt; s.trim()).filter(s =&gt; s);
+        STATE.currentIndex = 0;
+        STATE.isRunning = true;
+
+        if (!STATE.currentTemplate) STATE.currentTemplate = `Write about {{topic}}. &lt;file&gt;Content&lt;/file&gt;`;
+
+        processNext();
+    }
+
+    async function processNext() {
+        if (!STATE.isRunning) return;
+        if (STATE.currentIndex &gt;= STATE.queue.length) { STATE.isRunning = false; log("🎉 完成"); return; }
+
+        const topic = STATE.queue[STATE.currentIndex];
+        log(`\n&gt;&gt;&gt; [${STATE.currentIndex+1}/${STATE.queue.length}] ${topic}`);
+
+        // 1. 准备数据
+        STATE.activeRequestId = genId();
+        let prompt = STATE.currentTemplate.replace(/{{topic}}/g, topic);
+        prompt = injectId(prompt, STATE.activeRequestId);
+        STATE.sentPromptHash = calcHash(prompt);
+
+        try {
+            // 2. 强力发送
+            await titaniumSend(prompt);
+
+            // 3. 握手等待
+            log("⏳ 等待握手响应...");
+            const result = await handshakeWait();
+
+            // 4. 保存
+            if (result) {
+                await saveToDisk(result.filename, result.content);
+                log(`💾 已保存: ${result.filename}`);
+            }
+
+            // 5. 冷却
+            STATE.currentIndex++;
+            const cd = Math.floor(Math.random() * (CONFIG.cooldownMax - CONFIG.cooldownMin) + CONFIG.cooldownMin);
+            log(`❄️ 冷却 ${(cd/1000).toFixed(1)}s...`);
+            await sleep(cd);
+            processNext();
+
+        } catch (e) {
+            log(`❌ ${e.message}`);
+            STATE.currentIndex++;
+            setTimeout(processNext, 3000);
+        }
+    }
+
+    // --- 模块 A: 钛金发送 ---
+    async function titaniumSend(text) {
+        const MAX_RETRIES = 5;
+        let retries = 0;
+
+        while (retries &lt; MAX_RETRIES &amp;&amp; STATE.isRunning) {
+            const textarea = document.querySelector('textarea');
+            if (!textarea) throw new Error("找不到输入框");
+
+            textarea.focus();
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+            nativeSetter.call(textarea, text);
+
+            const events = ['input', 'change', 'keydown', 'keypress', 'keyup'];
+            events.forEach(evt =&gt; textarea.dispatchEvent(new Event(evt, { bubbles: true })));
+
+            await sleep(1000);
+
+            const btns = Array.from(document.querySelectorAll('button, div[role="button"]'));
+            const sendBtn = btns.find(b =&gt; {
+                const html = b.innerHTML.toLowerCase();
+                const label = (b.getAttribute('aria-label') || '').toLowerCase();
+                const active = !b.disabled &amp;&amp; b.getAttribute('aria-disabled') !== 'true';
+                const match = label.includes('send') || label.includes('发送') || html.includes('path') || html.includes('svg');
+                return active &amp;&amp; match &amp;&amp; b.clientWidth &lt; 100;
+            });
+
+            if (sendBtn) {
+                sendBtn.click();
+            } else {
+                textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+            }
+
+            await sleep(1500); 
+            if (textarea.value.trim() === '') {
+                log("🚀 发送成功");
+                return true;
+            } else {
+                log(`⚠️ 发送未响应 (尝试 ${retries+1}/${MAX_RETRIES})`);
+                textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+                await sleep(1000);
+                if (textarea.value.trim() === '') return true;
+            }
+
+            retries++;
+        }
+        throw new Error("发送失败：输入框死锁");
+    }
+
+    // --- 模块 B: 握手等待 ---
+    async function handshakeWait() {
+        const start = Date.now();
+        while (Date.now() - start &lt; CONFIG.responseTimeout &amp;&amp; STATE.isRunning) {
+            await sleep(1000);
+
+            const msgs = document.querySelectorAll('.ds-markdown, .markdown-body');
+            if (msgs.length === 0) continue;
+
+            for (let i = msgs.length - 1; i &gt;= 0; i--) {
+                const text = msgs[i].innerText;
+
+                if (!text.includes(STATE.activeRequestId)) continue;
+                if (!text.includes('&lt;/file&gt;')) continue;
+                if (calcHash(text) === STATE.sentPromptHash) continue;
+
+                const fileData = extractFile(text);
+                if (fileData) return fileData;
+            }
+        }
+        throw new Error("响应超时");
+    }
+
+    // --- 模块 C: 文件与工具 ---
+    function extractFile(text) {
+        const id = STATE.activeRequestId;
+        const regex = new RegExp(`&lt;file[^&gt;]*id="${id}"[^&gt;]*&gt;([\\s\\S]*?)&lt;\\/file&gt;`, 'i');
+        const match = regex.exec(text);
+        if (match) {
+            const nameMatch = text.match(/name="([^"]+)"/);
+            return {
+                filename: nameMatch ? nameMatch[1] : `${id}.md`,
+                content: match[1].trim()
+            };
+        }
+        return null;
+    }
+
+    async function saveToDisk(name, content) {
+        if (!STATE.directoryHandle) return;
+        try {
+            const safeName = name.replace(/[\\/:*?"&lt;&gt;|]/g, '_');
+            const h = await STATE.directoryHandle.getFileHandle(safeName, { create: true });
+            const w = await h.createWritable();
+            await w.write(content);
+            await w.close();
+        } catch(e) { log(`保存错: ${e.message}`); }
+    }
+
+    function sleep(ms) { return new Promise(r =&gt; setTimeout(r, ms)); }
+
+    setTimeout(initUI, 1500);
+})();</code></pre>
+                </div>
+            </div>
+
+            <!-- 方式二：浏览器控制台免安装版 -->
+            <div class="glass-card p-6 md:p-8 rounded-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-white flex items-center">
+                        <i class="fa-solid fa-terminal text-blue-500 mr-3"></i> 方式二：控制台极速版 (免安装)
+                    </h2>
+                </div>
+
+                <div class="mb-6 text-gray-400 text-sm space-y-2">
+                    <p><strong class="text-gray-200">特点：</strong>即插即用，无需安装任何扩展，随取随用。</p>
+                    <p><strong class="text-gray-200">教程：</strong>
+                        1. 打开并登录 <a href="https://chat.deepseek.com/" target="_blank" class="text-blue-400 hover:underline">chat.deepseek.com</a>。<br>
+                        2. 键盘按下 <kbd class="bg-gray-800 px-1.5 rounded">F12</kbd> (Mac 快捷键 <kbd class="bg-gray-800 px-1.5 rounded">Cmd+Opt+J</kbd>) 打开开发者工具。<br>
+                        3. 切换到 <strong>Console (控制台)</strong> 标签，粘贴下方代码并按回车运行。
+                    </p>
+                </div>
+
+                <div class="code-container">
+                    <button onclick="copyCode('script2', this)" class="copy-btn absolute top-3 right-3 bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded flex items-center gap-2 border border-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.3)] z-10">
+                        <i class="fa-regular fa-copy"></i> <span>复制代码</span>
+                    </button>
+                    <!-- 注意转义 -->
+                    <pre id="script2"><code>// Ge32 DeepSeeker - 使用方法
+// 直接复制到浏览器控制台运行（需在 chat.deepseek.com 页面）
+
+(function() {
+    'use strict';
+
+    // ==========================================
+    // 1. 配置与状态
+    // ==========================================
+    const CONFIG = {
+        cooldownMin: 3000,
+        cooldownMax: 6000,
+        responseTimeout: 300000,      // 5分钟超时
+        stabilityChecks: 3,            // 连续多少次内容相同视为完成
+        checkInterval: 1000,
+    };
+
+    const STATE = {
+        isRunning: false,
+        queue: [],
+        currentIndex: 0,
+        lastMessageCount: 0,
+    };
+
+    // ==========================================
+    // 2. UI 创建 (暗黑可拖动)
+    // ==========================================
+    function createUI() {
+        if (document.getElementById('ge32-dashboard')) return;
+
+        const style = document.createElement('style');
+        style.textContent = `
+            #ge32-dashboard {
+                position: fixed !important;
+                top: 80px !important;
+                right: 20px !important;
+                width: 400px !important;
+                height: 350px !important;
+                background: #1e1e2f !important;
+                border: 1px solid #3e3e5e !important;
+                border-radius: 8px !important;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+                color: #e0e0ff !important;
+                font-family: 'Segoe UI', 'Roboto', monospace !important;
+                font-size: 13px !important;
+                z-index: 9999999 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                padding: 0 !important;
+                resize: none !important;
+                overflow: hidden !important;
+                cursor: grab !important;
+                user-select: none !important;
+            }
+            #ge32-dashboard:active { cursor: grabbing !important; }
+            #ge32-header {
+                background: #2a2a3c !important;
+                padding: 8px 12px !important;
+                border-bottom: 1px solid #3e3e5e !important;
+                font-weight: bold !important;
+                font-size: 14px !important;
+                color: #a0a0ff !important;
+                border-radius: 8px 8px 0 0 !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                cursor: grab !important;
+            }
+            #ge32-header span { cursor: grab !important; }
+            #ge32-content {
+                flex: 1 !important;
+                padding: 12px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 10px !important;
+                background: #1e1e2f !important;
+                overflow: hidden !important;
+                cursor: default !important;
+            }
+            .ge32-label {
+                color: #b0b0ff !important;
+                font-size: 12px !important;
+                margin-bottom: 2px !important;
+            }
+            #ge32-queue-input {
+                width: 100% !important;
+                height: 80px !important;
+                background: #2a2a3c !important;
+                border: 1px solid #3e3e5e !important;
+                border-radius: 4px !important;
+                color: #e0e0ff !important;
+                font-family: monospace !important;
+                font-size: 12px !important;
+                padding: 6px !important;
+                resize: none !important;
+                box-sizing: border-box !important;
+            }
+            #ge32-queue-input:focus { outline: 1px solid #6a6aff !important; }
+            .ge32-button-row { display: flex !important; gap: 8px !important; margin-top: 4px !important; }
+            .ge32-btn {
+                background: #2a2a3c !important;
+                border: 1px solid #4a4a6a !important;
+                color: #d0d0ff !important;
+                padding: 6px 0 !important;
+                border-radius: 4px !important;
+                font-family: inherit !important;
+                font-size: 12px !important;
+                font-weight: 500 !important;
+                cursor: pointer !important;
+                flex: 1 !important;
+                transition: 0.2s !important;
+            }
+            .ge32-btn:hover { background: #3a3a50 !important; border-color: #6a6aff !important; }
+            .ge32-btn.primary { background: #3a3a6a !important; border-color: #8a8aff !important; color: white !important; }
+            .ge32-btn.primary:hover { background: #4a4a7a !important; }
+            #ge32-logger {
+                background: #11111f !important;
+                border: 1px solid #3e3e5e !important;
+                border-radius: 4px !important;
+                padding: 6px !important;
+                height: 120px !important;
+                overflow-y: auto !important;
+                font-family: monospace !important;
+                font-size: 11px !important;
+                color: #80ff80 !important;
+                line-height: 1.4 !important;
+                white-space: pre-wrap !important;
+                word-break: break-word !important;
+                margin-top: 4px !important;
+            }
+            #ge32-logger div { margin-bottom: 2px !important; border-bottom: 1px dotted #2a2a3c !important; }
+        `;
+        document.head.appendChild(style);
+
+        const panel = document.createElement('div');
+        panel.id = 'ge32-dashboard';
+        panel.innerHTML = `
+            &lt;div id="ge32-header"&gt;
+                &lt;span&gt;⚡ Ge32 DeepSeeker&lt;/span&gt;
+                &lt;span style="font-size:10px; opacity:0.5;"&gt;拖动&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div id="ge32-content"&gt;
+                &lt;div&gt;
+                    &lt;div class="ge32-label"&gt;📦 JSON 任务列表&lt;/div&gt;
+                    &lt;textarea id="ge32-queue-input" placeholder='["提示词1", "提示词2", ...]'&gt;&lt;/textarea&gt;
+                &lt;/div&gt;
+                &lt;div class="ge32-button-row"&gt;
+                    &lt;button id="ge32-start-btn" class="ge32-btn primary"&gt;▶ 启动&lt;/button&gt;
+                    &lt;button id="ge32-stop-btn" class="ge32-btn"&gt;⏹ 停止&lt;/button&gt;
+                &lt;/div&gt;
+                &lt;div&gt;
+                    &lt;div class="ge32-label"&gt;📋 日志&lt;/div&gt;
+                    &lt;div id="ge32-logger"&gt;就绪&lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        `;
+        document.body.appendChild(panel);
+
+        let isDragging = false;
+        let offsetX, offsetY;
+        const header = document.getElementById('ge32-header');
+        header.addEventListener('mousedown', (e) =&gt; {
+            isDragging = true;
+            const rect = panel.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            panel.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) =&gt; {
+            if (!isDragging) return;
+            panel.style.left = (e.clientX - offsetX) + 'px';
+            panel.style.top = (e.clientY - offsetY) + 'px';
+            panel.style.right = 'auto';
+        });
+
+        document.addEventListener('mouseup', () =&gt; {
+            isDragging = false;
+            panel.style.cursor = 'grab';
+        });
+
+        document.getElementById('ge32-start-btn').onclick = startEngine;
+        document.getElementById('ge32-stop-btn').onclick = () =&gt; {
+            STATE.isRunning = false;
+            log('🛑 已停止');
+        };
+    }
+
+    function log(msg) {
+        const el = document.getElementById('ge32-logger');
+        if (el) {
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            el.innerHTML += `&lt;div&gt;[${time}] ${msg}&lt;/div&gt;`;
+            el.scrollTop = el.scrollHeight;
+        }
+    }
+
+    // ==========================================
+    // 3. 核心引擎
+    // ==========================================
+    const sleep = (ms) =&gt; new Promise(r =&gt; setTimeout(r, ms));
+
+    function getMessages() { return document.querySelectorAll('.ds-markdown, .markdown-body'); }
+
+    async function waitForMessageCount(targetCount, timeout = 30000) {
+        const start = Date.now();
+        while (Date.now() - start &lt; timeout) {
+            if (getMessages().length &gt;= targetCount) return true;
+            await sleep(CONFIG.checkInterval);
+        }
+        return false;
+    }
+
+    async function waitForContentStable(messageElement, timeout = CONFIG.responseTimeout) {
+        let lastContent = '';
+        let stableCount = 0;
+        const start = Date.now();
+
+        while (Date.now() - start &lt; timeout) {
+            const current = messageElement.innerText;
+            if (current === lastContent) {
+                stableCount++;
+                if (stableCount &gt;= CONFIG.stabilityChecks) return current;
+            } else {
+                stableCount = 0;
+                lastContent = current;
+            }
+            await sleep(800);
+        }
+        return messageElement.innerText;
+    }
+
+    async function sendPrompt(text) {
+        const MAX_RETRIES = 5;
+        let retries = 0;
+
+        while (retries &lt; MAX_RETRIES &amp;&amp; STATE.isRunning) {
+            const textarea = document.querySelector('textarea');
+            if (!textarea) throw new Error('找不到输入框');
+
+            textarea.focus();
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+            nativeSetter.call(textarea, text);
+
+            ['input', 'change', 'keydown', 'keypress', 'keyup'].forEach(evt =&gt;
+                textarea.dispatchEvent(new Event(evt, { bubbles: true }))
+            );
+
+            await sleep(1000);
+
+            const btns = Array.from(document.querySelectorAll('button, div[role="button"]'));
+            const sendBtn = btns.find(b =&gt; {
+                const html = b.innerHTML.toLowerCase();
+                const label = (b.getAttribute('aria-label') || '').toLowerCase();
+                const active = !b.disabled &amp;&amp; b.getAttribute('aria-disabled') !== 'true';
+                const match = label.includes('send') || label.includes('发送') || html.includes('path') || html.includes('svg');
+                return active &amp;&amp; match &amp;&amp; b.clientWidth &lt; 100;
+            });
+
+            if (sendBtn) {
+                sendBtn.click();
+            } else {
+                textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+            }
+
+            await sleep(1500);
+            if (textarea.value.trim() === '') {
+                log('🚀 发送成功');
+                return true;
+            } else {
+                log(`⚠️ 发送未响应 (尝试 ${retries+1}/${MAX_RETRIES})`);
+                textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+                await sleep(1000);
+                if (textarea.value.trim() === '') return true;
+            }
+            retries++;
+        }
+        throw new Error('发送失败：输入框死锁');
+    }
+
+    async function waitForResponse() {
+        const initialCount = getMessages().length;
+        const targetUserCount = initialCount + 1;
+
+        if (!(await waitForMessageCount(targetUserCount, 30000))) throw new Error('用户消息未出现');
+
+        const targetAICount = targetUserCount + 1;
+        if (!(await waitForMessageCount(targetAICount, CONFIG.responseTimeout))) throw new Error('AI响应超时');
+
+        const messages = getMessages();
+        const latestMsg = messages[messages.length - 1];
+
+        return await waitForContentStable(latestMsg, CONFIG.responseTimeout);
+    }
+
+    async function processNext() {
+        if (!STATE.isRunning) return;
+        if (STATE.currentIndex &gt;= STATE.queue.length) {
+            STATE.isRunning = false;
+            log('🎉 所有任务完成');
+            return;
+        }
+
+        const prompt = STATE.queue[STATE.currentIndex];
+        log(`\n&gt;&gt;&gt; [${STATE.currentIndex+1}/${STATE.queue.length}] 发送...`);
+
+        try {
+            await sendPrompt(prompt);
+            log('⏳ 等待 AI 响应...');
+            const response = await waitForResponse();
+            log(`💬 收到响应 (${response.length} 字符)`);
+            log(`📄 预览: ${response.substring(0, 100)}...`);
+
+            STATE.currentIndex++;
+            const cd = Math.floor(Math.random() * (CONFIG.cooldownMax - CONFIG.cooldownMin) + CONFIG.cooldownMin);
+            log(`❄️ 冷却 ${(cd/1000).toFixed(1)}s...`);
+            await sleep(cd);
+            processNext();
+        } catch (err) {
+            log(`❌ 错误: ${err.message}`);
+            STATE.currentIndex++;
+            await sleep(3000);
+            processNext();
+        }
+    }
+
+    function startEngine() {
+        const raw = document.getElementById('ge32-queue-input').value.trim();
+        if (!raw) { log('❌ 请输入JSON任务列表'); return; }
+
+        try {
+            const taskArray = JSON.parse(raw);
+            if (!Array.isArray(taskArray)) throw new Error('不是数组');
+            STATE.queue = taskArray.filter(item =&gt; typeof item === 'string' &amp;&amp; item.trim() !== '');
+        } catch (e) {
+            log('❌ JSON 解析失败，格式示例: ["task1", "task2"]');
+            return;
+        }
+
+        STATE.currentIndex = 0;
+        STATE.isRunning = true;
+        log(`🚀 启动，共 ${STATE.queue.length} 个任务`);
+        processNext();
+    }
+
+    setTimeout(createUI, 1500);
+})();</code></pre>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="mt-20 text-center text-gray-500 text-sm tracking-widest uppercase">
+            &copy; 2024 Ge32 Aerospace & AI. All rights reserved.
+        </footer>
+    </div>
+
+    <script>
+        // 生成星空背景 (与主站一致)
+        function createStars() {
+            const container = document.getElementById('stars');
+            const starCount = 150;
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2 + 'px';
+                star.style.width = size;
+                star.style.height = size;
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+                container.appendChild(star);
+            }
+        }
+
+        // 一键复制代码逻辑
+        function copyCode(elementId, btnElement) {
+            const codeEl = document.getElementById(elementId);
+            // 这里因为预先使用 &lt; 和 &gt; 转义，复制时 innerText 会自动还原正常代码
+            const codeText = codeEl.innerText;
+
+            navigator.clipboard.writeText(codeText).then(() => {
+                // 保存原始HTML
+                const originalHTML = btnElement.innerHTML;
+                
+                // 变成绿色成功状态
+                btnElement.innerHTML = '<i class="fa-solid fa-check"></i> <span>已复制！</span>';
+                btnElement.classList.replace('bg-blue-600', 'bg-green-600');
+                btnElement.classList.replace('hover:bg-blue-500', 'hover:bg-green-500');
+                btnElement.classList.replace('border-blue-500', 'border-green-500');
+                btnElement.classList.replace('shadow-[0_0_10px_rgba(37,99,235,0.3)]', 'shadow-[0_0_10px_rgba(34,197,94,0.4)]');
+
+                // 2秒后恢复原样
+                setTimeout(() => {
+                    btnElement.innerHTML = originalHTML;
+                    btnElement.classList.replace('bg-green-600', 'bg-blue-600');
+                    btnElement.classList.replace('hover:bg-green-500', 'hover:bg-blue-500');
+                    btnElement.classList.replace('border-green-500', 'border-blue-500');
+                    btnElement.classList.replace('shadow-[0_0_10px_rgba(34,197,94,0.4)]', 'shadow-[0_0_10px_rgba(37,99,235,0.3)]');
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败', err);
+                alert("复制失败，请手动选择复制。");
+            });
+        }
+
+        // 初始化
+        window.onload = () => {
+            createStars();
+        };
+    </script>
+</body>
+</html>
