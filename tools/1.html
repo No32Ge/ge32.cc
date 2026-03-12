@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>违禁词查询系统 · 文本/Excel标黄工具</title>
+    <!-- 引入 ExcelJS 用于处理 .xlsx 样式 (单元格背景色) -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f3f5f9;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            padding: 30px;
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #0b1b33;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h1 small {
+            font-size: 0.9rem;
+            font-weight: 400;
+            background: #eef2ff;
+            color: #1e3a8a;
+            padding: 4px 12px;
+            border-radius: 40px;
+            margin-left: 12px;
+        }
+        .sub {
+            color: #4a5a72;
+            margin-bottom: 30px;
+            border-left: 4px solid #fbbf24;
+            padding-left: 18px;
+            background: #f8fafc;
+            border-radius: 0 12px 12px 0;
+            line-height: 1.5;
+        }
+        /* 配置区域 */
+        .config-section {
+            background: #f9fafc;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 28px;
+            border: 1px solid #e6edf4;
+        }
+        .section-title {
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            color: #1f2a44;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title span {
+            background: #1f2a44;
+            color: white;
+            font-size: 0.8rem;
+            padding: 2px 10px;
+            border-radius: 30px;
+        }
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 16px 14px;
+            border-radius: 18px;
+            border: 1px solid #dee7f0;
+            min-height: 70px;
+            align-items: center;
+        }
+        .tag {
+            background: #e5edf5;
+            color: #153b6f;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            transition: 0.1s;
+            border: 1px solid #cbd6e4;
+        }
+        .tag button {
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            color: #6f7d95;
+            font-weight: bold;
+            padding: 0 2px;
+            transition: 0.1s;
+        }
+        .tag button:hover {
+            color: #b91c1c;
+        }
+        .add-word {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .add-word input {
+            flex: 2 1 250px;
+            padding: 12px 18px;
+            border: 1px solid #ccd9e9;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            background: white;
+            outline: none;
+            transition: 0.15s;
+        }
+        .add-word input:focus {
+            border-color: #3b6eff;
+            box-shadow: 0 0 0 3px rgba(59,110,255,0.15);
+        }
+        .btn {
+            background: white;
+            border: 1px solid #bdcbdf;
+            padding: 10px 22px;
+            border-radius: 40px;
+            font-weight: 500;
+            color: #1f2a44;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        .btn-primary {
+            background: #1e2f5a;
+            border: 1px solid #10213e;
+            color: white;
+            box-shadow: 0 6px 12px rgba(20,40,80,0.15);
+        }
+        .btn-primary:hover {
+            background: #2b3f70;
+        }
+        .btn-warning {
+            background: #fef9e7;
+            border-color: #f5d98f;
+            color: #7a5d00;
+        }
+        .btn-warning:hover {
+            background: #fff1c8;
+        }
+        .json-area {
+            margin-top: 20px;
+            background: white;
+            border-radius: 18px;
+            border: 1px solid #dee7f0;
+            padding: 16px;
+        }
+        .json-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .json-row textarea {
+            flex: 3 1 300px;
+            height: 90px;
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid #ccd9e9;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+            background: #f5f8ff;
+        }
+        .json-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        /* 固定大小的文本输入框区域 */
+        .input-fixed-box {
+            margin: 30px 0 20px;
+        }
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: #1e2e4a;
+        }
+        .fixed-textarea {
+            width: 100%;
+            height: 200px;          /* 固定高度 */
+            min-height: 200px;
+            max-height: 200px;       /* 固定不允许拉伸 */
+            padding: 18px;
+            border: 1px solid #c9d6e8;
+            border-radius: 24px;
+            font-size: 1rem;
+            line-height: 1.5;
+            resize: none;            /* 完全固定大小 */
+            overflow: auto;           /* 内容过多时滚动 */
+            background: #ffffff;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .fixed-textarea:focus {
+            border-color: #3b6eff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59,110,255,0.2), inset 0 1px 4px #eee;
+        }
+        /* 上传文件控件 */
+        .file-area {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin: 20px 0 25px;
+            background: #f1f5f9;
+            padding: 12px 20px;
+            border-radius: 50px;
+        }
+        .file-label {
+            background: #ffffff;
+            border: 1px solid #a0b8d0;
+            padding: 8px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .file-label:hover {
+            background: #e9f0fa;
+        }
+        #file-info {
+            color: #264d7c;
+            font-size: 0.95rem;
+        }
+        .run-btn {
+            background: #fbbf24;
+            border: none;
+            color: #1e293b;
+            font-weight: 700;
+            font-size: 1.3rem;
+            padding: 16px 40px;
+            border-radius: 60px;
+            box-shadow: 0 12px 24px -8px #fbbf2480;
+            width: 100%;
+            transition: 0.2s;
+            letter-spacing: 1px;
+            margin: 20px 0 30px;
+            border: 1px solid #eab308;
+        }
+        .run-btn:hover {
+            background: #f59e0b;
+            box-shadow: 0 18px 30px -8px #f59e0b;
+            transform: scale(1.01);
+            color: white;
+        }
+        /* 文本高亮结果区 */
+        .result-area {
+            background: #f8fafc;
+            border-radius: 24px;
+            padding: 20px;
+            border: 1px solid #dce5f0;
+        }
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #163456;
+        }
+        .highlight-box {
+            background: white;
+            border-radius: 18px;
+            padding: 18px;
+            border: 1px solid #d2dfef;
+            max-height: 300px;
+            overflow: auto;
+            white-space: pre-wrap;       /* 保留换行，自动换行 */
+            font-size: 1rem;
+            line-height: 1.6;
+            font-family: 'Segoe UI', monospace;
+        }
+        mark {
+            background-color: #fefe00;    /* 亮黄色 */
+            color: black;
+            padding: 0 2px;
+            border-radius: 6px;
+            font-weight: 500;
+            border: 1px solid #e6c200;
+        }
+        .footer-note {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #6f7d99;
+            text-align: center;
+        }
+        hr {
+            border: 1px solid #e2eaf3;
+            margin: 24px 0 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>
+        ⚠️ 违禁词查询系统
+        <small>Excel标黄 / 文本高亮</small>
+    </h1>
+    <div class="sub">🔧 配置违禁词（不区分大小写）— 支持手动添加/删除，JSON导入/导出。下方固定输入框可键入文本或上传Excel。</div>
+
+    <!-- ========= 配置区域 ========= -->
+    <div class="config-section">
+        <div class="section-title"><span>❶</span> 当前违禁词列表</div>
+        <div class="tag-list" id="tagListContainer">
+            <!-- 动态渲染tag -->
+        </div>
+
+        <!-- 手动添加行 -->
+        <div class="add-word">
+            <input type="text" id="newWordInput" placeholder="输入新违禁词，例如：暴力、政治...">
+            <button class="btn btn-primary" id="addWordBtn">➕ 添加</button>
+            <button class="btn" id="clearAllBtn">🗑️ 清空所有</button>
+        </div>
+
+        <!-- JSON 导入/导出 区域（含可编辑textarea） -->
+        <div class="json-area">
+            <div style="font-weight:500; margin-bottom:8px;">📋 JSON 配置（可编辑/导入/导出）</div>
+            <div class="json-row">
+                <textarea id="jsonTextarea" placeholder='["违禁词1", "违禁词2"]' spellcheck="false"></textarea>
+                <div class="json-actions">
+                    <button class="btn btn-warning" id="importJsonBtn">📥 从JSON更新</button>
+                    <button class="btn" id="exportJsonFileBtn">📎 导出为.json文件</button>
+                    <button class="btn" id="importJsonFileBtn">📂 导入json文件</button>
+                </div>
+            </div>
+            <div style="font-size:0.85rem; margin-top:10px; color:#4b6589;">点击“从JSON更新”会解析上方文本域并替换列表（需合法数组）。导入文件将读取后自动填充到文本域，需手动点击更新。</div>
+        </div>
+    </div>
+
+    <!-- ========= 固定大小的文本输入框 ========= -->
+    <div class="input-fixed-box">
+        <div class="label-row">
+            <span>📄 文本输入区 (固定大小，可滚动) </span>
+            <span style="color:#497cad;">也可以直接上传Excel，优先处理文件</span>
+        </div>
+        <textarea id="mainTextInput" class="fixed-textarea" placeholder="在这里输入要检查的文本...&#10;例如：这是一段包含某些违禁词的测试内容。&#10;如果上传了Excel，将忽略此框内容，直接处理表格。"></textarea>
+    </div>
+
+    <!-- ========= Excel 文件上传 ========= -->
+    <div class="file-area">
+        <label for="excelUpload" class="file-label">📁 选择Excel文件 (.xlsx)</label>
+        <input type="file" id="excelUpload" accept=".xlsx, .xlsm" style="display:none;">
+        <span id="file-info">未选择任何文件</span>
+        <button class="btn" id="clearFileBtn">❌ 清除文件</button>
+    </div>
+
+    <!-- ========= 主运行按钮 ========= -->
+    <button class="run-btn" id="runBtn">▶ 运行检测 (Run)</button>
+
+    <!-- ========= 结果展示区域 (文本高亮) ========= -->
+    <div class="result-area">
+        <div class="result-title">✨ 文本检测结果 (违禁词标黄)  — 若上传Excel则直接下载标黄文件，此处忽略</div>
+        <div class="highlight-box" id="highlightResult">
+            <span style="color:#9aaec6;">暂无结果，点击“运行检测”后根据文本内容显示高亮</span>
+        </div>
+    </div>
+    <hr>
+    <div class="footer-note">
+        ⚡ 检测规则：只要单元格/文本包含违禁词即标黄（不区分大小写）。Excel处理会保留原样式，背景覆盖为黄色。支持多sheet。
+    </div>
+</div>
+
+<script>
+    (function() {
+        // --- 核心数据：违禁词数组 (全部小写存储用于比较，但展示原词)
+        let forbiddenWords = [];
+
+        // --- DOM 元素
+        const tagContainer = document.getElementById('tagListContainer');
+        const newWordInput = document.getElementById('newWordInput');
+        const addWordBtn = document.getElementById('addWordBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const jsonTextarea = document.getElementById('jsonTextarea');
+        const importJsonBtn = document.getElementById('importJsonBtn');
+        const exportJsonFileBtn = document.getElementById('exportJsonFileBtn');
+        const importJsonFileBtn = document.getElementById('importJsonFileBtn');
+        const mainTextInput = document.getElementById('mainTextInput');
+        const excelUpload = document.getElementById('excelUpload');
+        const fileInfo = document.getElementById('file-info');
+        const clearFileBtn = document.getElementById('clearFileBtn');
+        const runBtn = document.getElementById('runBtn');
+        const highlightResult = document.getElementById('highlightResult');
+
+        // --- 辅助函数：渲染违禁词tag
+        function renderTags() {
+            if (forbiddenWords.length === 0) {
+                tagContainer.innerHTML = '<div style="color:#9aaec6; font-style:italic;">暂无违禁词，请手动添加或导入JSON</div>';
+                return;
+            }
+            let html = '';
+            forbiddenWords.forEach((word, index) => {
+                html += `<span class="tag">${escapeHtml(word)} <button class="remove-tag" data-index="${index}">✕</button></span>`;
+            });
+            tagContainer.innerHTML = html;
+
+            // 绑定删除事件
+            document.querySelectorAll('.remove-tag').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = btn.getAttribute('data-index');
+                    if (idx !== null) {
+                        forbiddenWords.splice(idx, 1);
+                        syncJsonTextarea();
+                        renderTags();
+                    }
+                });
+            });
+        }
+
+        // 简单转义（防止XSS，tag内容安全）
+        function escapeHtml(unsafe) {
+            return unsafe.replace(/[&<>"]/g, function(m) {
+                if(m === '&') return '&amp;'; if(m === '<') return '&lt;'; if(m === '>') return '&gt;'; if(m === '"') return '&quot;';
+                return m;
+            });
+        }
+
+        // 同步JSON文本域 (pretty)
+        function syncJsonTextarea() {
+            jsonTextarea.value = JSON.stringify(forbiddenWords, null, 2);
+        }
+
+        // 从JSON文本域解析并更新数组（带校验）
+        function updateFromJsonString(jsonStr) {
+            try {
+                const parsed = JSON.parse(jsonStr);
+                if (!Array.isArray(parsed)) throw new Error('必须是一个数组');
+                // 过滤出字符串，去空，去重（简单去重保留首次）
+                const words = parsed.filter(item => typeof item === 'string').map(s => s.trim()).filter(s => s !== '');
+                // 去重 (保留顺序)
+                const unique = [];
+                const set = new Set();
+                for (let w of words) {
+                    if (!set.has(w)) {
+                        set.add(w);
+                        unique.push(w);
+                    }
+                }
+                forbiddenWords = unique;
+                renderTags();
+                syncJsonTextarea();
+            } catch (e) {
+                alert('JSON 解析失败：' + e.message);
+            }
+        }
+
+        // --- 初始化渲染
+        renderTags();
+        syncJsonTextarea();
+
+        // --- 事件绑定
+
+        // 1. 手动添加违禁词
+        addWordBtn.addEventListener('click', () => {
+            const newWord = newWordInput.value.trim();
+            if (newWord === '') {
+                alert('请输入要添加的违禁词');
+                return;
+            }
+            // 不区分大小写，但保留原词显示，避免完全重复（大小写不同仍视为不同？简单起见完全相同的原词去重，可忽略大小写去重，这里更自然）
+            // 做简单去重（保留首次出现的写法，忽略大小写比较）
+            const exists = forbiddenWords.some(w => w.toLowerCase() === newWord.toLowerCase());
+            if (exists) {
+                alert(`违禁词“${newWord}”已存在（忽略大小写）`);
+            } else {
+                forbiddenWords.push(newWord);
+                renderTags();
+                syncJsonTextarea();
+            }
+            newWordInput.value = '';
+        });
+
+        // 2. 清空所有
+        clearAllBtn.addEventListener('click', () => {
+            if (forbiddenWords.length > 0 && confirm('确定清空所有违禁词吗？')) {
+                forbiddenWords = [];
+                renderTags();
+                syncJsonTextarea();
+            }
+        });
+
+        // 3. 从JSON文本域更新
+        importJsonBtn.addEventListener('click', () => {
+            updateFromJsonString(jsonTextarea.value);
+        });
+
+        // 4. 导出为.json文件
+        exportJsonFileBtn.addEventListener('click', () => {
+            const dataStr = JSON.stringify(forbiddenWords, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'forbidden_words.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // 5. 导入json文件 (读取后填入文本域，但不自动更新，让用户手动点更新)
+        importJsonFileBtn.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json,application/json';
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    jsonTextarea.value = ev.target.result;
+                    // 可选项：自动更新？我们手动让用户更新，更安全
+                };
+                reader.readAsText(file);
+            };
+            fileInput.click();
+        });
+
+        // --- 文件上传相关
+        excelUpload.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                fileInfo.textContent = `已选择: ${this.files[0].name}`;
+            } else {
+                fileInfo.textContent = '未选择任何文件';
+            }
+        });
+
+        clearFileBtn.addEventListener('click', function() {
+            excelUpload.value = '';  // 清空文件
+            fileInfo.textContent = '未选择任何文件';
+        });
+
+        // --- 主运行逻辑
+        runBtn.addEventListener('click', async function() {
+            const files = excelUpload.files;
+            if (files.length > 0) {
+                // 处理Excel文件（优先）
+                const file = files[0];
+                await processExcel(file);
+            } else {
+                // 处理文本输入框
+                processText();
+            }
+        });
+
+        // 文本处理：高亮显示违禁词
+        function processText() {
+            const rawText = mainTextInput.value;
+            if (forbiddenWords.length === 0) {
+                highlightResult.innerHTML = '<span style="color:#b45353;">⚠️ 当前没有设置任何违禁词，请先添加。</span>';
+                return;
+            }
+            if (!rawText) {
+                highlightResult.innerHTML = '<span style="color:#a5b9d0;">📭 文本输入为空</span>';
+                return;
+            }
+
+            // 转义HTML特殊字符，防止注入
+            const escaped = escapeHtml(rawText);
+
+            // 对违禁词按长度降序排序，并转义正则特殊字符
+            const sortedWords = [...forbiddenWords].sort((a, b) => b.length - a.length);
+            const escapedWords = sortedWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+            if (escapedWords.length === 0) {
+                highlightResult.innerText = rawText; // 无词，直接原文
+                return;
+            }
+
+            // 构建正则 (全局, 不区分大小写)
+            const regex = new RegExp(`(${escapedWords.join('|')})`, 'gi');
+
+            // 使用replace高亮 (由于escaped没有HTML标签，安全)
+            const highlighted = escaped.replace(regex, '<mark>$1</mark>');
+
+            // 保留换行 (white-space: pre-wrap 已经设置)
+            highlightResult.innerHTML = highlighted || ' ';
+        }
+
+        // Excel处理：读取，遍历，标黄，下载
+        async function processExcel(file) {
+            if (forbiddenWords.length === 0) {
+                alert('请先配置违禁词列表，否则无法标黄。');
+                return;
+            }
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
+
+                // 遍历所有工作表
+                workbook.eachSheet((worksheet, sheetId) => {
+                    worksheet.eachRow((row, rowIndex) => {
+                        row.eachCell((cell, colIndex) => {
+                            const cellValue = cell.value ? cell.value.toString() : '';
+                            // 不区分大小写检测是否包含违禁词
+                            const lowerVal = cellValue.toLowerCase();
+                            const found = forbiddenWords.some(word => lowerVal.includes(word.toLowerCase()));
+                            if (found) {
+                                // 设置单元格背景为纯黄色 (argb: FFFFFF00)
+                                cell.fill = {
+                                    type: 'pattern',
+                                    pattern: 'solid',
+                                    fgColor: { argb: 'FFFFFF00' }
+                                };
+                            }
+                        });
+                    });
+                });
+
+                // 生成buffer并下载
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const fileName = file.name.replace(/\.(xlsx|xlsm)$/i, '_标黄.xlsx');
+                a.download = fileName;
+                a.click();
+                window.URL.revokeObjectURL(url);
+
+                // 可选提示
+                highlightResult.innerHTML = `<span style="color:#2b6e4f;">✅ Excel处理完成，已触发下载：${fileName}</span>`;
+            } catch (err) {
+                console.error(err);
+                alert('处理Excel时出错：' + err.message);
+            }
+        }
+
+        // 为方便，点击tag的删除已经在renderTags绑定
+
+        // 额外：如果点击运行且没有文件时，文本高亮区域更新，同时结果区展示高亮
+        // 已经包含在processText
+
+        // 加载示例数据（可选，演示）
+        const initDemo = () => {
+            // 默认加入几个演示词，避免空列表
+            if (forbiddenWords.length === 0) {
+                forbiddenWords = ['色情', '暴力', '政治', '赌博', '毒品'];
+                renderTags();
+                syncJsonTextarea();
+            }
+        };
+        initDemo();
+
+        // 点击“从JSON更新”后如果textarea为空数组，则列表清空
+        // 其他功能完好
+    })();
+</script>
+</body>
+</html>
