@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listing 智造中心 - 告别加班的爆单引擎</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #05070a;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        /* 太空背景动画保持一致 */
+        .stars-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: radial-gradient(circle at center, #111827 0%, #05070a 100%);
+            overflow: hidden;
+        }
+        .star {
+            position: absolute; background: white; border-radius: 50%; opacity: 0.5;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.2);
+        }
+
+        .neon-text { text-shadow: 0 0 15px rgba(59, 130, 246, 0.6); }
+        
+        .gradient-text {
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* 微信复制成功提示动画 */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #10b981; color: #fff;
+            text-align: center; border-radius: 8px; padding: 12px; position: fixed;
+            z-index: 50; left: 50%; bottom: 30px; transform: translateX(-50%);
+            font-weight: 600; opacity: 0; transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+    </style>
+</head>
+<body>
+
+    <div id="stars" class="stars-container"></div>
+
+    <!-- 返回主页导航 -->
+    <nav class="absolute top-6 left-6 z-20">
+        <a href="index.html" class="text-gray-400 hover:text-white transition flex items-center gap-2">
+            <i class="fa-solid fa-arrow-left"></i> 返回星际枢纽
+        </a>
+    </nav>
+
+    <div class="container mx-auto px-4 py-20 relative z-10 max-w-6xl">
+        
+        <!-- Hero 头部：直击不想加班的灵魂 -->
+        <header class="text-center mb-20">
+            <div class="inline-block px-4 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-semibold tracking-widest mb-6">
+                <i class="fa-solid fa-bolt text-yellow-400 mr-2"></i> 跨境运营效率革命
+            </div>
+            <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 leading-tight">
+                想要高产爆单，<br>
+                <span class="gradient-text neon-text">谁说一定要加班？</span>
+            </h1>
+            <p class="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto font-light leading-relaxed">
+                把你从杂乱无章的 ERP 导出表格中解放出来。你只需要提供最基础的中英夹杂/乱码数据，剩下的交给 Ge32 自动化矩阵。喝杯咖啡的功夫，几百条高转化 Listing 已经躺在你的桌面上。
+            </p>
+        </header>
+
+        <!-- 痛点与解决方案对比 -->
+        <div class="grid md:grid-cols-2 gap-8 mb-20">
+            <div class="glass-card p-8 rounded-2xl border-red-500/20">
+                <h3 class="text-xl font-bold text-red-400 mb-6 flex items-center gap-3">
+                    <i class="fa-regular fa-face-frown-open text-2xl"></i> 痛苦的现状
+                </h3>
+                <ul class="space-y-4 text-gray-300">
+                    <li class="flex items-start gap-3"><i class="fa-solid fa-xmark text-red-500 mt-1"></i> ERP 导出的基础数据杂乱无章，中英夹杂，甚至带着 HTML 乱码。</li>
+                    <li class="flex items-start gap-3"><i class="fa-solid fa-xmark text-red-500 mt-1"></i> 每天耗费数小时手动清洗数据、套用公式、枯燥翻译。</li>
+                    <li class="flex items-start gap-3"><i class="fa-solid fa-xmark text-red-500 mt-1"></i> 批量处理极易串行、格式错乱，传到后台疯狂报错。</li>
+                    <li class="flex items-start gap-3"><i class="fa-solid fa-xmark text-red-500 mt-1"></i> 为了赶上架进度，被迫无意义加班，毫无运营思考时间。</li>
+                </ul>
+            </div>
+
+            <div class="glass-card p-8 rounded-2xl border-blue-500/30 bg-blue-900/10 relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 text-blue-500/10 text-9xl"><i class="fa-solid fa-rocket"></i></div>
+                <h3 class="text-xl font-bold text-blue-400 mb-6 flex items-center gap-3">
+                    <i class="fa-solid fa-wand-magic-sparkles text-2xl"></i> 我们的降维打击
+                </h3>
+                <ul class="space-y-4 text-gray-300 relative z-10">
+                    <li class="flex items-start gap-3"><i class="fa-solid fa-check text-green-400 mt-1"></i> <strong>零门槛输入：</strong>直接扔给我们基础的 ERP 导出 Excel 即可，无需预处理。</li>
+                    <li class="flex items-start gap-3"><i class="fa-solid fa-check text-green-400 mt-1"></i> <strong>企业级高并发引擎：</strong>300 条以内数据，10分钟内闪电交付！绝不耽误上架。</li>
+                    <li class="flex items-start gap-3"><i class="fa-solid fa-check text-green-400 mt-1"></i> <strong>双重交付物：</strong>你将获得可以直接上传的完美 <b>Excel 表格</b>，外加一个可以在网页直接打开的 <b>可视化数据检验器</b>。</li>
+                    <li class="flex items-start gap-3"><i class="fa-solid fa-check text-green-400 mt-1"></i> <strong>绝对结构化：</strong>后台强制校验，生成的标题、五点、描述严格对齐，0格式错误。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 微信引流 & 免费体验区 -->
+        <div class="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-500/30 rounded-3xl p-8 md:p-12 text-center mb-20 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-purple-500"></div>
+            <h2 class="text-3xl font-bold mb-4">不信有这么神？来白嫖 100 条！</h2>
+            <p class="text-gray-300 mb-8 max-w-xl mx-auto">
+                我们深知跨境人的谨慎。现在添加主理人微信，发送你的 ERP 表格，<strong class="text-white">免费为你生成 100 条 Listing</strong>。让你亲眼看看什么叫“喝茶秒出活”。
+            </p>
+            <div class="inline-flex flex-col sm:flex-row items-center gap-4 bg-black/50 p-4 rounded-2xl border border-gray-700">
+                <div class="text-left px-4">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">主理人微信</p>
+                    <p class="text-xl font-mono text-white font-bold" id="wechat-id">ChancesAreIDontMind</p>
+                </div>
+                <button onclick="copyWechat()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-semibold transition-colors flex items-center gap-2">
+                    <i class="fa-regular fa-copy"></i> 复制微信去白嫖
+                </button>
+            </div>
+        </div>
+
+        <!-- 阶梯报价 -->
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold mb-4">规模化处理，良心阶梯报价</h2>
+            <p class="text-gray-400">数量越多，单条成本直线下降。省下的加班费，足够点无数杯星巴克。</p>
+            <p class="text-blue-400 text-sm mt-2"><i class="fa-solid fa-clock"></i> 承诺：300条以内订单，接单后 10 分钟内极速交付！</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- 体验版 -->
+            <div class="glass-card p-6 rounded-2xl text-center flex flex-col">
+                <div class="text-gray-400 font-semibold tracking-widest uppercase text-sm mb-4">起步体验版</div>
+                <div class="text-4xl font-bold text-white mb-2">￥5</div>
+                <div class="text-gray-500 text-sm mb-6">可处理 100 条</div>
+                <div class="mt-auto pt-6 border-t border-gray-800">
+                    <p class="text-xs text-gray-400">单条仅需 0.05 元</p>
+                </div>
+            </div>
+
+            <!-- 进阶版 -->
+            <div class="glass-card p-6 rounded-2xl text-center flex flex-col">
+                <div class="text-blue-400 font-semibold tracking-widest uppercase text-sm mb-4">铺货进阶版</div>
+                <div class="text-4xl font-bold text-white mb-2">￥20</div>
+                <div class="text-gray-500 text-sm mb-6">可处理 500 条</div>
+                <div class="mt-auto pt-6 border-t border-gray-800">
+                    <p class="text-xs text-gray-400">单条降至 0.04 元</p>
+                </div>
+            </div>
+
+            <!-- 高产版 -->
+            <div class="glass-card p-6 rounded-2xl text-center flex flex-col">
+                <div class="text-purple-400 font-semibold tracking-widest uppercase text-sm mb-4">店群高产版</div>
+                <div class="text-4xl font-bold text-white mb-2">￥30</div>
+                <div class="text-gray-500 text-sm mb-6">可处理 900 条</div>
+                <div class="mt-auto pt-6 border-t border-gray-800">
+                    <p class="text-xs text-gray-400">单条降至 0.033 元</p>
+                </div>
+            </div>
+
+            <!-- 性价比之王 -->
+            <div class="glass-card p-6 rounded-2xl text-center flex flex-col relative transform md:-translate-y-4 border-yellow-500/50 bg-gradient-to-b from-yellow-500/10 to-transparent">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    性价比之王
+                </div>
+                <div class="text-yellow-400 font-semibold tracking-widest uppercase text-sm mb-4 mt-2">终极爆单版</div>
+                <div class="text-4xl font-bold text-white mb-2">￥50</div>
+                <div class="text-gray-500 text-sm mb-6">可处理 2,000 条</div>
+                <div class="mt-auto pt-6 border-t border-gray-800">
+                    <p class="text-sm font-bold text-yellow-400">单条仅需 0.025 元！</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 复制成功的提示框 -->
+    <div id="toast"><i class="fa-solid fa-circle-check"></i> 微信号已复制！快去添加吧。</div>
+
+    <script>
+        // 生成星空背景（复用主站代码）
+        function createStars() {
+            const container = document.getElementById('stars');
+            const starCount = 100; // 稍微减少一点星空数量，突出文字
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2 + 'px';
+                star.style.width = size;
+                star.style.height = size;
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+                container.appendChild(star);
+            }
+        }
+
+        // 复制微信号功能
+        function copyWechat() {
+            const wechatID = document.getElementById('wechat-id').innerText;
+            navigator.clipboard.writeText(wechatID).then(() => {
+                showToast();
+            }).catch(err => {
+                alert('复制失败，请手动长按复制: ' + wechatID);
+            });
+        }
+
+        function showToast() {
+            const toast = document.getElementById("toast");
+            toast.className = "show";
+            setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        window.onload = createStars;
+    </script>
+</body>
+</html>
