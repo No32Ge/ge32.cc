@@ -1,1 +1,188 @@
-页面暂时不存在，或者映射错误
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - 迷失星空 (Ge32)</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google 字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <!-- 引入 Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #05070a;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* 太空背景动画 */
+        .stars-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: radial-gradient(circle at center, #111827 0%, #05070a 100%);
+            overflow: hidden;
+        }
+        .star {
+            position: absolute; background: white; border-radius: 50%; opacity: 0.5;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* 404 霓虹故障效果 */
+        .neon-404 {
+            font-family: 'Space Mono', monospace;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 40px rgba(168, 85, 247, 0.5);
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* 按钮发光效果 */
+        .btn-glow {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .btn-glow:hover {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* =========================================
+           核心黑科技：Twitter 优雅降级 (Fallback) 样式 
+           当 X 被屏蔽时，它将显示为漂亮的玻璃拟态卡片
+        ========================================= */
+        .twitter-tweet:not(.twitter-tweet-rendered) {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            color: #e2e8f0;
+            font-size: 1.1rem;
+            font-style: italic;
+            margin: 1rem auto !important;
+            max-width: 550px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        /* 伪元素：为 fallback 状态增加一个引号图标 */
+        .twitter-tweet:not(.twitter-tweet-rendered)::before {
+            content: "\f10d"; /* FontAwesome Quote Left */
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 1rem;
+            left: 1.5rem;
+            font-size: 2rem;
+            color: rgba(59, 130, 246, 0.2);
+        }
+        .twitter-tweet:not(.twitter-tweet-rendered) p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+            position: relative;
+            z-index: 10;
+        }
+        .twitter-tweet:not(.twitter-tweet-rendered) a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 600;
+            font-style: normal;
+        }
+        .twitter-tweet:not(.twitter-tweet-rendered) a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- 星空背景 -->
+    <div id="stars" class="stars-container"></div>
+
+    <div class="container mx-auto px-4 flex-grow flex flex-col justify-center items-center relative z-10 py-20 text-center">
+        
+        <!-- 404 主视觉 -->
+        <div class="mb-8">
+            <h1 class="text-[8rem] md:text-[12rem] font-bold leading-none neon-404">404</h1>
+            <div class="w-32 h-1 bg-purple-500 mx-auto mt-4 rounded-full shadow-[0_0_15px_rgba(168,85,247,0.8)]"></div>
+        </div>
+
+        <h2 class="text-2xl md:text-3xl font-bold mb-4 tracking-tight">舰长，我们偏离了航线。</h2>
+        <p class="text-gray-400 max-w-lg mx-auto mb-10 text-lg font-light leading-relaxed">
+            您寻找的页面似乎已被吸入黑洞，或者从未存在过。<br>
+            在深空中稍作休息，读几句先驱者的格言，然后返回母星吧。
+        </p>
+
+        <!-- 按钮 -->
+        <a href="index.html" class="btn-glow bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-full font-bold uppercase tracking-widest text-sm flex items-center gap-3 transition-colors mb-16">
+            <i class="fa-solid fa-space-shuttle"></i> 启动引擎，返回主站
+        </a>
+
+        <!-- 格言区域 (Twitter Embeds) -->
+        <div class="w-full max-w-4xl grid md:grid-cols-2 gap-8">
+            
+            <!-- X/Twitter 引用 1：马斯克 -->
+            <!-- 带有 data-theme="dark" 让加载成功的 X iframe 默认显示暗黑模式 -->
+            <blockquote class="twitter-tweet" data-theme="dark">
+                <p lang="en" dir="ltr">When something is important enough, you do it even if the odds are not in your favor.</p>
+                &mdash; Elon Musk (@elonmusk) 
+                <a href="https://twitter.com/elonmusk/status/1234567890123456789?ref_src=twsrc%5Etfw"></a>
+            </blockquote>
+
+            <!-- X/Twitter 引用 2：卡尔·萨根 (虚拟引用结构示范，可换成真实的X链接) -->
+            <blockquote class="twitter-tweet" data-theme="dark">
+                <p lang="en" dir="ltr">Somewhere, something incredible is waiting to be known. The universe is not required to be in perfect harmony with human ambition.</p>
+                &mdash; Carl Sagan (Quote)
+                <a href="https://twitter.com/NASA/status/1234567890?ref_src=twsrc%5Etfw"></a>
+            </blockquote>
+
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="w-full text-center text-gray-600 text-xs tracking-widest uppercase pb-6 relative z-10">
+        &copy; 2024 Ge32 Aerospace & AI. END OF TRANSMISSION.
+    </footer>
+
+    <!-- Twitter 官方加载脚本 -->
+    <!-- 加上 async，且不影响页面整体渲染。如果被墙，脚本报错，上面的 fallback 样式将永久保留 -->
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+    <script>
+        // 生成星空背景
+        function createStars() {
+            const container = document.getElementById('stars');
+            const starCount = 150;
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2 + 'px';
+                star.style.width = size;
+                star.style.height = size;
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+                container.appendChild(star);
+            }
+        }
+        window.onload = createStars;
+    </script>
+</body>
+</html>
