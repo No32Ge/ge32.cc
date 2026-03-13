@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ge32 - 效率</title>
+    <title>Ge32 - 未来科技入口</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Google 字体 -->
@@ -64,23 +64,14 @@
             text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
 
-        /* 按钮动画 */
-        .btn-glow {
-            position: relative;
-            overflow: hidden;
+        /* 广告卡片专属发光动画 */
+        .ad-card-glow {
+            animation: pulse-border 2s infinite;
         }
-        .btn-glow::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: conic-gradient(transparent, rgba(59, 130, 246, 0.3), transparent 30%);
-            animation: rotate 4s linear infinite;
-        }
-        @keyframes rotate {
-            100% { transform: rotate(360deg); }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
     </style>
 </head>
@@ -108,136 +99,107 @@
 
         <!-- 页脚 -->
         <footer class="mt-20 text-center text-gray-500 text-sm tracking-widest uppercase">
-            &copy; Ge32
+            &copy; 2024 Ge32 Aerospace & AI. All rights reserved.
         </footer>
     </div>
 
     <script>
+        // 这里是修改后的 JSON 内容
+        const pageData = {
+            title: "GE32 STATION",
+            subtitle: "Exploration • Intelligence • Future",
+            navigation: [
+                {
+                    title: "Listing 智造中心 ⚡", 
+                    desc: "想要高产又不想加班？丢给我 ERP 表格，喝杯咖啡的功夫，几百条高转化 Listing 直接到手。",
+                    url: "https://www.ge32.cc/listing.html",
+                    icon: "fa-solid fa-rocket",
+                    tag: "E-Commerce",
+                    isAd: true // 开启广告高亮模式
+                },
+                {
+                    title: "Ge Brain AI 助手",
+                    desc: "运行在浏览器的智能助手，提供全方位的 AI 支持，助你高效工作。",
+                    url: "https://www.ge32.site",
+                    icon: "fa-solid fa-microchip",
+                    tag: "AI Portal"
+                },
+                {
+                    title: "提示词批量生成器",
+                    desc: "Excel转提示词，让 AI 更懂你的意图。",
+                    url: "https://www.ge32.cc/tools/prompts.html",
+                    icon: "fa-solid fa-terminal",
+                    tag: "Knowledge"
+                },
+                {
+                    title: "DeepSeek 自动询问插件",
+                    desc: "浏览器插件，自动向 DeepSeek 提问，解放双手，提升效率。",
+                    url: "https://www.ge32.cc/deepseeker.html",
+                    icon: "fa-solid fa-bolt",
+                    tag: "Toolbox"
+                },
+                {
+                    title: "Excel转JSON工具（暂无）",
+                    desc: "轻松将 Excel 数据转换为 JSON 格式，适用于各种开发需求。",
+                    url: "https://www.ge32.cc/tools/ExcelToJson.html",
+                    icon: "fa-brands fa-weixin",
+                    tag: "Social"
+                },
+                {
+                    title: "JSON转Excel工具",
+                    desc: "便捷的在线工具，将 JSON 数据转换为 Excel 格式，适合数据分析和管理。",
+                    url: "https://www.ge32.cc/tools/JsonToExcel.html",
+                    icon: "fa-solid fa-code",
+                    tag: "Development"
+                },
+                {
+                    title: "Excel生成Html工具",
+                    desc: "快速查看生成的Listing数据有没有错误",
+                    url: "https://www.ge32.cc/tools/ExcelToHtml.html",
+                    icon: "fa-solid fa-code",
+                    tag: "Development"
+                }
+            ]
+        };
 
-        const futureFeatures = [
-        {
-            title: "专享服务 & 广告",
-            desc: "优质卡片售卖、Listing 代写、资源定制。诚邀合作。",
-            url: "YOUR_AD_LINK", 
-            icon: "fa-solid fa-rocket",
-            tag: "Commercial",
-            isAd: true
-        },
-        {
-            title: "Ge32 Anki",
-            desc: "科学记忆利器，针对硬核学习者深度定制的卡片包。",
-            url: "YOUR_ANKI_LINK", 
-            icon: "fa-solid fa-brain",
-            tag: "Learning"
-        },
-        {
-            title: "Ge32 功能演示",
-            desc: "Bilibili 官方频道，直观展示 AI 技术的实际应用。",
-            url: "YOUR_BILIBILI_URL",
-            icon: "fa-brands fa-bilibili",
-            tag: "Video Demo"
-        },
-        {
-            title: "Listing 智造中心", 
-            desc: "跨境电商全案优化，高转化率 Listing 代写，助力流量爆破。",
-            url: "YOUR_LISTING_SERVICE_LINK",
-            icon: "fa-solid fa-cart-shopping",
-            tag: "E-Commerce"
-        },
-        {
-            title: "Ge32 TTS 定制",
-            desc: "基于 GPT-SoVITS 的克隆配音服务，赋予文字灵魂。",
-            url: "YOUR_TTS_LINK",
-            icon: "fa-solid fa-waveform-lines",
-            tag: "Voice AI"
-        }
-        ];
-
-        // 这里后期方便修改的 JSON 内容
-        const pageData =  {
-    title: "GE32 STATION",
-    subtitle: "Exploration • Intelligence • Future",
-    navigation: [
-        
-        {
-            title: "Ge Brain AI 助手",
-            desc: "运行在浏览器的智能助手，提供全方位的 AI 支持，助你高效工作。",
-            url: "https://www.ge32.site",
-            icon: "fa-solid fa-microchip",
-            tag: "AI Portal"
-        },
-        {
-            title: "提示词批量生成器",
-            desc: "Excel转提示词，让 AI 更懂你的意图。",
-            url: "https://www.ge32.cc/tools/prompts.html",
-            icon: "fa-solid fa-terminal",
-            tag: "Knowledge"
-        },
-        {
-            title: "DeepSeek 自动询问插件",
-            desc: "浏览器插件，自动向 DeepSeek 提问，解放双手，提升效率。",
-            url: "https://www.ge32.cc/tools/deepseeker.html",
-            icon: "fa-solid fa-bolt",
-            tag: "Toolbox"
-        },
-        {
-            title: "Excel转JSON工具（暂无）",
-            desc: "轻松将 Excel 数据转换为 JSON 格式，适用于各种开发需求。",
-            url: "https://www.ge32.cc/tools/ExcelToJson.html",
-            icon: "fa-brands fa-weixin",
-            tag: "Social"
-        },
-        {
-            title: "JSON转Excel工具",
-            desc: "便捷的在线工具，将 JSON 数据转换为 Excel 格式，适合数据分析和管理。",
-            url: "https://www.ge32.cc/tools/JsonToExcel.html",
-            icon: "fa-solid fa-code",
-            tag: "Development"
-        },{
-            title: "Excel生成Html工具",
-            desc: "快速查看生成的Listing数据有没有错误",
-            url: "https://www.ge32.cc/tools/ExcelToHtml.html",
-            icon: "fa-solid fa-code",
-            tag: "Development"
-        },
-        // {
-        //     title: "Ge32 Tube",
-        //     desc: "YouTube 频道，暂未开启，敬请期待精彩内容。",
-        //     url: "YOUR_YOUTUBE_URL",
-        //     icon: "fa-brands fa-youtube",
-        //     tag: "Channel"
-        // },
-        // {
-        //     title: "联系我们",
-        //     desc: "欢迎通过 X 账号 @IAMGE32 与我们交流，获取最新动态。",
-        //     url: "www.x.com/IAMGE32",
-        //     icon: "fa-brands fa-x-twitter",
-        //     tag: "Social"
-        // },
-    ]
-};
-
-        // 渲染函数
+        // 渲染函数（增加了对 isAd 的专属样式处理）
         function renderPage() {
             document.getElementById('main-title').innerText = pageData.title;
             document.getElementById('main-subtitle').innerText = pageData.subtitle;
 
             const grid = document.getElementById('nav-grid');
-            grid.innerHTML = pageData.navigation.map(item => `
-                <a href="${item.url}" target="_blank" class="glass-card p-8 rounded-xl flex flex-col justify-between relative overflow-hidden group">
-                    ${item.isAd ? '<div class="absolute top-0 right-0 bg-blue-600 text-[10px] px-3 py-1 font-bold uppercase tracking-tighter">Promoted</div>' : ''}
+            grid.innerHTML = pageData.navigation.map(item => {
+                
+                // 判断是否为广告，如果是，赋予特殊的边框、发光效果和上浮样式
+                const cardClass = item.isAd 
+                    ? "glass-card p-8 rounded-xl flex flex-col justify-between relative overflow-hidden group border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.15)] md:-translate-y-2 ad-card-glow" 
+                    : "glass-card p-8 rounded-xl flex flex-col justify-between relative overflow-hidden group";
+                
+                // 广告专属的渐变色角标
+                const badgeHtml = item.isAd 
+                    ? '<div class="absolute top-0 right-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[10px] px-4 py-1.5 font-bold uppercase tracking-widest shadow-lg rounded-bl-lg">限时免费体验</div>' 
+                    : '';
+
+                // 广告卡片内的文字颜色处理
+                const titleColor = item.isAd ? "text-white" : "";
+                const iconColor = item.isAd ? "text-blue-400" : "text-blue-500";
+
+                return `
+                <a href="${item.url}" target="_blank" class="${cardClass}">
+                    ${badgeHtml}
                     <div>
-                        <div class="text-blue-500 text-3xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                        <div class="${iconColor} text-3xl mb-4 group-hover:scale-110 transition-transform duration-300">
                             <i class="${item.icon}"></i>
                         </div>
-                        <h3 class="text-xl font-bold mb-2 tracking-tight">${item.title}</h3>
+                        <h3 class="text-xl font-bold mb-2 tracking-tight ${titleColor}">${item.title}</h3>
                         <p class="text-gray-400 text-sm leading-relaxed">${item.desc}</p>
                     </div>
                     <div class="mt-8 flex items-center text-xs font-bold text-blue-400 tracking-widest uppercase">
-                        Explore Entry <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-2 transition-transform"></i>
+                        ${item.isAd ? '立即开启极速爆单' : 'Explore Entry'} <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-2 transition-transform"></i>
                     </div>
                 </a>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // 生成星空背景
