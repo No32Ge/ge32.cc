@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>.sua 可视化编辑器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            background: #f5f7fb;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            padding: 30px;
+        }
+        h1 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 28px;
+            color: #1e293b;
+        }
+        .sub {
+            color: #64748b;
+            margin-bottom: 30px;
+            font-size: 15px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 16px;
+            background: #f8fafc;
+            border-radius: 0 8px 8px 0;
+            line-height: 1.5;
+        }
+        .section {
+            background: #f9f9fc;
+            border-radius: 20px;
+            padding: 20px 24px;
+            margin-bottom: 28px;
+            border: 1px solid #e9eef2;
+        }
+        .section-title {
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title span {
+            background: #3b82f6;
+            color: white;
+            font-size: 14px;
+            padding: 2px 10px;
+            border-radius: 30px;
+        }
+        .field {
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: 500;
+            font-size: 14px;
+            color: #334155;
+            display: block;
+            margin-bottom: 6px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 14px;
+            transition: 0.2s;
+            background: white;
+            resize: vertical;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+        input:focus, textarea:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+        .row {
+            display: flex;
+            gap: 16px;
+        }
+        .row > div {
+            flex: 1;
+        }
+        .sample-group {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+        .sample-group .remove-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #fee2e2;
+            border: none;
+            color: #b91c1c;
+            width: 28px;
+            height: 28px;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .sample-group .remove-btn:hover {
+            background: #fecaca;
+        }
+        .btn {
+            background: white;
+            border: 1.5px solid #cbd5e1;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #1e293b;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #1e293b;
+            border-color: #1e293b;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0f172a;
+        }
+        .btn-outline {
+            background: white;
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .btn-outline:hover {
+            background: #eff6ff;
+        }
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        .output-area {
+            background: #0b1120;
+            color: #a5f3fc;
+            padding: 20px;
+            border-radius: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid #334155;
+            max-height: 300px;
+            overflow: auto;
+        }
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .copy-btn {
+            background: #334155;
+            border: none;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .parse-area {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .parse-area textarea {
+            flex: 1;
+            height: 100px;
+            font-size: 13px;
+        }
+        hr {
+            border: none;
+            border-top: 2px dashed #d1d9e6;
+            margin: 30px 0 20px;
+        }
+        .badge {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .footer-note {
+            font-size: 12px;
+            color: #94a3b8;
+            text-align: center;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>✏️ .sua 可视化编辑器</h1>
+    <div class="sub">
+        在表单中填写目录、任务名、system、template 以及 few-shot 样本，点击生成即可获得标准 .sua 行。<br>
+        也可以将已有的 .sua 行粘贴到下方解析区，一键回填表单进行修改。
+    </div>
+
+    <!-- 主要表单 -->
+    <div class="section">
+        <div class="section-title"><span>必填</span> 目录 & 任务</div>
+        <div class="row">
+            <div class="field">
+                <label>📁 目录路径 (例如 ../www.ge32.cc)</label>
+                <input type="text" id="dirPath" placeholder="例如 ../www.ge32.cc" value="../www.ge32.cc">
+            </div>
+            <div class="field">
+                <label>🏷️ 任务名 (英文/数字/下划线)</label>
+                <input type="text" id="taskName" placeholder="例如 产品描述生成" value="产品描述生成">
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>核心</span> System & Template</div>
+        <div class="field">
+            <label>🧠 System 提示 (可选)</label>
+            <textarea id="system" rows="3" placeholder="你是一位跨境电商文案专家……"></textarea>
+        </div>
+        <div class="field">
+            <label>📝 Template (必填，使用 {{p1}} 等占位符)</label>
+            <textarea id="template" rows="4" placeholder="请为以下产品生成JSON描述：产品：{{p1}}">请为以下产品生成JSON描述：产品：{{p1}}</textarea>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>样本</span> Few-shot 示例（第一组会合并到主块，其余独立成块）</div>
+        <div id="samplesContainer">
+            <!-- 默认第一组样本 -->
+            <div class="sample-group" id="sample0">
+                <div class="row">
+                    <div class="field">
+                        <label>👤 User 示例</label>
+                        <textarea class="userSample" rows="3" placeholder="用户输入示例">产品：无线蓝牙耳机 特点：续航长、降噪好</textarea>
+                    </div>
+                    <div class="field">
+                        <label>🤖 Assistant 示例</label>
+                        <textarea class="assistantSample" rows="3" placeholder="助手输出示例（应为JSON）">{"title": "Wireless Earbuds", "description": "..."}</textarea>
+                    </div>
+                </div>
+                <!-- 第一组不允许删除，所以不显示删除按钮 -->
+            </div>
+        </div>
+        <button class="btn btn-outline" id="addSampleBtn" type="button">➕ 添加一组样本</button>
+    </div>
+
+    <!-- 操作栏 -->
+    <div class="action-bar">
+        <button class="btn btn-primary" id="generateBtn">⚡ 生成 .sua 行</button>
+        <button class="btn" id="downloadBtn">💾 下载为 .sua 文件</button>
+        <button class="btn" id="copyBtn">📋 复制到剪贴板</button>
+    </div>
+
+    <!-- 生成的 .sua 预览 -->
+    <div class="output-header">
+        <span style="font-weight: 600;">🔍 生成的 .sua 行预览</span>
+        <span class="badge">整行内容会保存为一行，但此处为了可读性自动换行</span>
+    </div>
+    <div class="output-area" id="output">点击生成按钮预览</div>
+
+    <hr>
+
+    <!-- 解析已有 .sua 行 -->
+    <div class="section">
+        <div class="section-title"><span>导入</span> 解析现有 .sua 行并填充表单</div>
+        <div class="parse-area">
+            <textarea id="parseInput" placeholder="将 .sua 文件中的一行粘贴到这里……"></textarea>
+            <button class="btn btn-primary" id="parseBtn" style="height: fit-content;">🔍 解析并填充</button>
+        </div>
+        <p style="font-size: 13px; color: #475569; margin-top: 12px;">
+            ⚠️ 解析使用默认标记符：<code>[$</code> 和 <code>$]</code> ，块内分隔符 <code>&lt;|||&gt;</code> 。确保您的 .sua 行符合此格式。
+        </p>
+    </div>
+
+    <div class="footer-note">
+        ⚙️ 标记符固定为 [$ $] 与 &lt;|||&gt; (可在 configs/markers.json 中自定义，本工具暂不动态修改)
+    </div>
+</div>
+
+<script>
+    (function() {
+        // 常量：标记符（与 markers.json 默认一致）
+        const START = '[$';
+        const END = '$]';
+        const SEP = '<|||>';
+
+        // 获取 DOM 元素
+        const dirPathInput = document.getElementById('dirPath');
+        const taskNameInput = document.getElementById('taskName');
+        const systemTextarea = document.getElementById('system');
+        const templateTextarea = document.getElementById('template');
+        const samplesContainer = document.getElementById('samplesContainer');
+        const addSampleBtn = document.getElementById('addSampleBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const outputDiv = document.getElementById('output');
+        const parseInput = document.getElementById('parseInput');
+        const parseBtn = document.getElementById('parseBtn');
+
+        // 统计样本组数量（用于生成唯一ID）
+        let sampleCounter = 1; // 因为第一组是0，后续从1开始
+
+        // 添加样本组
+        function addSampleGroup(userContent = '', assistantContent = '') {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'sample-group';
+            const idx = sampleCounter++;
+            groupDiv.id = `sample${idx}`;
+
+            groupDiv.innerHTML = `
+                <button class="remove-btn" type="button">✕</button>
+                <div class="row">
+                    <div class="field">
+                        <label>👤 User 示例</label>
+                        <textarea class="userSample" rows="3" placeholder="用户输入示例">${escapeHtml(userContent)}</textarea>
+                    </div>
+                    <div class="field">
+                        <label>🤖 Assistant 示例</label>
+                        <textarea class="assistantSample" rows="3" placeholder="助手输出示例">${escapeHtml(assistantContent)}</textarea>
+                    </div>
+                </div>
+            `;
+            // 绑定删除事件
+            const removeBtn = groupDiv.querySelector('.remove-btn');
+            removeBtn.addEventListener('click', () => {
+                groupDiv.remove();
+            });
+            samplesContainer.appendChild(groupDiv);
+        }
+
+        // 简单的转义（防止HTML注入，但textarea内安全，仅用于innerHTML构建）
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe.replace(/[&<>"]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                if (m === '"') return '&quot;';
+                return m;
+            });
+        }
+
+        // 初始化：给添加按钮绑定事件
+        addSampleBtn.addEventListener('click', () => {
+            addSampleGroup('', '');
+        });
+
+        // 收集所有样本（包括第一组）
+        function collectSamples() {
+            const groups = samplesContainer.querySelectorAll('.sample-group');
+            const samples = [];
+            for (let group of groups) {
+                const user = group.querySelector('.userSample')?.value.trim() || '';
+                const assistant = group.querySelector('.assistantSample')?.value.trim() || '';
+                // 只有两者都不为空才加入样本（或者允许空？但样本通常需要成对）
+                // 这里放宽：只要至少有一个有内容就加入，但最好成对。如果都空则忽略
+                if (user || assistant) {
+                    samples.push({ user, assistant });
+                }
+            }
+            return samples;
+        }
+
+        // 生成 .sua 行
+        function generateSuaLine() {
+            const dir = dirPathInput.value.trim();
+            const task = taskNameInput.value.trim();
+            if (!dir || !task) {
+                alert('目录路径和任务名不能为空');
+                return '';
+            }
+            const system = systemTextarea.value.trim();
+            const template = templateTextarea.value.trim();
+            if (!template) {
+                alert('Template 不能为空');
+                return '';
+            }
+
+            const samples = collectSamples();
+            // 第一个样本（如果有）可能会合并到第一个块中，但取决于参数顺序
+            // 构建块数组 blocks = [ { params: ['s','t',...], values: [...] }, ... ]
+            const blocks = [];
+
+            // ---- 第一个块（必含 t，可能含 s 和第一个样本的 u,a） ----
+            let firstParams = [];
+            let firstValues = [];
+
+            // 添加 system 如果存在
+            if (system) {
+                firstParams.push('s');
+                firstValues.push(system);
+            }
+            // template 必须存在且放在 t 位置
+            firstParams.push('t');
+            firstValues.push(template);
+
+            // 第一个样本（如果有）的 u 和 a 可以合并到第一块
+            let remainingSamples = [...samples]; // 复制一份
+            if (remainingSamples.length > 0) {
+                const firstSample = remainingSamples[0];
+                if (firstSample.user) {
+                    firstParams.push('u');
+                    firstValues.push(firstSample.user);
+                }
+                if (firstSample.assistant) {
+                    firstParams.push('a');
+                    firstValues.push(firstSample.assistant);
+                }
+                // 移除已使用的第一个样本
+                remainingSamples.shift();
+            }
+
+            // 添加第一个块
+            blocks.push({
+                params: firstParams,
+                values: firstValues
+            });
+
+            // 剩余的每个样本单独成块 (u a)
+            for (let samp of remainingSamples) {
+                if (!samp.user && !samp.assistant) continue; // 忽略空
+                let params = [];
+                let values = [];
+                if (samp.user) {
+                    params.push('u');
+                    values.push(samp.user);
+                }
+                if (samp.assistant) {
+                    params.push('a');
+                    values.push(samp.assistant);
+                }
+                if (params.length > 0) {
+                    blocks.push({ params, values });
+                }
+            }
+
+            // 构建整行：目录 | 任务名(参数1 参数2 ...)[$值1<|||>值2...$](参数3 参数4)[$值3<|||>值4$]...
+            let line = `${dir} | ${task}`;
+            for (let block of blocks) {
+                const paramStr = block.params.join(' ');
+                const valueStr = block.values.join(SEP);
+                line += `(${paramStr})${START}${valueStr}${END}`;
+            }
+            return line;
+        }
+
+        // 刷新预览
+        function refreshOutput() {
+            const line = generateSuaLine();
+            outputDiv.textContent = line || '无法生成（请检查必填项）';
+        }
+
+        // 绑定生成按钮
+        generateBtn.addEventListener('click', refreshOutput);
+
+        // 复制到剪贴板
+        copyBtn.addEventListener('click', async () => {
+            const text = outputDiv.textContent;
+            if (!text || text === '点击生成按钮预览') {
+                alert('没有可复制的内容，请先生成');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(text);
+                alert('已复制到剪贴板');
+            } catch (err) {
+                alert('复制失败，请手动选择复制');
+            }
+        });
+
+        // 下载为 .sua 文件（仅保存一行，无额外换行）
+        downloadBtn.addEventListener('click', () => {
+            const text = outputDiv.textContent;
+            if (!text || text === '点击生成按钮预览') {
+                alert('没有可保存的内容，请先生成');
+                return;
+            }
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${taskNameInput.value.trim() || 'task'}.sua`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // ---------- 解析 .sua 行并填充表单 ----------
+        function parseSuaLine(line) {
+            // 去除首尾空白
+            line = line.trim();
+            // 分割 目录 | 任务...
+            const barIndex = line.indexOf('|');
+            if (barIndex === -1) throw new Error('缺少 | 分隔符');
+            const dir = line.substring(0, barIndex).trim();
+            const rest = line.substring(barIndex + 1).trim();
+
+            // 提取任务名: 任务名后面紧跟着括号块，任务名只能由字母数字下划线组成，遇到第一个 ( 即结束
+            const taskMatch = rest.match(/^([a-zA-Z0-9_]+)/);
+            if (!taskMatch) throw new Error('无法解析任务名');
+            const task = taskMatch[1];
+            let remaining = rest.substring(task.length).trim();
+
+            // 解析块
+            const blockRegex = /\(([^)]+)\)\s*\[\$(.*?)\$\]\s*/gs; // 使用g标志，多次匹配
+            const blocks = [];
+            let match;
+            // 由于我们使用正则，需要重置lastIndex，这里手动循环
+            const blockPattern = /\(([^)]+)\)\s*\[\$(.*?)\$\]\s*/g;
+            let lastIndex = 0;
+            while ((match = blockPattern.exec(remaining)) !== null) {
+                const paramStr = match[1].trim();
+                const content = match[2]; // 可能包含换行，保留
+                const params = paramStr.split(/\s+/); // 按空白分割
+                const values = content.split(SEP); // 按分隔符分割
+                if (params.length !== values.length) {
+                    throw new Error(`参数个数与值个数不匹配: ${paramStr} 与 ${values.length} 段`);
+                }
+                blocks.push({ params, values });
+            }
+
+            if (blocks.length === 0) throw new Error('未找到任何内容块');
+
+            // 提取 system, template, samples
+            let system = '';
+            let template = '';
+            const samples = [];
+
+            // 处理第一个块
+            const first = blocks[0];
+            const firstParamMap = {};
+            for (let i = 0; i < first.params.length; i++) {
+                firstParamMap[first.params[i]] = first.values[i];
+            }
+            // 必须包含 t
+            if (!firstParamMap.hasOwnProperty('t')) throw new Error('第一个块缺少 template (t) 参数');
+            template = firstParamMap['t'] || '';
+            if (firstParamMap.hasOwnProperty('s')) system = firstParamMap['s'] || '';
+            // 如果有 u 和 a 同时存在，视为第一个样本
+            if (firstParamMap.hasOwnProperty('u') && firstParamMap.hasOwnProperty('a')) {
+                samples.push({
+                    user: firstParamMap['u'] || '',
+                    assistant: firstParamMap['a'] || ''
+                });
+            } else if (firstParamMap.hasOwnProperty('u') || firstParamMap.hasOwnProperty('a')) {
+                // 如果只有一个，也推入（但警告）
+                console.warn('第一个块包含单独的 u 或 a，可能不完整');
+                samples.push({
+                    user: firstParamMap['u'] || '',
+                    assistant: firstParamMap['a'] || ''
+                });
+            }
+
+            // 处理后续块 (索引1开始)
+            for (let i = 1; i < blocks.length; i++) {
+                const blk = blocks[i];
+                const paramMap = {};
+                for (let j = 0; j < blk.params.length; j++) {
+                    paramMap[blk.params[j]] = blk.values[j];
+                }
+                // 后续块只能包含 u 和 a
+                if (paramMap.hasOwnProperty('u') || paramMap.hasOwnProperty('a')) {
+                    samples.push({
+                        user: paramMap['u'] || '',
+                        assistant: paramMap['a'] || ''
+                    });
+                }
+                // 忽略其他参数（如果有 s 或 t 会警告，但这里不处理）
+            }
+
+            return { dir, task, system, template, samples };
+        }
+
+        // 填充表单
+        function fillForm(parsed) {
+            dirPathInput.value = parsed.dir;
+            taskNameInput.value = parsed.task;
+            systemTextarea.value = parsed.system;
+            templateTextarea.value = parsed.template;
+
+            // 清空所有样本组（除了第一个保留）
+            const container = samplesContainer;
+            while (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+            // 重置第一个样本组的内容
+            const firstGroup = document.getElementById('sample0');
+            if (firstGroup) {
+                const userTa = firstGroup.querySelector('.userSample');
+                const assistantTa = firstGroup.querySelector('.assistantSample');
+                // 如果有至少一个样本，填充第一组
+                if (parsed.samples.length > 0) {
+                    userTa.value = parsed.samples[0].user || '';
+                    assistantTa.value = parsed.samples[0].assistant || '';
+                } else {
+                    userTa.value = '';
+                    assistantTa.value = '';
+                }
+            }
+
+            // 添加剩余的样本组
+            for (let i = 1; i < parsed.samples.length; i++) {
+                addSampleGroup(parsed.samples[i].user, parsed.samples[i].assistant);
+            }
+        }
+
+        parseBtn.addEventListener('click', () => {
+            const raw = parseInput.value.trim();
+            if (!raw) {
+                alert('请输入要解析的 .sua 行');
+                return;
+            }
+            try {
+                const parsed = parseSuaLine(raw);
+                fillForm(parsed);
+                // 可选：自动刷新预览
+                refreshOutput();
+                alert('解析成功！表单已更新');
+            } catch (e) {
+                alert('解析失败：' + e.message);
+                console.error(e);
+            }
+        });
+
+        // 默认预览一次（显示初始状态）
+        refreshOutput();
+    })();
+</script>
+</body>
+</html>
