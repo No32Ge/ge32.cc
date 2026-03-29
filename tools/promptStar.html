@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ge32 字段提取器 · 星际导航版</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030508;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        .code-font { font-family: 'Fira Code', monospace; }
+
+        /* 太空背景动画 */
+        .stars-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #0d1321 0%, #030508 100%);
+            overflow: hidden;
+        }
+        .star {
+            position: absolute; background: #fff; border-radius: 50%; opacity: 0.5;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.5); box-shadow: 0 0 8px #fff; }
+        }
+
+        /* 玻璃拟态卡片 */
+        .glass-panel {
+            background: rgba(16, 22, 35, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(59, 130, 246, 0.05);
+            border-radius: 16px;
+        }
+        
+        .neon-text { text-shadow: 0 0 15px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.4); }
+
+        /* 科幻输入框 */
+        .cyber-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .cyber-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        /* 复选框网格与美化 */
+        .checkbox-grid {
+            display: flex; flex-wrap: wrap; gap: 10px;
+            max-height: 220px; overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px; padding: 12px;
+        }
+        .checkbox-grid::-webkit-scrollbar { width: 6px; }
+        .checkbox-grid::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 3px; }
+        
+        .checkbox-item {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 6px 14px; border-radius: 20px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transition: all 0.2s;
+        }
+        .checkbox-item:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); }
+        .checkbox-item input[type="checkbox"] {
+            accent-color: #3b82f6; width: 16px; height: 16px; cursor: pointer;
+        }
+        .checkbox-item label { cursor: pointer; color: #cbd5e1; font-size: 0.9rem; }
+
+        /* 终端控制台样式 */
+        .terminal {
+            background: #050505;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #d1d5db; /* 默认灰白文字 */
+            min-height: 250px;
+            max-height: 450px;
+            overflow-y: auto;
+            width: 100%;
+            resize: vertical;
+        }
+        .terminal:focus { outline: none; border-color: #3b82f6; box-shadow: inset 0 0 15px rgba(59,130,246,0.1); }
+        .terminal::-webkit-scrollbar { width: 6px; }
+        .terminal::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+
+        /* 按钮体系 */
+        .cyber-btn {
+            position: relative; overflow: hidden; transition: all 0.3s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .cyber-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: all 0.5s;
+        }
+        .cyber-btn:hover::before { left: 100%; }
+        .cyber-btn:hover { transform: translateY(-2px); }
+        .cyber-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; filter: grayscale(100%); }
+
+        .btn-blue { background: linear-gradient(45deg, #1e3a8a, #2563eb); border: 1px solid #3b82f6; box-shadow: 0 0 15px rgba(37,99,235,0.4); color: white; }
+        .btn-green { background: linear-gradient(45deg, #064e3b, #059669); border: 1px solid #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.4); color: white; }
+        .btn-purple { background: linear-gradient(45deg, #4c1d95, #7c3aed); border: 1px solid #8b5cf6; box-shadow: 0 0 15px rgba(139,92,246,0.4); color: white; }
+        .btn-orange { background: linear-gradient(45deg, #7c2d12, #ea580c); border: 1px solid #f97316; box-shadow: 0 0 15px rgba(249,115,22,0.4); color: white; }
+        .btn-outline { background: transparent; border: 1px solid #4b5563; color: #9ca3af; }
+        .btn-outline:hover { border-color: #3b82f6; color: #60a5fa; background: rgba(59,130,246,0.1); }
+
+        /* 上传框美化 */
+        input[type="file"]::file-selector-button {
+            background: #1e3a8a; border: 1px solid #3b82f6; color: white;
+            padding: 8px 16px; border-radius: 6px; margin-right: 12px;
+            cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif;
+        }
+        input[type="file"]::file-selector-button:hover { background: #2563eb; box-shadow: 0 0 10px rgba(59,130,246,0.5); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- 星空背景 -->
+    <div id="stars" class="stars-container"></div>
+
+    <div class="max-w-7xl mx-auto relative z-10">
+        
+        <!-- 头部 -->
+        <header class="mb-10 mt-4 border-b border-blue-900/50 pb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-extrabold tracking-widest text-white uppercase italic neon-text mb-2 flex items-center">
+                    <span class="bg-blue-600/20 border border-blue-500 text-blue-400 text-sm px-3 py-1 rounded-full mr-4 not-italic font-bold tracking-normal">GE32 PROMPT</span>
+                    字段提取引擎
+                </h1>
+                <p class="text-blue-400/80 tracking-[0.2em] text-xs uppercase font-light code-font">
+                    <i class="fa-solid fa-satellite-dish mr-1"></i> Visual Header Selection · Data Extractor
+                </p>
+            </div>
+            <div class="text-xs text-gray-500 bg-black/40 px-4 py-2 rounded-full border border-gray-800 flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                SYSTEM ONLINE
+            </div>
+        </header>
+
+        <!-- 三列配置区 -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+            
+            <!-- 左侧：可视化字段选择 (占大头) -->
+            <div class="glass-panel p-6 lg:col-span-7 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <label class="font-bold text-blue-400 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check"></i> 字段探测阵列
+                    </label>
+                    <span class="text-xs bg-blue-500/10 text-blue-300 px-2 py-1 rounded border border-blue-500/20 code-font">AUTO-SYNC</span>
+                </div>
+                
+                <!-- 隐藏的原始 JSON 容器 -->
+                <textarea id="fieldConfig" style="display: none;">["SKU","产品标题","亚马逊描述","沃尔玛描述","五点1","五点2","五点3","五点4","五点5"]</textarea>
+
+                <!-- 控制栏 -->
+                <div class="flex flex-wrap items-center gap-3 mb-4 bg-black/40 p-3 rounded-lg border border-gray-800">
+                    <span class="text-gray-400 text-sm">📌 解析第</span>
+                    <input type="number" id="headerRowNum" min="1" value="1" step="1" class="cyber-input w-16 text-center py-1">
+                    <span class="text-gray-400 text-sm">行作为表头</span>
+                    <button id="loadFieldsBtn" class="cyber-btn btn-outline px-4 py-1.5 rounded text-sm ml-auto">
+                        <i class="fa-solid fa-magnifying-glass"></i> 加载字段
+                    </button>
+                    <span id="rowCountHint" class="text-gray-500 text-xs ml-2"></span>
+                </div>
+
+                <!-- 动作栏 -->
+                <div class="flex flex-wrap items-center gap-3 mb-3">
+                    <button id="selectAllBtn" class="cyber-btn btn-outline px-3 py-1 rounded text-xs"><i class="fa-solid fa-check-double"></i> 全选</button>
+                    <button id="deselectAllBtn" class="cyber-btn btn-outline px-3 py-1 rounded text-xs"><i class="fa-solid fa-xmark"></i> 全不选</button>
+                    <span id="selectedCount" class="text-blue-300 text-xs bg-blue-900/30 px-3 py-1 rounded-full border border-blue-800 ml-auto">已选 0 个字段</span>
+                </div>
+
+                <!-- 复选框网格 -->
+                <div id="fieldCheckboxList" class="checkbox-grid flex-grow mb-3">
+                    <div class="w-full text-center text-gray-500 py-8 code-font text-sm flex flex-col items-center">
+                        <i class="fa-solid fa-radar fa-spin mb-2 text-2xl opacity-50"></i>
+                        等待载入数据源解析表头...
+                    </div>
+                </div>
+
+                <!-- 预览 (只读) -->
+                <div class="bg-black/50 border border-gray-800 rounded-lg p-3 text-xs text-gray-400 code-font break-all">
+                    <span class="text-blue-500">Config ></span> <span id="fieldConfigPreview">[]</span>
+                </div>
+            </div>
+
+            <!-- 右侧：提示词与批次设置 -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                <!-- 提示词面板 -->
+                <div class="glass-panel p-6 flex-1 flex flex-col justify-center border-t-2 border-t-purple-500/50">
+                    <label class="font-bold text-purple-400 flex items-center gap-2 mb-4">
+                        <i class="fa-solid fa-quote-left"></i> 前置指令 (Prompt)
+                    </label>
+                    <input type="text" id="prefixText" placeholder="例如：请根据以下商品信息..." class="cyber-input w-full p-3 mb-3 text-sm">
+                    <div class="bg-purple-900/20 border border-purple-500/20 text-purple-300 text-xs p-3 rounded-lg code-font">
+                        ✨ 注入预览: <span id="prefixPreview" class="text-white">(无指令)</span>
+                    </div>
+                </div>
+
+                <!-- 匹配数量面板 -->
+                <div class="glass-panel p-6 flex-1 flex flex-col justify-center border-t-2 border-t-emerald-500/50">
+                    <label class="font-bold text-emerald-400 flex items-center gap-2 mb-4">
+                        <i class="fa-solid fa-layer-group"></i> 聚合维度 (Batch Size)
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <input type="number" id="batchSize" min="1" value="1" step="1" class="cyber-input w-24 p-3 text-center text-lg">
+                        <div class="text-emerald-500/80 text-xs code-font bg-emerald-900/20 p-2 rounded border border-emerald-900">
+                            条记录 / 组<br>
+                            总组数 = 总行数 ÷ 聚合数
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作中枢 -->
+        <div class="glass-panel p-6 mb-8 flex flex-col md:flex-row flex-wrap items-center gap-4 border-l-4 border-l-blue-500">
+            <div class="flex-1 w-full md:w-auto">
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="cyber-input w-full p-2 text-sm">
+            </div>
+            
+            <button id="processBtn" class="cyber-btn btn-blue px-6 py-3 rounded-lg text-sm w-full md:w-auto">
+                <i class="fa-solid fa-bolt"></i> 运行转换序列
+            </button>
+            
+            <div class="h-8 w-px bg-gray-700 hidden md:block"></div>
+            
+            <button id="downloadTxtBtn" disabled class="cyber-btn btn-green px-4 py-2 rounded-lg text-sm w-full md:w-auto">
+                <i class="fa-solid fa-file-lines"></i> TXT
+            </button>
+            <button id="downloadHtmlBtn" disabled class="cyber-btn btn-purple px-4 py-2 rounded-lg text-sm w-full md:w-auto">
+                <i class="fa-solid fa-file-code"></i> HTML
+            </button>
+            <button id="downloadJsonBtn" disabled class="cyber-btn btn-orange px-4 py-2 rounded-lg text-sm w-full md:w-auto">
+                <i class="fa-solid fa-file-invoice"></i> JSON
+            </button>
+        </div>
+
+        <!-- 报错信息 -->
+        <div id="errorMessage" class="mb-6 p-4 bg-red-950/50 border border-red-500/50 text-red-400 rounded-lg font-bold code-font text-sm shadow-[0_0_15px_rgba(239,68,68,0.2)] hidden"></div>
+
+        <!-- 终端输出区 -->
+        <div class="glass-panel p-6 relative">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
+                <div class="text-blue-400 font-bold uppercase tracking-widest text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-terminal"></i> Output Terminal
+                </div>
+                <div id="groupCount" class="text-emerald-400 bg-emerald-900/30 px-3 py-1 rounded-full text-xs font-bold border border-emerald-800 code-font">
+                    0 GROUPS
+                </div>
+            </div>
+            
+            <textarea id="outputText" readonly placeholder="Waiting for extraction command..." class="terminal"></textarea>
+            
+            <div id="statsInfo" class="mt-4 flex flex-wrap gap-4 text-xs text-gray-500 code-font border-t border-gray-800 pt-3">
+                <span>[STATUS] IDLE</span>
+                <span id="prefixStat"></span>
+                <span id="batchStat"></span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script>
+        // 背景星星动画
+        function createStars() {
+            const container = document.getElementById('stars');
+            for (let i = 0; i < 150; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2 + 'px';
+                star.style.width = size; star.style.height = size;
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+                container.appendChild(star);
+            }
+        }
+        createStars();
+
+        // ==========================================
+        // 核心 JS 逻辑 (完全保持不变)
+        // ==========================================
+        (function() {
+            const fieldConfigTextarea = document.getElementById('fieldConfig');
+            const prefixInput = document.getElementById('prefixText');
+            const prefixPreviewSpan = document.getElementById('prefixPreview');
+            const batchSizeInput = document.getElementById('batchSize');
+            const fileInput = document.getElementById('excelFileInput');
+            const processBtn = document.getElementById('processBtn');
+            const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+            const downloadHtmlBtn = document.getElementById('downloadHtmlBtn');
+            const downloadJsonBtn = document.getElementById('downloadJsonBtn');
+            const outputTextarea = document.getElementById('outputText');
+            const groupCountSpan = document.getElementById('groupCount');
+            const statsInfo = document.getElementById('statsInfo');
+            const prefixStatSpan = document.getElementById('prefixStat');
+            const batchStatSpan = document.getElementById('batchStat');
+            const errorDiv = document.getElementById('errorMessage');
+
+            const headerRowNum = document.getElementById('headerRowNum');
+            const loadFieldsBtn = document.getElementById('loadFieldsBtn');
+            const rowCountHint = document.getElementById('rowCountHint');
+            const fieldCheckboxList = document.getElementById('fieldCheckboxList');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            const deselectAllBtn = document.getElementById('deselectAllBtn');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            const fieldConfigPreview = document.getElementById('fieldConfigPreview');
+
+            let cachedRows = null;
+            let currentFileName = ''; 
+            let currentResultText = '';
+            let currentGroupContents = [];
+            let currentFieldList = [];
+            let currentRawPrefix = '';
+            let currentBatchSize = 1;
+
+            function updatePrefixPreview() {
+                const prefix = prefixInput.value;
+                if (prefix) {
+                    const words = prefix.trim().split(/\s+/);
+                    let displayText = prefix;
+                    if (words.length > 10) {
+                        const firstTenWords = words.slice(0, 10).join(' ');
+                        displayText = firstTenWords + '...';
+                    }
+                    prefixPreviewSpan.innerText = `“${displayText}”`;
+                    prefixPreviewSpan.className = "text-purple-300";
+                } else {
+                    prefixPreviewSpan.innerText = '(无指令)';
+                    prefixPreviewSpan.className = "text-gray-500";
+                }
+            }
+            prefixInput.addEventListener('input', updatePrefixPreview);
+            updatePrefixPreview();
+
+            function showError(msg) {
+                errorDiv.classList.remove('hidden');
+                errorDiv.innerText = '[ERROR] ' + msg;
+                outputTextarea.value = '';
+                groupCountSpan.innerText = '0 GROUPS';
+                statsInfo.innerHTML = `<span class="text-red-400">[FAIL] ${msg}</span>`;
+                if (prefixStatSpan) prefixStatSpan.innerText = '';
+                if (batchStatSpan) batchStatSpan.innerText = '';
+                downloadTxtBtn.disabled = true; downloadHtmlBtn.disabled = true; downloadJsonBtn.disabled = true;
+                currentResultText = ''; currentGroupContents = [];
+            }
+
+            function hideError() {
+                errorDiv.classList.add('hidden');
+                errorDiv.innerText = '';
+            }
+
+            function updateStats(groupCount, usedFields, prefixUsed, batchSize) {
+                groupCountSpan.innerText = groupCount + ' GROUPS';
+                if (usedFields && usedFields.length) {
+                    let fieldStr = usedFields.join(' | ');
+                    statsInfo.innerHTML = `<span class="text-blue-400">[FIELDS] ${fieldStr}</span>`;
+                } else {
+                    statsInfo.innerHTML = `<span class="text-yellow-500">[WARN] NO MATCHING FIELDS</span>`;
+                }
+                const prefixShow = prefixUsed ? `“${prefixUsed}”` : 'NONE';
+                prefixStatSpan.innerText = `[PROMPT] ${prefixShow}`;
+                batchStatSpan.innerText = `[BATCH] ${batchSize}`;
+            }
+
+            function collectSelectedFields() {
+                const checkboxes = fieldCheckboxList.querySelectorAll('input[type="checkbox"]');
+                const selected = [];
+                for (let cb of checkboxes) {
+                    if (cb.checked) selected.push(cb.dataset.fieldname);
+                }
+                return selected;
+            }
+
+            function updateFieldConfigFromCheckboxes() {
+                const selected = collectSelectedFields();
+                const jsonStr = JSON.stringify(selected, null, 0);
+                fieldConfigTextarea.value = jsonStr;
+                fieldConfigPreview.innerText = jsonStr;
+                selectedCountSpan.innerText = `已选 ${selected.length} 个字段`;
+            }
+
+            function renderFieldCheckboxes(headerCells) {
+                fieldCheckboxList.innerHTML = ''; 
+                if (!headerCells || headerCells.length === 0) {
+                    fieldCheckboxList.innerHTML = '<div class="w-full text-center py-4 text-red-400">[!] HEADER ROW IS EMPTY</div>';
+                    updateFieldConfigFromCheckboxes(); 
+                    return;
+                }
+
+                let validCols = [];
+                for (let i = 0; i < headerCells.length; i++) {
+                    let cellVal = headerCells[i];
+                    let trimmed = (cellVal === undefined || cellVal === null) ? '' : String(cellVal).trim();
+                    if (trimmed !== '') validCols.push({ index: i, fieldName: trimmed });
+                }
+
+                if (validCols.length === 0) {
+                    fieldCheckboxList.innerHTML = '<div class="w-full text-center py-4 text-yellow-500">[!] NO VALID FIELDS FOUND</div>';
+                    updateFieldConfigFromCheckboxes();
+                    return;
+                }
+
+                validCols.forEach((col, idx) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'checkbox-item';
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.id = `field_${idx}_${col.index}`;
+                    cb.checked = true; 
+                    cb.dataset.fieldname = col.fieldName;
+                    const label = document.createElement('label');
+                    label.htmlFor = cb.id;
+                    label.innerText = col.fieldName;
+                    itemDiv.appendChild(cb); itemDiv.appendChild(label);
+                    fieldCheckboxList.appendChild(itemDiv);
+                    cb.addEventListener('change', updateFieldConfigFromCheckboxes);
+                });
+                updateFieldConfigFromCheckboxes();
+            }
+
+            function renderFieldsFromCachedRows() {
+                if (!cachedRows || cachedRows.length === 0) {
+                    fieldCheckboxList.innerHTML = '<div class="w-full text-center py-4 text-gray-500">Please load a file first.</div>';
+                    return;
+                }
+                let rowIndex = parseInt(headerRowNum.value, 10) - 1;
+                if (isNaN(rowIndex) || rowIndex < 0) rowIndex = 0;
+                if (rowIndex >= cachedRows.length) {
+                    rowIndex = cachedRows.length - 1;
+                    headerRowNum.value = cachedRows.length; 
+                }
+                const headerRow = cachedRows[rowIndex] || [];
+                renderFieldCheckboxes(headerRow);
+            }
+
+            function loadFileAndParse(file) {
+                hideError();
+                if (!file) { showError('NO FILE SELECTED'); return; }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array', cellText: false, cellDates: true });
+                        const firstSheetName = workbook.SheetNames[0];
+                        if (!firstSheetName) { showError('NO SHEETS FOUND'); return; }
+                        const sheet = workbook.Sheets[firstSheetName];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                        if (rows.length === 0) { showError('FILE IS EMPTY'); return; }
+
+                        cachedRows = rows;
+                        currentFileName = file.name; 
+                        rowCountHint.innerText = `(TOTAL: ${rows.length} ROWS)`;
+                        headerRowNum.max = rows.length;
+                        if (parseInt(headerRowNum.value, 10) > rows.length) headerRowNum.value = rows.length;
+                        renderFieldsFromCachedRows();
+                    } catch (err) { showError('PARSE ERROR: ' + err.message); }
+                };
+                reader.onerror = () => showError('FILE READ FAILED');
+                reader.readAsArrayBuffer(file);
+            }
+
+            loadFieldsBtn.addEventListener('click', () => {
+                const file = fileInput.files[0];
+                if (!file) { showError('PLEASE SELECT A FILE FIRST'); return; }
+                loadFileAndParse(file);
+            });
+
+            fileInput.addEventListener('change', () => {
+                cachedRows = null; currentFileName = ''; rowCountHint.innerText = '';
+                fieldCheckboxList.innerHTML = '<div class="w-full text-center py-8 text-gray-500 code-font flex flex-col items-center"><i class="fa-solid fa-radar fa-spin mb-2 opacity-50 text-2xl"></i>等待载入数据源解析表头...</div>';
+                fieldConfigPreview.innerText = '[]'; fieldConfigTextarea.value = '[]'; 
+                selectedCountSpan.innerText = '已选 0 个字段';
+                hideError();
+            });
+
+            headerRowNum.addEventListener('change', () => {
+                if (cachedRows && cachedRows.length > 0) {
+                    let val = parseInt(headerRowNum.value, 10);
+                    if (isNaN(val) || val < 1) headerRowNum.value = 1;
+                    if (val > cachedRows.length) headerRowNum.value = cachedRows.length;
+                    renderFieldsFromCachedRows();
+                }
+            });
+
+            selectAllBtn.addEventListener('click', () => {
+                fieldCheckboxList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+                updateFieldConfigFromCheckboxes();
+            });
+            deselectAllBtn.addEventListener('click', () => {
+                fieldCheckboxList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                updateFieldConfigFromCheckboxes();
+            });
+
+            function processExcel(file) {
+                hideError();
+                if (!file) { showError('PLEASE SELECT A FILE'); return; }
+
+                let configFields;
+                try {
+                    configFields = JSON.parse(fieldConfigTextarea.value);
+                    if (!Array.isArray(configFields)) throw new Error('NOT AN ARRAY');
+                    configFields = configFields.map(s => String(s).trim()).filter(s => s !== '');
+                    if (configFields.length === 0) throw new Error('NO FIELDS SELECTED');
+                    currentFieldList = configFields.slice();
+                } catch (err) { showError('INVALID CONFIG: ' + err.message); return; }
+
+                let rawPrefix = prefixInput.value; currentRawPrefix = rawPrefix;
+                const hasPrefix = rawPrefix.length > 0;
+                let batchSize = parseInt(batchSizeInput.value, 10);
+                if (isNaN(batchSize) || batchSize < 1) batchSize = 1;
+                currentBatchSize = batchSize;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array', cellText: false, cellDates: true });
+                        const firstSheetName = workbook.SheetNames[0];
+                        if (!firstSheetName) { showError('NO SHEETS FOUND'); return; }
+                        const sheet = workbook.Sheets[firstSheetName];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                        if (rows.length === 0) { showError('FILE IS EMPTY'); return; }
+
+                        let headerIdx = parseInt(headerRowNum.value, 10) - 1;
+                        if (isNaN(headerIdx) || headerIdx < 0) headerIdx = 0;
+                        if (headerIdx >= rows.length) headerIdx = rows.length - 1;
+
+                        const headerRow = rows[headerIdx].map(c => (c === undefined || c === null ? '' : String(c).trim()));
+                        const headerIndexMap = new Map();
+                        headerRow.forEach((colName, idx) => { if (colName !== '') headerIndexMap.set(colName, idx); });
+
+                        const fieldsToExtract = [];
+                        for (let cfgField of configFields) {
+                            const trimmedCfg = cfgField.trim();
+                            if (trimmedCfg === '') continue;
+                            if (headerIndexMap.has(trimmedCfg)) {
+                                fieldsToExtract.push({ configField: cfgField, actualHeader: trimmedCfg, colIndex: headerIndexMap.get(trimmedCfg) });
+                            } else {
+                                let found = false;
+                                for (let [key, idx] of headerIndexMap.entries()) {
+                                    if (key.toLowerCase() === trimmedCfg.toLowerCase()) {
+                                        fieldsToExtract.push({ configField: cfgField, actualHeader: key, colIndex: idx });
+                                        found = true; break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (fieldsToExtract.length === 0) { showError('NO MATCHING FIELDS FOUND'); return; }
+
+                        const dataRows = rows.slice(headerIdx + 1);
+                        if (dataRows.length === 0) {
+                            currentResultText = ''; currentGroupContents = []; outputTextarea.value = '';
+                            updateStats(0, fieldsToExtract.map(f => f.actualHeader), rawPrefix, batchSize);
+                            downloadTxtBtn.disabled = false; downloadHtmlBtn.disabled = false; downloadJsonBtn.disabled = false;
+                            return;
+                        }
+
+                        const recordFieldLines = [];
+                        for (let r = 0; r < dataRows.length; r++) {
+                            const row = dataRows[r] || [];
+                            const fieldParts = [];
+                            for (let f of fieldsToExtract) {
+                                const colIdx = f.colIndex;
+                                let cellValue = (colIdx < row.length && row[colIdx] !== undefined && row[colIdx] !== null) ? row[colIdx] : '';
+                                if (cellValue instanceof Date) {
+                                    try { cellValue = cellValue.toISOString().split('T')[0]; } catch { cellValue = String(cellValue); }
+                                } else { cellValue = String(cellValue); }
+                                fieldParts.push(`${f.configField}: ${cellValue}`);
+                            }
+                            recordFieldLines.push(fieldParts);
+                        }
+
+                        const groups = [];
+                        for (let i = 0; i < recordFieldLines.length; i += batchSize) groups.push(recordFieldLines.slice(i, i + batchSize));
+
+                        const txtGroups = []; const jsonGroupContents = [];
+                        groups.forEach((group, groupIdx) => {
+                            let groupText = `====== GROUP ${groupIdx+1} ======\n`;
+                            if (hasPrefix) groupText += rawPrefix + '\n';
+                            group.forEach((fieldParts, recIdx) => {
+                                if (recIdx > 0) groupText += '\n';
+                                groupText += fieldParts.join('\n');
+                            });
+                            txtGroups.push(groupText);
+
+                            let jsonContent = '';
+                            if (hasPrefix) jsonContent += rawPrefix + '\n';
+                            group.forEach((fieldParts, recIdx) => {
+                                if (recIdx > 0) jsonContent += '\n\n';
+                                jsonContent += fieldParts.join('\n');
+                            });
+                            jsonGroupContents.push(jsonContent);
+                        });
+
+                        currentResultText = txtGroups.join('\n\n');
+                        currentGroupContents = jsonGroupContents.slice();
+                        outputTextarea.value = currentResultText;
+                        updateStats(groups.length, fieldsToExtract.map(f => f.actualHeader), rawPrefix, batchSize);
+                        
+                        downloadTxtBtn.disabled = false; downloadHtmlBtn.disabled = false; downloadJsonBtn.disabled = false;
+
+                    } catch (err) { showError('PROCESS ERROR: ' + err.message); }
+                };
+                reader.onerror = () => showError('FILE READ ERROR');
+                reader.readAsArrayBuffer(file);
+            }
+
+            function downloadTxt() {
+                if (!currentResultText) { alert('NO DATA'); return; }
+                const filename = `Ge32_Extract_${Date.now()}.txt`;
+                const blob = new Blob([currentResultText], { type: 'text/plain;charset=utf-8' });
+                const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
+            }
+
+            function downloadHtml() {
+                if (!currentGroupContents.length) { alert('NO DATA'); return; }
+                const filename = `Ge32_Extract_${Date.now()}.html`;
+                const recordItems = currentGroupContents.map((content, index) => {
+                    const escaped = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+                    const htmlContent = escaped.replace(/\n/g, '<br>');
+                    return `
+                    <div class="card">
+                        <div class="header"><span>Group #${index+1}</span><button onclick="copy(${index})">Copy</button></div>
+                        <div class="content" id="g${index}">${htmlContent}</div>
+                    </div>`;
+                }).join('');
+                
+                // 补全了暗黑科幻风的 HTML 模板
+                const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ge32 Output</title>
+                <style>
+                    body{background:#030508;color:#e2e8f0;font-family:system-ui,sans-serif;padding:2rem;max-width:800px;margin:0 auto;}
+                    h2{color:#3b82f6;border-bottom:1px solid #1e3a8a;padding-bottom:10px;}
+                    .card{background:#0f172a;border:1px solid #1e293b;border-radius:8px;margin-bottom:1rem;overflow:hidden;}
+                    .header{background:#1e293b;padding:10px 15px;display:flex;justify-content:space-between;align-items:center;}
+                    .header span{font-weight:bold;color:#60a5fa;}
+                    button{background:#2563eb;color:white;border:none;padding:5px 15px;border-radius:4px;cursor:pointer;}
+                    button:hover{background:#3b82f6;}
+                    .content{padding:15px;line-height:1.6;font-family:monospace;color:#a7f3d0;}
+                </style>
+                </head><body><h2>GE32 Extraction Results</h2>${recordItems}
+                <script>
+                function copy(id){
+                    var text = document.getElementById('g'+id).innerText;
+                    navigator.clipboard.writeText(text).then(()=>alert('Copied Group #'+(id+1)));
+                }
+                <\/script></body></html>`;
+                
+                const blob = new Blob([fullHtml], { type: 'text/html' });
+                const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
+            }
+
+            function downloadJson() {
+                if (!currentGroupContents.length) { alert('NO DATA'); return; }
+                const filename = `Ge32_Extract_${Date.now()}.json`;
+                const blob = new Blob([JSON.stringify(currentGroupContents, null, 2)], { type: 'application/json' });
+                const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
+            }
+
+            processBtn.addEventListener('click', () => { const file = fileInput.files[0]; if (!file) { showError('PLEASE SELECT A FILE'); return; } processExcel(file); });
+            downloadTxtBtn.addEventListener('click', downloadTxt); downloadHtmlBtn.addEventListener('click', downloadHtml); downloadJsonBtn.addEventListener('click', downloadJson);
+
+            fieldConfigTextarea.addEventListener('input', () => { if (currentResultText) { downloadTxtBtn.disabled = true; downloadHtmlBtn.disabled = true; downloadJsonBtn.disabled = true; } });
+            prefixInput.addEventListener('input', () => { if (currentResultText) { downloadTxtBtn.disabled = true; downloadHtmlBtn.disabled = true; downloadJsonBtn.disabled = true; } updatePrefixPreview(); });
+            batchSizeInput.addEventListener('input', () => { if (currentResultText) { downloadTxtBtn.disabled = true; downloadHtmlBtn.disabled = true; downloadJsonBtn.disabled = true; } });
+            fileInput.addEventListener('change', hideError);
+        })();
+    </script>
+</body>
+</html>
