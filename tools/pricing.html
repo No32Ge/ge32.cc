@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ge32 上架公式 - 核心计算终端</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030508;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* 太空背景动画 */
+        .stars-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #0d1321 0%, #030508 100%);
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.5); box-shadow: 0 0 8px #fff; }
+        }
+
+        /* 玻璃拟态与科幻边框 */
+        .glass-panel {
+            background: rgba(16, 22, 35, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(59, 130, 246, 0.05);
+            border-radius: 16px;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 15px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.4);
+        }
+
+        /* 自定义文件上传区 */
+        .upload-zone {
+            border: 2px dashed rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease;
+        }
+        .upload-zone:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2) inset;
+        }
+
+        /* 终端控制台样式 */
+        .terminal {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #10b981;
+            height: 150px;
+            overflow-y: auto;
+        }
+        .terminal::-webkit-scrollbar { width: 6px; }
+        .terminal::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        /* 赛博朋克按钮 */
+        .cyber-btn {
+            background: linear-gradient(45deg, #2563eb, #3b82f6);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .cyber-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: all 0.5s;
+        }
+        .cyber-btn:hover::before { left: 100%; }
+        .cyber-btn:hover {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+            transform: translateY(-2px);
+        }
+        .cyber-btn:disabled {
+            background: #374151; color: #9ca3af; box-shadow: none; cursor: not-allowed; transform: none;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- 星空背景 -->
+    <div id="stars" class="stars-container"></div>
+
+    <div class="max-w-5xl mx-auto relative z-10">
+        <!-- 头部 -->
+        <header class="text-center mb-10 mt-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-widest text-white uppercase italic neon-text mb-3">
+                Ge32 上架公式
+            </h1>
+            <p class="text-blue-400/80 tracking-[0.3em] text-sm uppercase font-light">
+                <i class="fa-solid fa-satellite-dish mr-2"></i> Orbital Pricing & Logistics Terminal
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- 左侧：计算逻辑说明 -->
+            <div class="glass-panel p-6 md:p-8 flex flex-col h-full">
+                <div class="flex items-center mb-6 text-blue-400 border-b border-blue-900/50 pb-4">
+                    <i class="fa-solid fa-microchip text-2xl mr-3"></i>
+                    <h2 class="text-xl font-bold tracking-wider uppercase">系统计算逻辑</h2>
+                </div>
+                
+                <div class="space-y-5 text-sm text-gray-300 flex-grow">
+                    <!-- 逻辑1 -->
+                    <div class="bg-blue-950/20 p-4 rounded-lg border border-blue-900/30">
+                        <h3 class="text-white font-semibold mb-2 flex items-center">
+                            <span class="w-6 h-6 rounded bg-blue-600 flex justify-center items-center text-xs mr-2">1</span>
+                            计费重量判定
+                        </h3>
+                        <p class="mb-2">提取 <strong>克重</strong> 与 <strong>泡重</strong> 的最大值，并匹配档位（向上取整至10g倍数，+4.99g容差）。</p>
+                        <code class="block bg-black/50 p-2 rounded text-blue-300 code-font text-xs">Actual = Max(Weight, VolWeight)<br>Bucket = Math.round((Actual + 4.99) / 10) * 10</code>
+                    </div>
+
+                    <!-- 逻辑2 -->
+                    <div class="bg-purple-950/20 p-4 rounded-lg border border-purple-900/30">
+                        <h3 class="text-white font-semibold mb-2 flex items-center">
+                            <span class="w-6 h-6 rounded bg-purple-600 flex justify-center items-center text-xs mr-2">2</span>
+                            成本与基础汇率计算
+                        </h3>
+                        <p class="mb-2">总成本为 SKU人民币价 + 档位对应运费。按 <strong>7.2</strong> 汇率转换为基础美元。</p>
+                        <code class="block bg-black/50 p-2 rounded text-purple-300 code-font text-xs">TotalCNY = SKU Price + ShippingRate(Bucket)<br>USDBase = TotalCNY / 7.2</code>
+                    </div>
+
+                    <!-- 逻辑3 -->
+                    <div class="bg-emerald-950/20 p-4 rounded-lg border border-emerald-900/30">
+                        <h3 class="text-white font-semibold mb-2 flex items-center">
+                            <span class="w-6 h-6 rounded bg-emerald-600 flex justify-center items-center text-xs mr-2">3</span>
+                            智能定价策略 (.99结尾)
+                        </h3>
+                        <p class="mb-2">根据基准价区间除以利润系数 (0.4 / 0.5 / 0.65)，强制保底 $9.99。</p>
+                        <code class="block bg-black/50 p-2 rounded text-emerald-300 code-font text-xs">Divisor = Base≤5 ? 0.4 : (Base≤15 ? 0.5 : 0.65)<br>FinalPrice = Max(9.99, Floor(Base/Divisor) + 0.99)</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：操作终端 -->
+            <div class="glass-panel p-6 md:p-8 flex flex-col h-full">
+                <div class="flex items-center mb-6 text-blue-400 border-b border-blue-900/50 pb-4">
+                    <i class="fa-solid fa-terminal text-2xl mr-3"></i>
+                    <h2 class="text-xl font-bold tracking-wider uppercase">数据处理中枢</h2>
+                </div>
+
+                <!-- 上传区 -->
+                <div class="mb-6">
+                    <label for="excelFile" class="upload-zone block p-8 rounded-xl text-center cursor-pointer group">
+                        <div class="text-4xl text-blue-500/50 group-hover:text-blue-400 mb-3 transition-colors">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <p class="text-gray-300 font-medium mb-1 group-hover:text-white transition-colors">点击或拖拽上传 Excel 数据表</p>
+                        <p class="text-gray-500 text-xs code-font">要求包含: SKU价(￥), 重量(g), 泡重</p>
+                        <p id="fileNameDisplay" class="mt-4 text-emerald-400 text-sm font-bold hidden"></p>
+                    </label>
+                    <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden">
+                </div>
+
+                <!-- 操作按钮 -->
+                <button id="processBtn" class="cyber-btn w-full py-4 rounded-lg text-white font-bold tracking-widest uppercase mb-6 shadow-lg flex justify-center items-center">
+                    <i class="fa-solid fa-rocket mr-2"></i> 启动计算序列
+                </button>
+
+                <!-- 系统日志 -->
+                <div class="mt-auto">
+                    <div class="flex justify-between items-end mb-2">
+                        <span class="text-xs text-gray-500 uppercase tracking-widest font-bold">System Logs</span>
+                        <span class="flex h-2 w-2 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                    </div>
+                    <div id="terminal-output" class="terminal code-font">
+                        <div>> GE32 Station initialized.</div>
+                        <div>> Waiting for data input...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 依赖脚本 -->
+  
+    <script src="map.js"></script>
+
+    <script>
+        // ==========================================
+        // UI 与 动画初始化
+        // ==========================================
+        function createStars() {
+            const container = document.getElementById('stars');
+            for (let i = 0; i < 150; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2 + 'px';
+                star.style.width = size; star.style.height = size;
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+                container.appendChild(star);
+            }
+        }
+        createStars();
+
+        // 终端日志输出功能
+        const terminal = document.getElementById('terminal-output');
+        function logToTerminal(msg, type = 'info') {
+            const div = document.createElement('div');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            
+            let colorClass = 'text-green-400';
+            if(type === 'error') colorClass = 'text-red-400';
+            if(type === 'warning') colorClass = 'text-yellow-400';
+            if(type === 'success') colorClass = 'text-cyan-400';
+
+            div.className = `mb-1 ${colorClass}`;
+            div.innerHTML = `<span class="text-gray-600">[${time}]</span> > ${msg}`;
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight; // 自动滚动到底部
+        }
+
+        // ==========================================
+        // 核心业务逻辑 (原样保留)
+        // ==========================================
+        function getWeightBucket(weightGram) {
+            return Math.round((weightGram + 4.99) / 10) * 10;
+        }
+
+        function getActualWeight(weightGram, volumetricWeight) {
+            return Math.max(weightGram, volumetricWeight);
+        }
+
+        function getShippingCost(weightGram, rateMap, defaultRate = null) {
+            const bucket = getWeightBucket(weightGram);
+            if (rateMap.has(bucket)) {
+                return rateMap.get(bucket);
+            }
+            if (defaultRate !== null) {
+                return defaultRate;
+            }
+            throw new Error(`未找到档位 ${bucket}g 对应的运费`);
+        }
+
+        function calculateUSDShipping(totalCNY, exchangeRate = 7.2) {
+            if (totalCNY === undefined || totalCNY === null || totalCNY === '') return "";
+            const total = parseFloat(totalCNY);
+            if (isNaN(total) || total <= 0) return "";
+            const usdBase = total / exchangeRate;
+            let divisor;
+            if (usdBase <= 5) divisor = 0.4;
+            else if (usdBase <= 15) divisor = 0.5;
+            else divisor = 0.65;
+            
+            const intermediate = usdBase / divisor;
+            const value = Math.floor(intermediate) + 0.99;
+            return Math.round(Math.max(9.99, value) * 100) / 100;
+        }
+
+        // ==========================================
+        // Excel 转换工具
+        // ==========================================
+        function excelToJson(file, headerMapping) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const rawData = XLSX.utils.sheet_to_json(worksheet);
+                        
+                        const resultJson = rawData.map(row => {
+                            const mappedItem = { _raw: row };
+                            for (const [excelHeader, jsonKey] of Object.entries(headerMapping)) {
+                                mappedItem[jsonKey] = row[excelHeader] !== undefined ? row[excelHeader] : null;
+                            }
+                            return mappedItem;
+                        });
+                        resolve(resultJson);
+                    } catch (error) {
+                        reject("解析 Excel 失败：" + error.message);
+                    }
+                };
+                reader.onerror = () => reject("文件读取出错");
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function jsonToExcel(jsonList, fileName = '计算结果.xlsx') {
+            const exportData = jsonList.map(item => {
+                const row = { ...item._raw };
+                if (item.actualWeight !== undefined) row['实际计费重量(g)'] = item.actualWeight;
+                if (item.shippingCNY !== undefined) row['运费(人民币)'] = item.shippingCNY;
+                if (item.totalCNY !== undefined) row['总成本(人民币)'] = item.totalCNY;
+                if (item.finalUsdPrice !== undefined) row['计算后美元价格'] = item.finalUsdPrice;
+                return row;
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Result');
+            XLSX.writeFile(workbook, fileName);
+        }
+
+        // ==========================================
+        // DOM 交互与主流程
+        // ==========================================
+        const headerMapping = {
+            'SKU价(￥)': 'skuPrice',
+            '重量(g)': 'weight',
+            '泡重': 'volWeight'
+        };
+
+        // 防御性编程：防止 map.js 没加载报错
+        let shippingRates = new Map();
+        try {
+            if (typeof Window.map !== 'undefined') {
+                shippingRates = new Map(Window.map);
+                logToTerminal(`运费费率表已加载 (${shippingRates.size} 个档位)`);
+            } else if (typeof window.map !== 'undefined') {
+                shippingRates = new Map(window.map);
+                logToTerminal(`运费费率表已加载 (${shippingRates.size} 个档位)`);
+            } else {
+                logToTerminal("警告: 未检测到 map.js 数据，运费将采用默认值 99.99", "warning");
+            }
+        } catch (e) {
+            logToTerminal("警告: map.js 解析失败", "warning");
+        }
+        
+        const EXCHANGE_RATE = 7.2;
+
+        const btn = document.getElementById('processBtn');
+        const fileInput = document.getElementById('excelFile');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+        // 文件选择反馈
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const name = e.target.files[0].name;
+                fileNameDisplay.innerHTML = `<i class="fa-solid fa-file-excel mr-1"></i> 已载入: ${name}`;
+                fileNameDisplay.classList.remove('hidden');
+                logToTerminal(`文件读取就绪: ${name}`);
+            } else {
+                fileNameDisplay.classList.add('hidden');
+            }
+        });
+
+        // 核心执行
+        btn.addEventListener('click', async () => {
+            if (!fileInput.files.length) {
+                logToTerminal("错误: 未检测到数据源，请先上传文件。", "error");
+                // 增加按钮震动反馈
+                btn.classList.add('animate-pulse');
+                setTimeout(()=>btn.classList.remove('animate-pulse'), 500);
+                return;
+            }
+
+            const file = fileInput.files[0];
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> 运算中...';
+            logToTerminal("开始提取加密数据流...");
+
+            try {
+                const dataList = await excelToJson(file, headerMapping);
+                logToTerminal(`数据流提取成功，共计 [${dataList.length}] 条记录。`, 'success');
+                logToTerminal("启动定价算法模型...");
+
+                let successCount = 0;
+                let skipCount = 0;
+
+                dataList.forEach(item => {
+                    const skuPrice = parseFloat(item.skuPrice) || 0;
+                    const weight = parseFloat(item.weight) || 0;
+                    const volWeight = parseFloat(item.volWeight) || 0;
+
+                    if (skuPrice === 0 && weight === 0) {
+                        skipCount++;
+                        return;
+                    }
+
+                    try {
+                        const actualWeight = getActualWeight(weight, volWeight);
+                        const shippingCNY = getShippingCost(actualWeight, shippingRates, 99.99); 
+                        const totalCNY = skuPrice + shippingCNY;
+                        const finalUsdPrice = calculateUSDShipping(totalCNY, EXCHANGE_RATE);
+                        
+                        item.actualWeight = actualWeight;
+                        item.shippingCNY = shippingCNY;
+                        item.totalCNY = totalCNY;
+                        item.finalUsdPrice = finalUsdPrice;
+                        successCount++;
+                    } catch (e) {
+                        logToTerminal(`单行计算异常: ${e.message}`, "warning");
+                    }
+                });
+
+                logToTerminal(`计算完成: ${successCount} 成功, ${skipCount} 忽略。`);
+                logToTerminal("正在封装数据并建立下载链接...");
+                
+                setTimeout(() => {
+                    const outName = `GE32_Priced_${new Date().getTime()}.xlsx`;
+                    jsonToExcel(dataList, outName);
+                    logToTerminal(`操作结束！文件 [${outName}] 已自动下载。`, "success");
+                    
+                    // 恢复按钮状态
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-rocket mr-2"></i> 重新启动序列';
+                }, 800);
+
+            } catch (error) {
+                logToTerminal(`系统发生致命错误: ${error}`, "error");
+                console.error(error);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-rocket mr-2"></i> 重新启动序列';
+            }
+        });
+    </script>
+</body>
+</html>
