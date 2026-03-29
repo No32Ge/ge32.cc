@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ge32 - 未来科技入口</title>
+    <title>Ge32</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Google 字体 -->
@@ -44,35 +44,41 @@
             50% { opacity: 1; transform: scale(1.2); }
         }
 
-        /* 玻璃拟态卡片 */
+        /* 玻璃拟态卡片优化 */
         .glass-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
         .glass-card:hover {
-            background: rgba(255, 255, 255, 0.07);
-            border-color: #3b82f6;
-            transform: translateY(-5px);
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.1);
         }
 
         /* 霓虹文字效果 */
         .neon-text {
-            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            text-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
         }
 
-        /* 广告卡片专属发光动画 */
-        .ad-card-glow {
-            animation: pulse-border 2s infinite;
+        /* 分类标签样式 */
+        .tag-badge {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-        @keyframes pulse-border {
-            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-        }
+
+        .tag-ai { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+        .tag-tool { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-color: rgba(59, 130, 246, 0.3); }
+        .tag-dev { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border-color: rgba(139, 92, 246, 0.3); }
+        .tag-edu { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
     </style>
 </head>
 <body>
@@ -80,122 +86,122 @@
     <!-- 星空背景 -->
     <div id="stars" class="stars-container"></div>
 
-    <div class="container mx-auto px-4 py-16 relative z-10 min-h-screen flex flex-col justify-center">
+    <div class="container mx-auto px-4 py-16 relative z-10 min-h-screen">
         <!-- 头部 -->
         <header class="text-center mb-16">
             <h1 id="main-title" class="text-5xl md:text-7xl font-extrabold tracking-tighter mb-4 neon-text italic uppercase">
                 <!-- 由 JSON 渲染 -->
             </h1>
-            <p id="main-subtitle" class="text-gray-400 text-lg md:text-xl font-light tracking-widest uppercase">
+            <p id="main-subtitle" class="text-gray-400 text-lg md:text-xl font-light tracking-widest uppercase mb-8">
                 <!-- 由 JSON 渲染 -->
             </p>
-            <div class="w-24 h-1 bg-blue-600 mx-auto mt-6 shadow-[0_0_15px_rgba(37,99,235,0.8)]"></div>
+            
+            <!-- 分类概览栏 -->
+            <div class="flex flex-wrap justify-center gap-4 text-xs font-bold uppercase tracking-widest text-gray-500">
+                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span class="text-green-500 mr-1">●</span> AI Intelligence</span>
+                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span class="text-blue-500 mr-1">●</span> Productivity</span>
+                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span class="text-purple-500 mr-1">●</span> Development</span>
+                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span class="text-orange-500 mr-1">●</span> Education</span>
+            </div>
         </header>
 
         <!-- 导航网格 -->
-        <div id="nav-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div id="nav-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <!-- 由 JSON 渲染 -->
         </div>
 
         <!-- 页脚 -->
-        <footer class="mt-20 text-center text-gray-500 text-sm tracking-widest uppercase">
-            &copy; 2026 Ge32 Aerospace & AI. All rights reserved.
+        <footer class="mt-24 pb-12 text-center text-gray-600 text-sm tracking-[0.2em] uppercase">
+            &copy; 2026 Ge32 Aerospace & AI. Designed for the Next Era.
         </footer>
     </div>
 
     <script>
-        // 这里是修改后的 JSON 内容
         const pageData = {
             title: "GE32 STATION",
             subtitle: "Exploration • Intelligence • Future",
             navigation: [
-                
+                {
+                    title: "OrbixMind 英语学习",
+                    desc: "基于 AI 的沉浸式语言学习平台，像母语者一样思考和交流。",
+                    url: "https://orbixmind.com",
+                    icon: "fa-solid fa-graduation-cap",
+                    tag: "Education",
+                    tagClass: "tag-edu"
+                },
                 {
                     title: "Ge Brain AI 助手",
                     desc: "运行在浏览器的智能助手，提供全方位的 AI 支持，助你高效工作。",
                     url: "https://www.ge32.site",
                     icon: "fa-solid fa-microchip",
-                    tag: "AI Portal"
+                    tag: "AI Portal",
+                    tagClass: "tag-ai"
                 },
                 {
                     title: "提示词批量生成器",
-                    desc: "Excel转提示词，让 AI 更懂你的意图。",
+                    desc: "Excel一键转提示词，让 AI 批量处理你的复杂任务。",
                     url: "https://www.ge32.cc/tools/prompts.html",
                     icon: "fa-solid fa-terminal",
-                    tag: "Knowledge"
+                    tag: "Toolbox",
+                    tagClass: "tag-tool"
                 },
                 {
-                    title: "DeepSeek 自动询问插件",
-                    desc: "浏览器插件，自动向 DeepSeek 提问，解放双手，提升效率。",
+                    title: "DeepSeek 自动询问",
+                    desc: "自动化提问插件，大幅提升与大模型交互的效率。",
                     url: "https://www.ge32.cc/tools/deepseeker.html",
                     icon: "fa-solid fa-bolt",
-                    tag: "Toolbox"
-                },
-                {
-                    title: "Excel转JSON工具（暂无）",
-                    desc: "轻松将 Excel 数据转换为 JSON 格式，适用于各种开发需求。",
-                    url: "https://www.ge32.cc/tools/ExcelToJson.html",
-                    icon: "fa-brands fa-weixin",
-                    tag: "Social"
+                    tag: "Toolbox",
+                    tagClass: "tag-tool"
                 },
                 {
                     title: "JSON转Excel工具",
-                    desc: "便捷的在线工具，将 JSON 数据转换为 Excel 格式，适合数据分析和管理。",
+                    desc: "便捷的在线工具，将 JSON 数据转换为 Excel 格式，适合数据分析。",
                     url: "https://www.ge32.cc/tools/JsonToExcel.html",
-                    icon: "fa-solid fa-code",
-                    tag: "Development"
+                    icon: "fa-solid fa-file-csv",
+                    tag: "Development",
+                    tagClass: "tag-dev"
                 },
                 {
                     title: "Excel生成Html工具",
-                    desc: "快速查看生成的Listing数据有没有错误",
+                    desc: "快速预览生成的 Listing 数据，确保跨境电商文案完美无缺。",
                     url: "https://www.ge32.cc/tools/ExcelToHtml.html",
                     icon: "fa-solid fa-code",
-                    tag: "Development"
+                    tag: "Development",
+                    tagClass: "tag-dev"
                 }
             ]
         };
 
-        // 渲染函数（增加了对 isAd 的专属样式处理）
         function renderPage() {
             document.getElementById('main-title').innerText = pageData.title;
             document.getElementById('main-subtitle').innerText = pageData.subtitle;
 
             const grid = document.getElementById('nav-grid');
             grid.innerHTML = pageData.navigation.map(item => {
-                
-                // 判断是否为广告，如果是，赋予特殊的边框、发光效果和上浮样式
-                const cardClass = item.isAd 
-                    ? "glass-card p-8 rounded-xl flex flex-col justify-between relative overflow-hidden group border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.15)] md:-translate-y-2 ad-card-glow" 
-                    : "glass-card p-8 rounded-xl flex flex-col justify-between relative overflow-hidden group";
-                
-                // 广告专属的渐变色角标
-                const badgeHtml = item.isAd 
-                    ? '<div class="absolute top-0 right-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[10px] px-4 py-1.5 font-bold uppercase tracking-widest shadow-lg rounded-bl-lg">限时免费体验</div>' 
-                    : '';
-
-                // 广告卡片内的文字颜色处理
-                const titleColor = item.isAd ? "text-white" : "";
-                const iconColor = item.isAd ? "text-blue-400" : "text-blue-500";
-
                 return `
-                <a href="${item.url}" target="_blank" class="${cardClass}">
-                    ${badgeHtml}
+                <a href="${item.url}" target="_blank" class="glass-card p-8 rounded-2xl flex flex-col justify-between relative group overflow-hidden">
+                    <!-- 背景装饰光晕 -->
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-600/5 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-all"></div>
+                    
                     <div>
-                        <div class="${iconColor} text-3xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                            <i class="${item.icon}"></i>
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="text-blue-500 text-3xl group-hover:scale-110 group-hover:text-blue-400 transition-all duration-300">
+                                <i class="${item.icon}"></i>
+                            </div>
+                            <span class="tag-badge ${item.tagClass}">${item.tag}</span>
                         </div>
-                        <h3 class="text-xl font-bold mb-2 tracking-tight ${titleColor}">${item.title}</h3>
-                        <p class="text-gray-400 text-sm leading-relaxed">${item.desc}</p>
+                        <h3 class="text-xl font-bold mb-3 tracking-tight text-white group-hover:text-blue-300 transition-colors">${item.title}</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed mb-6">${item.desc}</p>
                     </div>
-                    <div class="mt-8 flex items-center text-xs font-bold text-blue-400 tracking-widest uppercase">
-                        ${item.isAd ? '立即开启极速爆单' : 'Explore Entry'} <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-2 transition-transform"></i>
+                    
+                    <div class="pt-4 border-t border-white/5 flex items-center text-xs font-bold text-blue-500 tracking-[0.2em] uppercase">
+                        Launch System <i class="fa-solid fa-chevron-right ml-2 group-hover:translate-x-1 transition-transform"></i>
                     </div>
                 </a>
                 `;
             }).join('');
         }
 
-        // 生成星空背景
         function createStars() {
             const container = document.getElementById('stars');
             const starCount = 150;
@@ -212,7 +218,6 @@
             }
         }
 
-        // 初始化
         window.onload = () => {
             createStars();
             renderPage();
