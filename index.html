@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,8 +41,17 @@
         }
 
         @keyframes twinkle {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
         }
 
         /* 玻璃拟态卡片优化 */
@@ -72,15 +82,35 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             font-weight: 700;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .tag-ai { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
-        .tag-tool { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-color: rgba(59, 130, 246, 0.3); }
-        .tag-dev { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border-color: rgba(139, 92, 246, 0.3); }
-        .tag-edu { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
+        .tag-ai {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .tag-tool {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .tag-dev {
+            background: rgba(139, 92, 246, 0.1);
+            color: #8b5cf6;
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .tag-edu {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
     </style>
 </head>
+
 <body>
 
     <!-- 星空背景 -->
@@ -89,19 +119,24 @@
     <div class="container mx-auto px-4 py-16 relative z-10 min-h-screen">
         <!-- 头部 -->
         <header class="text-center mb-16">
-            <h1 id="main-title" class="text-5xl md:text-7xl font-extrabold tracking-tighter mb-4 neon-text italic uppercase">
+            <h1 id="main-title"
+                class="text-5xl md:text-7xl font-extrabold tracking-tighter mb-4 neon-text italic uppercase">
                 <!-- 由 JSON 渲染 -->
             </h1>
             <p id="main-subtitle" class="text-gray-400 text-lg md:text-xl font-light tracking-widest uppercase mb-8">
                 <!-- 由 JSON 渲染 -->
             </p>
-            
+
             <!-- 分类概览栏 -->
             <div class="flex flex-wrap justify-center gap-4 text-xs font-bold uppercase tracking-widest text-gray-500">
-                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span class="text-green-500 mr-1">●</span> AI Intelligence</span>
-                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span class="text-blue-500 mr-1">●</span> Productivity</span>
-                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span class="text-purple-500 mr-1">●</span> Development</span>
-                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span class="text-orange-500 mr-1">●</span> Education</span>
+                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span
+                        class="text-green-500 mr-1">●</span> AI Intelligence</span>
+                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span
+                        class="text-blue-500 mr-1">●</span> Productivity</span>
+                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span
+                        class="text-purple-500 mr-1">●</span> Development</span>
+                <span class="px-4 py-2 border border-gray-800 rounded-full bg-black/20"><span
+                        class="text-orange-500 mr-1">●</span> Education</span>
             </div>
         </header>
 
@@ -122,9 +157,17 @@
             subtitle: "Exploration • Intelligence • Future",
             navigation: [
                 {
+                    "title": "智能颜色标准化转换器",
+                    "desc": "批量映射颜色名称，支持拼写纠错、模糊匹配，一键转换 Excel 颜色值。",
+                    "url": "https://www.ge32.cc/tools/colorConverter.html",     
+                    "icon": "fa-solid fa-palette",
+                    "tag": "Toolbox",
+                    "tagClass": "tag-tool"
+                },
+                {
                     title: "Ge32 上架公式计算",
                     desc: "基于运费档位与利润系数，批量智能计算 SKU 的最终美元售价，支持 Excel 导入导出。",
-                    url: "https://www.ge32.cc/tools/pricing.html", 
+                    url: "https://www.ge32.cc/tools/pricing.html",
                     icon: "fa-solid fa-calculator",
                     tag: "Toolbox",
                     tagClass: "tag-tool"
@@ -232,4 +275,5 @@
         };
     </script>
 </body>
+
 </html>

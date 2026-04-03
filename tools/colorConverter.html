@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能颜色转换器 (极速版)</title>
+    
+    <!-- 保留 Tailwind CSS 核心用于快速布局 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* 移除外部字体，使用极速的系统原生字体 */
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #111827; /* 纯色深灰背景，零渲染负担 */
+            color: #f3f4f6;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        /* 纯净的文本域等宽字体 */
+        textarea {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        
+        /* 极简滚动条 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* 未映射标签扁平化 */
+        .unmapped-item {
+            background: #374151;
+            color: #fbbf24;
+            display: inline-block;
+            margin: 4px 8px 4px 0;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    
+    <!-- 头部区域 -->
+    <div class="mb-8 border-b border-gray-800 pb-6">
+        <h1 class="text-3xl md:text-4xl font-bold mb-3">🎨 智能颜色标准化转换器</h1>
+        <p class="text-gray-400 text-sm">批量映射颜色名称 · 支持拼写纠错 · 模糊匹配 · 新增单字母/Multicolor系列/Wine映射</p>
+    </div>
+
+    <!-- 转换器面板 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <!-- 输入区 -->
+        <div class="flex flex-col">
+            <div class="flex justify-between items-end mb-2">
+                <label class="font-medium text-gray-300">📥 原始颜色列表</label>
+                <span class="text-xs text-gray-500">每行一个颜色</span>
+            </div>
+            <textarea id="inputColors" class="w-full h-96 p-4 bg-gray-800 border border-gray-700 rounded-lg text-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-y transition-colors" placeholder="在此输入颜色..."></textarea>
+        </div>
+
+        <!-- 输出区 -->
+        <div class="flex flex-col">
+            <div class="flex justify-between items-end mb-2">
+                <label class="font-medium text-gray-300">✨ 转换结果</label>
+                <span class="text-xs text-gray-500">标准颜色可直接复制</span>
+            </div>
+            <textarea id="outputColors" readonly class="w-full h-96 p-4 bg-gray-900 border border-gray-700 rounded-lg text-green-400 outline-none resize-y"></textarea>
+        </div>
+    </div>
+
+    <!-- 操作栏 (移除发光特效，采用扁平化按钮) -->
+    <div class="flex gap-3 mb-8 flex-wrap">
+        <button id="convertBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-md font-medium transition-colors">
+            🔄 开始转换 & 识别
+        </button>
+        <button id="copyBtn" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-md font-medium transition-colors">
+            📋 复制转换结果
+        </button>
+        <button id="clearBtn" class="bg-red-900/50 hover:bg-red-800 text-red-200 px-6 py-2.5 rounded-md font-medium transition-colors ml-auto">
+            🗑️ 清空所有
+        </button>
+    </div>
+
+    <!-- 未映射颜色提示区 -->
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+        <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+            <div class="flex items-center gap-3">
+                <h2 class="font-bold text-gray-200">⚠️ 未映射的颜色 (保留原值)</h2>
+                <span id="unmappedCount" class="bg-gray-900 text-gray-400 text-xs px-2 py-1 rounded border border-gray-700">0 个未匹配项</span>
+            </div>
+            <button id="copyUnmappedHint" class="bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-1.5 rounded text-sm transition-colors">
+                📋 复制未映射列表
+            </button>
+        </div>
+
+        <div id="unmappedArea" class="bg-gray-900 border border-gray-700 p-4 rounded-lg max-h-48 overflow-y-auto mb-4">
+            <span class="text-gray-500 text-sm">暂无未映射颜色，转换后将显示需要补充的颜色词</span>
+        </div>
+
+        <div class="text-xs text-gray-400 leading-relaxed bg-gray-900/50 p-3 rounded border border-gray-800">
+            💡 提示：“未映射颜色”即未命中精确映射表且未命中模糊规则的颜色（已去重）。您可据此扩充映射库。<br>
+            🌈 包含模糊匹配逻辑：单个字母、color/colorful/mul、Multiple*、Mixed colors 等自动转为 Multicolor。
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    // 1. 原始精确映射表 (核心逻辑原样保留，执行极快)
+    // --------------------------------------------------------------
+    const RAW_COLOR_MAP = {
+        "mint green": "Green", "army green": "Green", "light green": "Green", "dark green": "Green", 
+        "grean": "Green", "greem": "Green", "gteen": "Green", "green ": "Green", " green": "Green",
+        "rose gold": "Gold", "rosegold": "Gold", "rose-gold": "Gold",
+        "sky blue": "Blue", "light blue": "Blue", "light bule": "Blue", "light b lue": "Blue", 
+        "dark blue": "Blue", "navy": "Blue", "navy blue": "Blue", "bleu": "Blue", "bule": "Blue", "bluw": "Blue",
+        "coffee": "Brown", "khaki": "Brown", "brown": "Brown", "browm": "Brown", "broun": "Brown", "brawn": "Brown",
+        "watermelon red": "Red", "watermellon red": "Red", "redd": "Red", "red ": "Red",
+        "sliver": "Silver", "silvery": "Silver", "silver,clear": "Silver", "silverclear": "Silver", "siver": "Silver", "silvre": "Silver",
+        "dark gray": "Gray", "dark grey": "Gray", "grey": "Gray", "gray": "Gray", "graay": "Gray", "graey": "Gray",
+        "transparent": "Clear", "transparant": "Clear", "transperent": "Clear", "transperant": "Clear", "clear": "Clear", "clearr": "Clear", "clera": "Clear",
+        "black": "Black", "blak": "Black", "blck": "Black", "balck": "Black",
+        "white": "White", "whit": "White", "wite": "White", "whtie": "White", "while": "White",
+        "yellow": "Yellow", "yello": "Yellow", "yelow": "Yellow",
+        "orange": "Orange", "orenge": "Orange", "orng": "Orange",
+        "pink": "Pink", "pinc": "Pink", "peenk": "Pink",
+        "purple": "Purple", "purpel": "Purple", "purpple": "Purple", "violet": "Purple",
+        "Champagne": "Pink", "champagne": "Pink",
+        "Wine": "Red", "wine": "Red",
+        "color": "Multicolor", "colorful": "Multicolor", "mul": "Multicolor", "as show": "Multicolor", "as shown": "Multicolor",
+    };
+
+    const exactLookupMap = new Map();
+    for (const [rawKey, targetColor] of Object.entries(RAW_COLOR_MAP)) {
+        exactLookupMap.set(rawKey.trim().toLowerCase(), targetColor);
+    }
+
+    // --------------------------------------------------------------
+    // 2. 模糊匹配规则
+    // --------------------------------------------------------------
+    const fuzzyRules = [
+        { regex: /^[a-z]$/i, target: "Multicolor" },
+        { regex: /^multiple[a-z]*$/i, target: "Multicolor" },
+        { regex: /^multicolour[a-z]*$/i, target: "Multicolor" },
+        { regex: /^multicolor[a-z]*$/i, target: "Multicolor" },
+        { regex: /^mixed\s*colou?r[a-z]*$/i, target: "Multicolor" },
+        { regex: /^mixedcolou?r[a-z]*$/i, target: "Multicolor" },
+        { regex: /^mixed\s+colou?rs?[a-z]*$/i, target: "Multicolor" },
+        { regex: /^mixed[\s\-_]?colou?r[a-z]*$/i, target: "Multicolor" },
+        { regex: /^mixed\s+colors?[a-z]*$/i, target: "Multicolor" }
+    ];
+
+    function applyFuzzyMatch(trimmedLower) {
+        for (const rule of fuzzyRules) {
+            if (rule.regex.test(trimmedLower)) return rule.target;
+        }
+        return null;
+    }
+
+    function convertColors(rawText) {
+        const lines = rawText.split(/\r?\n/);
+        const outputLines = [];
+        const unmappedStats = new Map();
+
+        for (let originalLine of lines) {
+            const trimmedLine = originalLine.trim();
+            if (trimmedLine === "") {
+                outputLines.push("");
+                continue;
+            }
+
+            const normalizedInput = trimmedLine.toLowerCase();
+            let mappedColor = exactLookupMap.get(normalizedInput) || applyFuzzyMatch(normalizedInput);
+            
+            if (mappedColor) {
+                outputLines.push(mappedColor);
+            } else {
+                outputLines.push(originalLine);
+                const existing = unmappedStats.get(normalizedInput);
+                if (existing) {
+                    existing.count += 1;
+                } else {
+                    unmappedStats.set(normalizedInput, { display: trimmedLine, count: 1 });
+                }
+            }
+        }
+        return { outputLines, unmappedStats };
+    }
+
+    // ---------- UI 极速渲染逻辑 ----------
+    function updateUI() {
+        const inputText = document.getElementById('inputColors').value;
+        const { outputLines, unmappedStats } = convertColors(inputText);
+        
+        document.getElementById('outputColors').value = outputLines.join('\n');
+        
+        const unmappedArea = document.getElementById('unmappedArea');
+        const unmappedCountSpan = document.getElementById('unmappedCount');
+        
+        unmappedCountSpan.textContent = `${unmappedStats.size} 个未匹配项`;
+        
+        if (unmappedStats.size === 0) {
+            unmappedArea.innerHTML = '<span class="text-green-500">✅ 所有颜色均已成功映射！</span>';
+        } else {
+            let itemsHtml = '';
+            for (let [normKey, info] of unmappedStats.entries()) {
+                const timesText = info.count > 1 ? ` (${info.count}次)` : '';
+                itemsHtml += `<span class="unmapped-item">${escapeHtml(info.display)}${timesText}</span>`;
+            }
+            unmappedArea.innerHTML = itemsHtml;
+        }
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+    }
+
+    async function copyOutput() {
+        const textToCopy = document.getElementById('outputColors').value;
+        if (!textToCopy.trim()) return alert("暂无转换结果！");
+        
+        try {
+            await navigator.clipboard.writeText(textToCopy);
+            const btn = document.getElementById('copyBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✅ 已复制！';
+            btn.classList.replace('bg-gray-700', 'bg-green-600');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.replace('bg-green-600', 'bg-gray-700');
+            }, 1500);
+        } catch (err) {
+            alert("复制失败，请手动复制");
+        }
+    }
+
+    async function copyUnmappedList() {
+        const inputText = document.getElementById('inputColors').value;
+        const { unmappedStats } = convertColors(inputText);
+        if (unmappedStats.size === 0) return alert("没有未映射的颜色");
+        
+        const lines = Array.from(unmappedStats.values()).map(info => `${info.display}${info.count > 1 ? ` (${info.count}次)` : ''}`);
+        
+        try {
+            await navigator.clipboard.writeText(lines.join('\n'));
+            const btn = document.getElementById('copyUnmappedHint');
+            const oldHtml = btn.innerHTML;
+            btn.innerHTML = '✅ 已复制';
+            setTimeout(() => btn.innerHTML = oldHtml, 1200);
+        } catch(e) {
+            alert("复制失败，可手动选取");
+        }
+    }
+
+    function clearAll() {
+        document.getElementById('inputColors').value = '';
+        document.getElementById('outputColors').value = '';
+        document.getElementById('unmappedArea').innerHTML = '<span class="text-gray-500 text-sm">暂无未映射颜色</span>';
+        document.getElementById('unmappedCount').textContent = '0 个未匹配项';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('convertBtn').addEventListener('click', updateUI);
+        document.getElementById('copyBtn').addEventListener('click', copyOutput);
+        document.getElementById('clearBtn').addEventListener('click', clearAll);
+        document.getElementById('copyUnmappedHint').addEventListener('click', copyUnmappedList);
+        
+        const inputArea = document.getElementById('inputColors');
+        
+        // 默认样例数据
+        if (inputArea.value.trim() === "") {
+            inputArea.value = "mint green\nrose gold\nchampagne\nA\nB\ncolor\nas show\nWine\nbalck\nwhtie\nMulticolorXYZ\nMixed colors\nnavy blue\nunknownTest";
+            updateUI();
+        }
+        
+        // Ctrl+Enter 快捷转换
+        inputArea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                updateUI();
+            }
+        });
+    });
+</script>
+</body>
+</html>
