@@ -2,193 +2,576 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>美国地图时间查询</title>
-    
-    <!-- 引入 Highmaps 核心库 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>美国订单热度地图 · 暗夜星空版（修复导入导出）</title>
+    <!-- Highmaps 核心 + 美国地图数据 -->
     <script src="https://code.highcharts.com/maps/highmaps.js"></script>
-    <!-- 通过 script 标签直接引入美国地图数据 -->
     <script src="https://code.highcharts.com/mapdata/countries/us/us-all.js"></script>
-    
+    <!-- SheetJS 处理 Excel - 使用备用 CDN 提高稳定性 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f6f9;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(circle at 10% 20%, #0a0f1e, #03060c);
+            font-family: 'Segoe UI', 'Poppins', 'Inter', system-ui, sans-serif;
+            padding: 24px 20px;
+            color: #eef5ff;
+        }
+
+        .dashboard {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .map-panel {
+            flex: 3;
+            min-width: 280px;
+            background: rgba(10, 20, 30, 0.55);
+            backdrop-filter: blur(2px);
+            border-radius: 36px;
+            padding: 20px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+            border: 1px solid rgba(72, 187, 255, 0.2);
+        }
+
+        #map-container {
+            width: 100%;
+            height: 550px;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 0 0 1px rgba(0, 255, 255, 0.1), 0 10px 25px -5px black;
+        }
+
+        .info-panel {
+            flex: 1.2;
+            min-width: 280px;
             display: flex;
             flex-direction: column;
+            gap: 24px;
+        }
+
+        .card {
+            background: rgba(12, 20, 30, 0.7);
+            backdrop-filter: blur(8px);
+            border-radius: 32px;
+            padding: 20px 24px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            display: flex;
             align-items: center;
+            gap: 10px;
+            border-left: 4px solid #2dd4bf;
+            padding-left: 14px;
         }
-        h2 { margin-top: 20px; color: #333; }
-        #info-panel {
-            background-color: #fff;
-            padding: 15px 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin: 10px 0;
-            font-size: 18px;
-            color: #555;
-            min-width: 300px;
+
+        .selected-info {
             text-align: center;
+            margin-bottom: 12px;
         }
-        .time-highlight {
-            font-size: 24px;
+        .selected-state-name {
+            font-size: 1.8rem;
             font-weight: bold;
-            color: #d32f2f;
-            display: block;
-            margin-top: 5px;
+            background: linear-gradient(135deg, #ffe6b0, #ffb347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
-        #map-container {
-            width: 90vw;
-            height: 75vh;
-            background-color: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        .clock {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.2rem;
+            font-weight: 600;
+            background: #010a14;
+            padding: 12px;
+            border-radius: 48px;
+            text-align: center;
+            letter-spacing: 2px;
+            color: #7df9ff;
+            text-shadow: 0 0 5px #00ccff;
+            border: 1px solid #2dd4bf50;
         }
-        /* 去除 Highcharts 右下角默认的版权文字 */
-        .highcharts-credits { display: none !important; }
+
+        .daynight-split {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+        }
+        .day-box, .night-box {
+            flex: 1;
+            background: rgba(0,0,0,0.4);
+            border-radius: 24px;
+            padding: 12px;
+        }
+        .day-box h4, .night-box h4 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+        .state-list {
+            max-height: 180px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .state-tag {
+            background: #1e2a3a;
+            padding: 4px 10px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            color: #cbd5e6;
+        }
+        .day-box .state-tag { background: #2c4a3e; color: #b9f6ca; }
+        .night-box .state-tag { background: #1a2a3f; color: #9ac8ff; }
+
+        .button-group {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .btn {
+            background: rgba(20, 40, 60, 0.9);
+            border: 1px solid #2dd4bf;
+            color: #ccf4ff;
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.85rem;
+        }
+        .btn-primary {
+            background: #0e4b6e;
+            border-color: #5eead4;
+            color: white;
+            box-shadow: 0 0 6px #2dd4bf80;
+        }
+        .btn-primary:hover {
+            background: #1e6f9e;
+            transform: scale(1.02);
+        }
+        .btn:hover {
+            background: #2c5a7a;
+            border-color: #7ef0e0;
+        }
+        input[type="file"] { display: none; }
+
+        .highcharts-point {
+            transition: filter 0.2s, stroke-width 0.1s;
+            cursor: pointer;
+            filter: drop-shadow(0 0 2px rgba(0,255,255,0.2));
+        }
+        .highcharts-point-hover {
+            filter: drop-shadow(0 0 8px #ffb347) brightness(1.1);
+            stroke: #ffdd99 !important;
+            stroke-width: 1.5px !important;
+        }
+        .highlight-state {
+            filter: drop-shadow(0 0 12px #f5b042) drop-shadow(0 0 4px #ff9900);
+            stroke: #ffcc66 !important;
+            stroke-width: 2px !important;
+        }
+        .highcharts-credits { display: none; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0f1a24; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #2dd4bf; border-radius: 10px; }
+
+        .toast-msg {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            border-left: 3px solid #2dd4bf;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
     </style>
 </head>
 <body>
 
-    <h2>点击美国地图查看当地当前时间</h2>
-    <div id="info-panel">
-        请点击地图上的任意一个州
-        <span class="time-highlight" id="time-display">-- : -- : --</span>
+<div class="dashboard">
+    <div class="map-panel">
+        <div id="map-container"></div>
+        <div style="margin-top: 16px; text-align: center; font-size: 0.75rem; opacity: 0.7;">
+            ⭐ 销量越高 → 州颜色越亮 | 点击任意州查看当地实时时间
+        </div>
     </div>
-    
-    <div id="map-container"></div>
 
-    <script>
-        // 美国各州英文名到 IANA 时区的映射
-        const stateTimezones = {
-            'Alabama': 'America/Chicago',
-            'Alaska': 'America/Anchorage',
-            'Arizona': 'America/Phoenix', 
-            'Arkansas': 'America/Chicago',
-            'California': 'America/Los_Angeles',
-            'Colorado': 'America/Denver',
-            'Connecticut': 'America/New_York',
-            'Delaware': 'America/New_York',
-            'District of Columbia': 'America/New_York',
-            'Florida': 'America/New_York',
-            'Georgia': 'America/New_York',
-            'Hawaii': 'Pacific/Honolulu', 
-            'Idaho': 'America/Boise',
-            'Illinois': 'America/Chicago',
-            'Indiana': 'America/Indiana/Indianapolis',
-            'Iowa': 'America/Chicago',
-            'Kansas': 'America/Chicago',
-            'Kentucky': 'America/New_York',
-            'Louisiana': 'America/Chicago',
-            'Maine': 'America/New_York',
-            'Maryland': 'America/New_York',
-            'Massachusetts': 'America/New_York',
-            'Michigan': 'America/Detroit',
-            'Minnesota': 'America/Chicago',
-            'Mississippi': 'America/Chicago',
-            'Missouri': 'America/Chicago',
-            'Montana': 'America/Denver',
-            'Nebraska': 'America/Chicago',
-            'Nevada': 'America/Los_Angeles',
-            'New Hampshire': 'America/New_York',
-            'New Jersey': 'America/New_York',
-            'New Mexico': 'America/Denver',
-            'New York': 'America/New_York',
-            'North Carolina': 'America/New_York',
-            'North Dakota': 'America/Chicago',
-            'Ohio': 'America/New_York',
-            'Oklahoma': 'America/Chicago',
-            'Oregon': 'America/Los_Angeles',
-            'Pennsylvania': 'America/New_York',
-            'Rhode Island': 'America/New_York',
-            'South Carolina': 'America/New_York',
-            'South Dakota': 'America/Chicago',
-            'Tennessee': 'America/Chicago',
-            'Texas': 'America/Chicago',
-            'Utah': 'America/Denver',
-            'Vermont': 'America/New_York',
-            'Virginia': 'America/New_York',
-            'Washington': 'America/Los_Angeles',
-            'West Virginia': 'America/New_York',
-            'Wisconsin': 'America/Chicago',
-            'Wyoming': 'America/Denver',
-            'Puerto Rico': 'America/Puerto_Rico'
-        };
+    <div class="info-panel">
+        <div class="card">
+            <div class="selected-info">
+                <div style="font-size: 0.9rem; opacity: 0.8;">当前选中</div>
+                <div class="selected-state-name" id="selectedStateName">——</div>
+            </div>
+            <div class="clock" id="liveClock">-- : -- : --</div>
+        </div>
 
-        let currentSelectedTimezone = null;
-        let timer = null;
-        const infoPanel = document.getElementById('info-panel');
+        <div class="card">
+            <div class="card-title">🌓 昼夜分布 · 实时</div>
+            <div class="daynight-split">
+                <div class="day-box"><h4>☀️ 白昼区</h4><div id="dayStatesList" class="state-list">加载中...</div></div>
+                <div class="night-box"><h4>🌙 夜晚区</h4><div id="nightStatesList" class="state-list">加载中...</div></div>
+            </div>
+        </div>
 
-        // 【关键修复 1】：从地图库中解析出每个州的数据对象，这样它们才是可点击的实体！
-        const mapData = Highcharts.geojson(Highcharts.maps['countries/us/us-all']);
+        <div class="card">
+            <div class="card-title">📊 订单数据引擎</div>
+            <div style="font-size: 0.85rem; margin-bottom: 12px;">销量越高 → 州地图亮度越强（暗蓝 → 炽金）</div>
+            <div class="button-group">
+                <button class="btn" id="exportExcelBtn">📎 导出模板 (州+销量)</button>
+                <label for="uploadExcel" class="btn btn-primary">📂 导入 Excel 数据</label>
+                <input type="file" id="uploadExcel" accept=".xlsx, .xls, .csv">
+                <button class="btn" id="resetSalesBtn">🔄 重置销量</button>
+            </div>
+            <div style="margin-top: 12px; font-size: 0.7rem; opacity: 0.6;">
+                💡 提示：导出的表格中修改「销量」数字，导入后地图热度自动更新
+            </div>
+        </div>
+    </div>
+</div>
+<div id="toastMsg" class="toast-msg"></div>
 
-        // 初始化 Highcharts 地图
-        Highcharts.mapChart('map-container', {
-            chart: {
-                map: 'countries/us/us-all', 
-                backgroundColor: 'transparent'
-            },
-            title: { text: null },
-            mapNavigation: {
-                enabled: true, 
-                buttonOptions: { verticalAlign: 'bottom' }
-            },
-            tooltip: {
-                headerFormat: '',
-                pointFormat: '{point.name}' 
-            },
-            series: [{
-                // 【关键修复 2】：把解析出来的数据挂载到地图上
-                data: mapData,
-                name: '美国地图',
-                borderColor: '#ffffff', 
-                borderWidth: 1,
-                color: '#e0e0e0', // 默认每个州的颜色
-                allowPointSelect: true, 
-                cursor: 'pointer',
-                states: {
-                    hover: { color: '#ffb74d' }, // 悬浮颜色
-                    select: { color: '#d32f2f' } // 点击选中颜色
-                },
-                point: {
-                    events: {
-                        // 【现在这里的点击事件可以完美触发了】
-                        click: function () {
-                            const stateName = this.name;
-                            const timezone = stateTimezones[stateName];
+<script>
+    // 简单提示函数
+    function showMessage(msg, isError = false) {
+        const toast = document.getElementById('toastMsg');
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        toast.style.background = isError ? '#7f1a1a' : '#1e293b';
+        setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+    }
 
-                            if (timezone) {
-                                currentSelectedTimezone = timezone;
-                                infoPanel.innerHTML = `当前选中的州：<b>${stateName}</b> <span class="time-highlight" id="time-display"></span>`;
-                                const timeDisplay = document.getElementById('time-display');
-                                
-                                const formatTime = () => {
-                                    return new Intl.DateTimeFormat('zh-CN', {
-                                        timeZone: currentSelectedTimezone,
-                                        year: 'numeric', month: '2-digit', day: '2-digit',
-                                        hour: '2-digit', minute: '2-digit', second: '2-digit',
-                                        hour12: false
-                                    }).format(new Date());
-                                };
+    // ======================= 1. 时区映射 =======================
+    const stateTimezones = {
+        'Alabama': 'America/Chicago', 'Alaska': 'America/Anchorage', 'Arizona': 'America/Phoenix',
+        'Arkansas': 'America/Chicago', 'California': 'America/Los_Angeles', 'Colorado': 'America/Denver',
+        'Connecticut': 'America/New_York', 'Delaware': 'America/New_York', 'District of Columbia': 'America/New_York',
+        'Florida': 'America/New_York', 'Georgia': 'America/New_York', 'Hawaii': 'Pacific/Honolulu',
+        'Idaho': 'America/Boise', 'Illinois': 'America/Chicago', 'Indiana': 'America/Indiana/Indianapolis',
+        'Iowa': 'America/Chicago', 'Kansas': 'America/Chicago', 'Kentucky': 'America/New_York',
+        'Louisiana': 'America/Chicago', 'Maine': 'America/New_York', 'Maryland': 'America/New_York',
+        'Massachusetts': 'America/New_York', 'Michigan': 'America/Detroit', 'Minnesota': 'America/Chicago',
+        'Mississippi': 'America/Chicago', 'Missouri': 'America/Chicago', 'Montana': 'America/Denver',
+        'Nebraska': 'America/Chicago', 'Nevada': 'America/Los_Angeles', 'New Hampshire': 'America/New_York',
+        'New Jersey': 'America/New_York', 'New Mexico': 'America/Denver', 'New York': 'America/New_York',
+        'North Carolina': 'America/New_York', 'North Dakota': 'America/Chicago', 'Ohio': 'America/New_York',
+        'Oklahoma': 'America/Chicago', 'Oregon': 'America/Los_Angeles', 'Pennsylvania': 'America/New_York',
+        'Rhode Island': 'America/New_York', 'South Carolina': 'America/New_York', 'South Dakota': 'America/Chicago',
+        'Tennessee': 'America/Chicago', 'Texas': 'America/Chicago', 'Utah': 'America/Denver',
+        'Vermont': 'America/New_York', 'Virginia': 'America/New_York', 'Washington': 'America/Los_Angeles',
+        'West Virginia': 'America/New_York', 'Wisconsin': 'America/Chicago', 'Wyoming': 'America/Denver',
+        'Puerto Rico': 'America/Puerto_Rico', 'Washington, D.C.': 'America/New_York', 'D.C.': 'America/New_York'
+    };
+    function getTimezone(stateName) {
+        if (!stateName) return null;
+        let name = stateName.trim();
+        if (stateTimezones[name]) return stateTimezones[name];
+        let simpler = name.replace(/^(Commonwealth of|State of) /i, '');
+        if (stateTimezones[simpler]) return stateTimezones[simpler];
+        if (name.includes('Columbia')) return 'America/New_York';
+        return null;
+    }
+    function isDaytime(tz) {
+        if (!tz) return true;
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
+        const hour = parseInt(formatter.format(now));
+        return (hour >= 6 && hour < 18);
+    }
 
-                                timeDisplay.textContent = formatTime();
+    // ======================= 2. 全局变量 =======================
+    let chart = null;
+    let allPoints = [];           // 存储 Highmaps point 对象
+    let salesData = {};           // { "California": 1250, ... }
+    let currentHighlightPoint = null;
+    let currentClockTimezone = null;
+    let clockInterval = null;
+    let dayNightInterval = null;
 
-                                if (timer) clearInterval(timer);
-                                timer = setInterval(() => {
-                                    timeDisplay.textContent = formatTime();
-                                }, 1000);
+    // 根据销量返回颜色 (0 → 暗蓝，高销量 → 亮橙)
+    function getColorBySales(sales) {
+        let intensity = Math.min(1, sales / 8000);
+        const startHue = 210, startSat = 40, startLight = 18;
+        const endHue = 35, endSat = 95, endLight = 62;
+        const hue = startHue + (endHue - startHue) * intensity;
+        const sat = startSat + (endSat - startSat) * intensity;
+        const light = startLight + (endLight - startLight) * intensity;
+        return `hsl(${hue}, ${sat}%, ${light}%)`;
+    }
 
-                            } else {
-                                infoPanel.innerHTML = `暂无 <b>${stateName}</b> 的时区数据`;
-                                if (timer) clearInterval(timer);
-                            }
+    // 更新所有州的颜色（仅更新颜色，不重建 series）
+    function updateAllColors() {
+        if (!chart || !allPoints.length) return;
+        allPoints.forEach(point => {
+            const sale = salesData[point.name] || 0;
+            const newColor = getColorBySales(sale);
+            point.update({ color: newColor }, false);
+        });
+        chart.redraw();
+    }
+
+    // 重置销量
+    function resetSales() {
+        allPoints.forEach(p => { salesData[p.name] = 0; });
+        updateAllColors();
+        if (currentHighlightPoint) clearHighlight();
+        showMessage('所有销量已归零，地图恢复暗夜色');
+    }
+
+    // 高亮管理
+    function highlightPoint(point) {
+        if (currentHighlightPoint && currentHighlightPoint !== point) clearHighlight();
+        if (!point || !point.graphic) return;
+        const el = point.graphic.element;
+        if (el) el.classList.add('highlight-state');
+        currentHighlightPoint = point;
+    }
+    function clearHighlight() {
+        if (currentHighlightPoint && currentHighlightPoint.graphic) {
+            const el = currentHighlightPoint.graphic.element;
+            if (el) el.classList.remove('highlight-state');
+        }
+        currentHighlightPoint = null;
+    }
+
+    // 右侧时钟
+    function updateClockDisplay() {
+        const clockSpan = document.getElementById('liveClock');
+        if (!currentClockTimezone) {
+            clockSpan.textContent = '-- : -- : --';
+            return;
+        }
+        try {
+            const formatter = new Intl.DateTimeFormat('zh-CN', {
+                timeZone: currentClockTimezone,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            });
+            clockSpan.textContent = formatter.format(new Date());
+        } catch(e) { clockSpan.textContent = '时区错误'; }
+    }
+    function startClockTimer(tz) {
+        currentClockTimezone = tz;
+        if (clockInterval) clearInterval(clockInterval);
+        updateClockDisplay();
+        clockInterval = setInterval(updateClockDisplay, 1000);
+    }
+    function stopClockTimer() { if (clockInterval) clearInterval(clockInterval); clockInterval = null; }
+
+    // 刷新白天/夜晚面板
+    function refreshDayNightPanel() {
+        if (!allPoints.length) return;
+        const dayStates = [], nightStates = [];
+        allPoints.forEach(point => {
+            const tz = getTimezone(point.name);
+            if (!tz) return;
+            if (isDaytime(tz)) dayStates.push(point.name);
+            else nightStates.push(point.name);
+        });
+        document.getElementById('dayStatesList').innerHTML = dayStates.map(s => `<span class="state-tag">${s}</span>`).join('') || '<span style="opacity:0.6;">暂无</span>';
+        document.getElementById('nightStatesList').innerHTML = nightStates.map(s => `<span class="state-tag">${s}</span>`).join('') || '<span style="opacity:0.6;">暂无</span>';
+    }
+
+    // ======================= 3. Excel 导入导出 (修复版) =======================
+    function exportTemplate() {
+        if (!allPoints.length) {
+            showMessage('地图数据未加载完成，请稍后重试', true);
+            return;
+        }
+        try {
+            const wsData = [["州名", "销量"]];
+            allPoints.forEach(point => {
+                wsData.push([point.name, salesData[point.name] || 0]);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "订单热度");
+            XLSX.writeFile(wb, `US_sales_template_${new Date().toISOString().slice(0,19)}.xlsx`);
+            showMessage('模板导出成功');
+        } catch(err) {
+            console.error(err);
+            showMessage('导出失败：' + err.message, true);
+        }
+    }
+
+    function importExcel(file) {
+        if (!allPoints.length) {
+            showMessage('地图未就绪，请稍后重试', true);
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                if (!rows || rows.length < 2) throw new Error('表格为空');
+                const headers = rows[0];
+                const nameIdx = headers.findIndex(h => h && (h.includes("州") || h.toLowerCase() === "state"));
+                const salesIdx = headers.findIndex(h => h && (h.includes("销量") || h.toLowerCase() === "sales"));
+                if (nameIdx === -1 || salesIdx === -1) throw new Error('表格需要包含「州名」和「销量」列');
+                
+                const newSales = {};
+                let matchedCount = 0;
+                for (let i = 1; i < rows.length; i++) {
+                    const stateRaw = rows[i][nameIdx];
+                    const salesVal = parseFloat(rows[i][salesIdx]);
+                    if (stateRaw && !isNaN(salesVal)) {
+                        let matched = null;
+                        for (let point of allPoints) {
+                            if (point.name === stateRaw.trim()) { matched = point.name; break; }
+                        }
+                        if (matched) {
+                            newSales[matched] = salesVal;
+                            matchedCount++;
+                        } else {
+                            console.warn(`未匹配州: ${stateRaw}`);
                         }
                     }
                 }
+                if (matchedCount === 0) throw new Error('没有有效的州销量数据，请确保州名与地图显示完全一致');
+                // 更新销量数据
+                allPoints.forEach(p => {
+                    if (newSales[p.name] !== undefined) salesData[p.name] = newSales[p.name];
+                    else if (salesData[p.name] === undefined) salesData[p.name] = 0;
+                });
+                updateAllColors();
+                showMessage(`导入成功！更新了 ${matchedCount} 个州的销量热度`);
+                // 刷新昼夜面板（颜色变了但昼夜不变，无需刷新，但可选）
+            } catch(err) {
+                console.error(err);
+                showMessage('导入失败：' + err.message, true);
+            }
+        };
+        reader.onerror = () => showMessage('文件读取失败', true);
+        reader.readAsArrayBuffer(file);
+    }
+
+    // ======================= 4. 地图初始化（所有依赖地图的操作都在 load 中绑定）=======================
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('map-container');
+        chart = Highcharts.mapChart(container, {
+            chart: {
+                map: 'countries/us/us-all',
+                backgroundColor: 'transparent',
+                events: {
+                    load: function() {
+                        const series = this.series[0];
+                        allPoints = series.points;
+                        // 初始化销量为0
+                        allPoints.forEach(p => { salesData[p.name] = 0; });
+                        // 设置初始颜色
+                        allPoints.forEach(p => {
+                            p.update({ color: getColorBySales(0) }, false);
+                        });
+                        this.redraw();
+
+                        // 绑定原生点击事件
+                        allPoints.forEach(point => {
+                            const graphic = point.graphic;
+                            if (graphic && graphic.element) {
+                                const el = graphic.element;
+                                el.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+                                    const stateName = point.name;
+                                    clearHighlight();
+                                    highlightPoint(point);
+                                    const tz = getTimezone(stateName);
+                                    if (tz) {
+                                        startClockTimer(tz);
+                                        document.getElementById('selectedStateName').innerHTML = stateName;
+                                    } else {
+                                        document.getElementById('selectedStateName').innerHTML = `${stateName} (无时区)`;
+                                        stopClockTimer();
+                                        document.getElementById('liveClock').textContent = '时区缺失';
+                                    }
+                                });
+                            }
+                        });
+
+                        // 刷新昼夜面板
+                        refreshDayNightPanel();
+                        if (dayNightInterval) clearInterval(dayNightInterval);
+                        dayNightInterval = setInterval(refreshDayNightPanel, 60000);
+                        stopClockTimer();
+                        document.getElementById('selectedStateName').innerHTML = '点击任意州';
+
+                        // ********** 关键修复：在这里绑定导入导出按钮事件 **********
+                        const exportBtn = document.getElementById('exportExcelBtn');
+                        const resetBtn = document.getElementById('resetSalesBtn');
+                        const fileInput = document.getElementById('uploadExcel');
+                        
+                        // 移除旧的监听器，避免重复绑定（使用新函数）
+                        const newExportBtn = exportBtn.cloneNode(true);
+                        exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+                        newExportBtn.addEventListener('click', exportTemplate);
+                        
+                        const newResetBtn = resetBtn.cloneNode(true);
+                        resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+                        newResetBtn.addEventListener('click', resetSales);
+                        
+                        // 文件上传处理
+                        const newFileInput = fileInput.cloneNode(true);
+                        fileInput.parentNode.replaceChild(newFileInput, fileInput);
+                        newFileInput.addEventListener('change', (e) => {
+                            if (e.target.files.length) {
+                                importExcel(e.target.files[0]);
+                                e.target.value = ''; // 清空，允许重复上传同一个文件
+                            }
+                        });
+                        
+                        showMessage('地图加载完成，可以使用导入导出功能');
+                    }
+                }
+            },
+            title: { text: null },
+            mapNavigation: { enabled: true, buttonOptions: { align: 'right', verticalAlign: 'bottom' } },
+            tooltip: {
+                headerFormat: '',
+                pointFormat: '<b>{point.name}</b><br/>🔥 销量: {point.sales}'
+            },
+            plotOptions: {
+                series: {
+                    states: { hover: { color: '#ffbc6e', borderColor: '#ffffff' } },
+                    borderColor: '#1e2a36',
+                    borderWidth: 0.6,
+                    allowPointSelect: false
+                }
+            },
+            series: [{
+                allAreas: true,
+                name: '美国州',
+                keys: ['name', 'sales'],
+                data: [],   // 稍后在 load 中动态填充，避免重复
+                nullColor: '#0a1420',
+                tooltip: { pointFormat: '<b>{point.name}</b><br/>🔥 销量: {point.sales}' }
             }]
         });
-    </script>
+    });
+</script>
 </body>
 </html>
