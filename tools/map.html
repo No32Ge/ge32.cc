@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美国地图时间查询</title>
+    
+    <!-- 引入 Highmaps 核心库 -->
+    <script src="https://code.highcharts.com/maps/highmaps.js"></script>
+    <!-- 通过 script 标签直接引入美国地图数据，完美避开本地 fetch 的跨域报错！ -->
+    <script src="https://code.highcharts.com/mapdata/countries/us/us-all.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 { margin-top: 20px; color: #333; }
+        #info-panel {
+            background-color: #fff;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 10px 0;
+            font-size: 18px;
+            color: #555;
+            min-width: 300px;
+            text-align: center;
+        }
+        .time-highlight {
+            font-size: 24px;
+            font-weight: bold;
+            color: #d32f2f;
+            display: block;
+            margin-top: 5px;
+        }
+        #map-container {
+            width: 90vw;
+            height: 75vh;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        /* 去除 Highcharts 右下角默认的版权文字 */
+        .highcharts-credits { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <h2>点击美国地图查看当地当前时间</h2>
+    <div id="info-panel">
+        请点击地图上的任意一个州
+        <span class="time-highlight" id="time-display">-- : -- : --</span>
+    </div>
+    
+    <div id="map-container"></div>
+
+    <script>
+        // 美国各州英文名（Highmaps默认名称）到 IANA 时区的映射
+        const stateTimezones = {
+            'Alabama': 'America/Chicago',
+            'Alaska': 'America/Anchorage',
+            'Arizona': 'America/Phoenix', 
+            'Arkansas': 'America/Chicago',
+            'California': 'America/Los_Angeles',
+            'Colorado': 'America/Denver',
+            'Connecticut': 'America/New_York',
+            'Delaware': 'America/New_York',
+            'District of Columbia': 'America/New_York',
+            'Florida': 'America/New_York',
+            'Georgia': 'America/New_York',
+            'Hawaii': 'Pacific/Honolulu', 
+            'Idaho': 'America/Boise',
+            'Illinois': 'America/Chicago',
+            'Indiana': 'America/Indiana/Indianapolis',
+            'Iowa': 'America/Chicago',
+            'Kansas': 'America/Chicago',
+            'Kentucky': 'America/New_York',
+            'Louisiana': 'America/Chicago',
+            'Maine': 'America/New_York',
+            'Maryland': 'America/New_York',
+            'Massachusetts': 'America/New_York',
+            'Michigan': 'America/Detroit',
+            'Minnesota': 'America/Chicago',
+            'Mississippi': 'America/Chicago',
+            'Missouri': 'America/Chicago',
+            'Montana': 'America/Denver',
+            'Nebraska': 'America/Chicago',
+            'Nevada': 'America/Los_Angeles',
+            'New Hampshire': 'America/New_York',
+            'New Jersey': 'America/New_York',
+            'New Mexico': 'America/Denver',
+            'New York': 'America/New_York',
+            'North Carolina': 'America/New_York',
+            'North Dakota': 'America/Chicago',
+            'Ohio': 'America/New_York',
+            'Oklahoma': 'America/Chicago',
+            'Oregon': 'America/Los_Angeles',
+            'Pennsylvania': 'America/New_York',
+            'Rhode Island': 'America/New_York',
+            'South Carolina': 'America/New_York',
+            'South Dakota': 'America/Chicago',
+            'Tennessee': 'America/Chicago',
+            'Texas': 'America/Chicago',
+            'Utah': 'America/Denver',
+            'Vermont': 'America/New_York',
+            'Virginia': 'America/New_York',
+            'Washington': 'America/Los_Angeles',
+            'West Virginia': 'America/New_York',
+            'Wisconsin': 'America/Chicago',
+            'Wyoming': 'America/Denver',
+            'Puerto Rico': 'America/Puerto_Rico'
+        };
+
+        let currentSelectedTimezone = null;
+        let timer = null;
+        const infoPanel = document.getElementById('info-panel');
+
+        // 初始化 Highcharts 地图
+        Highcharts.mapChart('map-container', {
+            chart: {
+                map: 'countries/us/us-all', // 关联上面引入的美国地图数据
+                backgroundColor: 'transparent'
+            },
+            title: {
+                text: null // 隐藏标题
+            },
+            mapNavigation: {
+                enabled: true, // 开启鼠标滚轮缩放和拖拽
+                buttonOptions: { verticalAlign: 'bottom' }
+            },
+            tooltip: {
+                headerFormat: '',
+                pointFormat: '{point.name}' // 悬浮只显示州名
+            },
+            series: [{
+                allAreas: true, // 渲染所有的州
+                name: '美国地图',
+                borderColor: '#ffffff', // 边界线颜色
+                borderWidth: 1,
+                nullColor: '#e0e0e0', // 默认未选中的颜色
+                allowPointSelect: true, // 允许点击选中
+                cursor: 'pointer',
+                states: {
+                    hover: {
+                        color: '#ffb74d' // 鼠标悬浮时的颜色
+                    },
+                    select: {
+                        color: '#d32f2f' // 点击选中后的颜色
+                    }
+                },
+                point: {
+                    events: {
+                        click: function () {
+                            // 当点击某个州时触发
+                            const stateName = this.name;
+                            const timezone = stateTimezones[stateName];
+
+                            if (timezone) {
+                                currentSelectedTimezone = timezone;
+                                infoPanel.innerHTML = `当前选中的州：<b>${stateName}</b> <span class="time-highlight" id="time-display"></span>`;
+                                const timeDisplay = document.getElementById('time-display');
+                                
+                                // 时间格式化方法
+                                const formatTime = () => {
+                                    return new Intl.DateTimeFormat('zh-CN', {
+                                        timeZone: currentSelectedTimezone,
+                                        year: 'numeric', month: '2-digit', day: '2-digit',
+                                        hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                        hour12: false
+                                    }).format(new Date());
+                                };
+
+                                // 立即渲染一次
+                                timeDisplay.textContent = formatTime();
+
+                                // 启动定时器，每秒刷新时钟
+                                if (timer) clearInterval(timer);
+                                timer = setInterval(() => {
+                                    timeDisplay.textContent = formatTime();
+                                }, 1000);
+
+                            } else {
+                                infoPanel.innerHTML = `暂无 <b>${stateName}</b> 的时区数据`;
+                                if (timer) clearInterval(timer);
+                            }
+                        }
+                    }
+                }
+            }]
+        });
+    </script>
+</body>
+</html>

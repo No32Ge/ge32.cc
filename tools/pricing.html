@@ -306,6 +306,7 @@
                         const rawData = XLSX.utils.sheet_to_json(worksheet);
                         
                         const resultJson = rawData.map(row => {
+                            console.log("原始行数据:", row);
                             const mappedItem = { _raw: row };
                             for (const [excelHeader, jsonKey] of Object.entries(headerMapping)) {
                                 mappedItem[jsonKey] = row[excelHeader] !== undefined ? row[excelHeader] : null;
