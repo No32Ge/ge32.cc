@@ -7,7 +7,7 @@
     
     <!-- 引入 Highmaps 核心库 -->
     <script src="https://code.highcharts.com/maps/highmaps.js"></script>
-    <!-- 通过 script 标签直接引入美国地图数据，完美避开本地 fetch 的跨域报错！ -->
+    <!-- 通过 script 标签直接引入美国地图数据 -->
     <script src="https://code.highcharts.com/mapdata/countries/us/us-all.js"></script>
     
     <style>
@@ -61,7 +61,7 @@
     <div id="map-container"></div>
 
     <script>
-        // 美国各州英文名（Highmaps默认名称）到 IANA 时区的映射
+        // 美国各州英文名到 IANA 时区的映射
         const stateTimezones = {
             'Alabama': 'America/Chicago',
             'Alaska': 'America/Anchorage',
@@ -121,43 +121,41 @@
         let timer = null;
         const infoPanel = document.getElementById('info-panel');
 
+        // 【关键修复 1】：从地图库中解析出每个州的数据对象，这样它们才是可点击的实体！
+        const mapData = Highcharts.geojson(Highcharts.maps['countries/us/us-all']);
+
         // 初始化 Highcharts 地图
         Highcharts.mapChart('map-container', {
             chart: {
-                map: 'countries/us/us-all', // 关联上面引入的美国地图数据
+                map: 'countries/us/us-all', 
                 backgroundColor: 'transparent'
             },
-            title: {
-                text: null // 隐藏标题
-            },
+            title: { text: null },
             mapNavigation: {
-                enabled: true, // 开启鼠标滚轮缩放和拖拽
+                enabled: true, 
                 buttonOptions: { verticalAlign: 'bottom' }
             },
             tooltip: {
                 headerFormat: '',
-                pointFormat: '{point.name}' // 悬浮只显示州名
+                pointFormat: '{point.name}' 
             },
             series: [{
-                allAreas: true, // 渲染所有的州
+                // 【关键修复 2】：把解析出来的数据挂载到地图上
+                data: mapData,
                 name: '美国地图',
-                borderColor: '#ffffff', // 边界线颜色
+                borderColor: '#ffffff', 
                 borderWidth: 1,
-                nullColor: '#e0e0e0', // 默认未选中的颜色
-                allowPointSelect: true, // 允许点击选中
+                color: '#e0e0e0', // 默认每个州的颜色
+                allowPointSelect: true, 
                 cursor: 'pointer',
                 states: {
-                    hover: {
-                        color: '#ffb74d' // 鼠标悬浮时的颜色
-                    },
-                    select: {
-                        color: '#d32f2f' // 点击选中后的颜色
-                    }
+                    hover: { color: '#ffb74d' }, // 悬浮颜色
+                    select: { color: '#d32f2f' } // 点击选中颜色
                 },
                 point: {
                     events: {
+                        // 【现在这里的点击事件可以完美触发了】
                         click: function () {
-                            // 当点击某个州时触发
                             const stateName = this.name;
                             const timezone = stateTimezones[stateName];
 
@@ -166,7 +164,6 @@
                                 infoPanel.innerHTML = `当前选中的州：<b>${stateName}</b> <span class="time-highlight" id="time-display"></span>`;
                                 const timeDisplay = document.getElementById('time-display');
                                 
-                                // 时间格式化方法
                                 const formatTime = () => {
                                     return new Intl.DateTimeFormat('zh-CN', {
                                         timeZone: currentSelectedTimezone,
@@ -176,10 +173,8 @@
                                     }).format(new Date());
                                 };
 
-                                // 立即渲染一次
                                 timeDisplay.textContent = formatTime();
 
-                                // 启动定时器，每秒刷新时钟
                                 if (timer) clearInterval(timer);
                                 timer = setInterval(() => {
                                     timeDisplay.textContent = formatTime();
