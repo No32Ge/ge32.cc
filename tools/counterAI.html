@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>X记录提取器 · 沃尔玛异常值导出工具</title>
+    
+    <!-- Tailwind CSS + Google Fonts + Font Awesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 10% 20%, #0a0f1e, #03050b);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(16, 22, 35, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 24px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .cyber-input {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 10px 14px;
+            color: #cbd5e1;
+            transition: all 0.2s;
+        }
+        .cyber-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+        }
+        .cyber-btn {
+            transition: all 0.2s ease;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 40px;
+        }
+        .cyber-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.05);
+        }
+        .terminal {
+            background: #050a12;
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            padding: 18px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: #a7f3d0;
+            resize: vertical;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .terminal:focus { outline: none; border-color: #3b82f6; }
+        .record-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        .record-table th {
+            text-align: left;
+            padding: 8px 6px;
+            background: #1e293b;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .record-table td {
+            padding: 6px;
+            border-bottom: 1px solid #1e293b;
+            word-break: break-word;
+        }
+        .badge-x {
+            background: #f97316;
+            color: #000;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 0.65rem;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+<div class="max-w-7xl mx-auto">
+    
+    <!-- 头部 -->
+    <div class="mb-8 flex flex-col md:flex-row justify-between items-center gap-3 border-b border-blue-900/50 pb-4">
+        <div>
+            <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-orange-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
+                <i class="fa-solid fa-bug text-orange-500"></i> X记录提取器
+            </h1>
+            <p class="text-blue-300/80 text-sm mt-1">筛选 Piece Count / Count Per Pack / Total Count 为 "X" 的异常行 · 支持分组聚合导出</p>
+        </div>
+        <div class="text-xs bg-black/50 px-4 py-2 rounded-full border border-gray-700">
+            <i class="fa-regular fa-file-excel text-green-400"></i> 基于 Excel 文件 · 一键提取
+        </div>
+    </div>
+
+    <!-- 主内容区 两列布局 -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+        
+        <!-- 左侧控制区 (上传/统计/配置) -->
+        <div class="lg:col-span-5 space-y-5">
+            <!-- 文件上传卡片 -->
+            <div class="glass-panel p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <i class="fa-solid fa-cloud-upload-alt text-blue-400 text-xl"></i>
+                    <h2 class="font-bold text-blue-300 text-lg">数据源</h2>
+                </div>
+                <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" class="cyber-input w-full cursor-pointer">
+                <div class="flex justify-between items-center mt-3 text-xs text-gray-400">
+                    <span><i class="fa-regular fa-clock"></i> 支持 .xlsx / .xls / .csv</span>
+                    <button id="refreshStatsBtn" class="cyber-btn bg-gray-800/50 px-3 py-1 rounded-full text-xs"><i class="fa-solid fa-rotate-right"></i> 刷新统计</button>
+                </div>
+                <div class="mt-4 flex items-center gap-2 flex-wrap">
+                    <span class="text-gray-300 text-sm">📊 命中X记录数：</span>
+                    <span id="hitCountBadge" class="bg-orange-500/20 text-orange-400 border border-orange-500/40 px-3 py-1 rounded-full text-sm font-mono">0</span>
+                    <span id="fileStatus" class="text-gray-500 text-xs ml-auto">未上传文件</span>
+                </div>
+            </div>
+            
+            <!-- 配置卡片 -->
+            <div class="glass-panel p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <i class="fa-solid fa-sliders-h text-purple-400"></i>
+                    <h2 class="font-bold text-purple-300 text-lg">聚合配置</h2>
+                </div>
+                
+                <div class="mb-5">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2"><i class="fa-solid fa-quote-left text-purple-400"></i> 提示词 (前置指令)</label>
+                    <input type="text" id="promptPrefix" placeholder="例如：请分析以下异常商品信息：" class="cyber-input w-full">
+                    <div class="text-xs text-gray-500 mt-1">每组分组前会添加该文本</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2"><i class="fa-solid fa-layer-group text-emerald-400"></i> 聚合数量 (每组记录条数)</label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" id="batchSize" min="1" value="3" step="1" class="cyber-input w-28 text-center">
+                        <span class="text-gray-400 text-xs">超过此数量自动分组</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 操作按钮组 -->
+            <div class="glass-panel p-5 flex flex-wrap gap-3 justify-between items-center">
+                <button id="processBtn" class="cyber-btn bg-blue-600 hover:bg-blue-500 px-6 py-2.5 shadow-lg shadow-blue-900/30"><i class="fa-solid fa-bolt"></i> 运行转换序列</button>
+                <div class="flex gap-2">
+                    <button id="dlTxtBtn" disabled class="cyber-btn bg-green-800/60 hover:bg-green-700 px-4 py-2 text-sm disabled:opacity-40"><i class="fa-regular fa-file-lines"></i> TXT</button>
+                    <button id="dlHtmlBtn" disabled class="cyber-btn bg-purple-800/60 hover:bg-purple-700 px-4 py-2 text-sm disabled:opacity-40"><i class="fa-regular fa-file-code"></i> HTML</button>
+                    <button id="dlJsonBtn" disabled class="cyber-btn bg-orange-800/60 hover:bg-orange-700 px-4 py-2 text-sm disabled:opacity-40"><i class="fa-regular fa-file-code"></i> JSON</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧预览&输出区 -->
+        <div class="lg:col-span-7 flex flex-col gap-5">
+            <!-- 命中记录预览表格 -->
+            <div class="glass-panel p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold text-blue-300 text-sm flex items-center gap-2"><i class="fa-solid fa-table-list"></i> 命中记录预览 (最多显示20条)</h3>
+                    <span class="text-[10px] text-gray-500">仅展示提取的异常行</span>
+                </div>
+                <div class="overflow-x-auto max-h-64 overflow-y-auto">
+                    <table class="record-table w-full" id="previewTable">
+                        <thead>
+                            <tr><th>#</th><th>行号</th><th>原始行内容</th><th>异常字段</th></tr>
+                        </thead>
+                        <tbody id="previewTbody">
+                            <tr><td colspan="4" class="text-center text-gray-500 py-6">⬆ 请先上传Excel文件 ⬆</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 终端输出区 -->
+            <div class="glass-panel p-4">
+                <div class="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
+                    <div class="text-emerald-400 font-mono text-sm flex items-center gap-2"><i class="fa-solid fa-terminal"></i> 输出终端</div>
+                    <div id="groupCountDisplay" class="text-gray-400 text-xs bg-black/40 px-3 py-1 rounded-full">0 组</div>
+                </div>
+                <textarea id="outputArea" readonly class="terminal w-full" rows="10" placeholder="等待运行转换序列..."></textarea>
+                <div class="flex justify-end mt-2 text-[11px] text-gray-500"><span id="outputStats"></span></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center text-gray-600 text-xs py-4 border-t border-gray-800/40">
+        <i class="fa-regular fa-copyright"></i> 异常提取器 · 筛选 Piece Count / Count Per Pack / Total Count = "X" 的记录
+    </div>
+</div>
+
+<script>
+    (function() {
+        // DOM 元素
+        const fileInput = document.getElementById('excelUpload');
+        const refreshStatsBtn = document.getElementById('refreshStatsBtn');
+        const hitCountSpan = document.getElementById('hitCountBadge');
+        const fileStatusSpan = document.getElementById('fileStatus');
+        const promptInput = document.getElementById('promptPrefix');
+        const batchSizeInput = document.getElementById('batchSize');
+        const processBtn = document.getElementById('processBtn');
+        const dlTxtBtn = document.getElementById('dlTxtBtn');
+        const dlHtmlBtn = document.getElementById('dlHtmlBtn');
+        const dlJsonBtn = document.getElementById('dlJsonBtn');
+        const outputArea = document.getElementById('outputArea');
+        const groupCountDisplay = document.getElementById('groupCountDisplay');
+        const outputStatsSpan = document.getElementById('outputStats');
+        const previewTbody = document.getElementById('previewTbody');
+        
+        // 存储解析后的数据
+        let currentRecords = [];       // [{ rowNum, originalContent, reasonFields }]
+        let currentGroupedData = [];    // 分组后的文本数组 (用于导出)
+        let currentPrefix = '';
+        let currentBatch = 3;
+        let currentRawExcelData = null; // 缓存原始工作表数据
+        
+        // 辅助: 模糊匹配表头 (支持中英文变体)
+        function findHeaderIndex(headers, possibleNames) {
+            for (let i = 0; i < headers.length; i++) {
+                const cell = String(headers[i] || '').trim();
+                for (let name of possibleNames) {
+                    if (cell === name || cell.includes(name) || (name.includes('Piece') && cell.includes('件数')) || (name.includes('Count Per Pack') && cell.includes('每包数量')) || (name.includes('Total Count') && cell.includes('总数量'))) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
+        
+        // 从Excel解析并提取命中X的记录
+        async function parseExcelAndExtract(file) {
+            if (!file) throw new Error('未选择文件');
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array', cellText: false });
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                        if (!rows.length) throw new Error('表格为空');
+                        
+                        // 第一行为表头
+                        const headerRow = rows[0].map(cell => (cell === undefined || cell === null ? '' : String(cell).trim()));
+                        
+                        // 定位列: 行号、原始行内容、三个X字段
+                        const rowNumIdx = findHeaderIndex(headerRow, ['行号', '#', '序号', 'Row Number', 'RowNum']);
+                        const originalIdx = findHeaderIndex(headerRow, ['原始行内容', '原始行', 'Original Content', '原始内容', '描述']);
+                        const pieceIdx = findHeaderIndex(headerRow, ['Piece Count', '件数', 'PieceCount']);
+                        const perPackIdx = findHeaderIndex(headerRow, ['Count Per Pack', '每包数量', 'CountPerPack']);
+                        const totalIdx = findHeaderIndex(headerRow, ['Total Count', '总数量', 'TotalCount']);
+                        
+                        if (rowNumIdx === -1) throw new Error('未找到“行号”列，请确保Excel包含行号列（导出工具自动生成）');
+                        if (originalIdx === -1) throw new Error('未找到“原始行内容”列，请确保Excel包含原始行内容');
+                        if (pieceIdx === -1 && perPackIdx === -1 && totalIdx === -1) throw new Error('未找到 Piece Count / Count Per Pack / Total Count 相关列，无法判断X状态');
+                        
+                        const records = [];
+                        // 遍历数据行 (跳过表头)
+                        for (let i = 1; i < rows.length; i++) {
+                            const row = rows[i];
+                            const rowNumVal = row[rowNumIdx] !== undefined ? row[rowNumIdx] : '';
+                            const originalVal = row[originalIdx] !== undefined ? row[originalIdx] : '';
+                            const pieceVal = pieceIdx !== -1 ? (row[pieceIdx] !== undefined ? String(row[pieceIdx]).trim() : '') : '';
+                            const perPackVal = perPackIdx !== -1 ? (row[perPackIdx] !== undefined ? String(row[perPackIdx]).trim() : '') : '';
+                            const totalVal = totalIdx !== -1 ? (row[totalIdx] !== undefined ? String(row[totalIdx]).trim() : '') : '';
+                            
+                            // 判断是否为 X (严格匹配字符串 X)
+                            const isX = (pieceVal === 'X' || perPackVal === 'X' || totalVal === 'X');
+                            if (isX) {
+                                let reason = [];
+                                if (pieceVal === 'X') reason.push('Piece');
+                                if (perPackVal === 'X') reason.push('PerPack');
+                                if (totalVal === 'X') reason.push('Total');
+                                records.push({
+                                    rowNum: rowNumVal,
+                                    originalContent: originalVal,
+                                    reasonFields: reason.join(',')
+                                });
+                            }
+                        }
+                        resolve(records);
+                    } catch (err) {
+                        reject(err.message);
+                    }
+                };
+                reader.onerror = () => reject('文件读取失败');
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        // 更新预览表格 + 命中数量
+        async function updatePreviewAndCount() {
+            const file = fileInput.files[0];
+            if (!file) {
+                fileStatusSpan.innerText = '未上传文件';
+                hitCountSpan.innerText = '0';
+                previewTbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-6">📁 请上传Excel文件</td></tr>';
+                currentRecords = [];
+                return;
+            }
+            fileStatusSpan.innerText = '解析中...';
+            try {
+                const records = await parseExcelAndExtract(file);
+                currentRecords = records;
+                hitCountSpan.innerText = records.length;
+                fileStatusSpan.innerText = `✅ ${file.name} | 命中 ${records.length} 条`;
+                // 渲染预览表格 (最多20条)
+                if (records.length === 0) {
+                    previewTbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-400 py-6">✨ 未发现任何“X”记录，文件无异常值</td></tr>';
+                } else {
+                    const showRecords = records.slice(0, 20);
+                    previewTbody.innerHTML = showRecords.map((rec, idx) => `
+                        <tr>
+                            <td class="text-gray-400">${idx+1}</td>
+                            <td class="font-mono text-orange-300">${escapeHtml(String(rec.rowNum))}</td>
+                            <td class="max-w-xs truncate" title="${escapeHtml(rec.originalContent)}">${escapeHtml(rec.originalContent.length > 60 ? rec.originalContent.slice(0,60)+'…' : rec.originalContent)}</td>
+                            <td><span class="badge-x">${rec.reasonFields}</span></td>
+                        </tr>
+                    `).join('');
+                    if (records.length > 20) {
+                        previewTbody.innerHTML += `<tr><td colspan="4" class="text-center text-gray-500 text-xs">... 仅展示前20条，共${records.length}条</td></tr>`;
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                fileStatusSpan.innerText = '解析失败';
+                hitCountSpan.innerText = '错误';
+                previewTbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-400 py-4">❌ ${escapeHtml(err)}</td></tr>`;
+                currentRecords = [];
+            }
+        }
+        
+        // 辅助转义
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        // 核心：运行转换序列（分组+提示词）
+        function runExtraction() {
+            if (!currentRecords.length) {
+                outputArea.value = '[错误] 没有命中任何X记录，请上传包含X值的Excel文件。';
+                groupCountDisplay.innerText = '0 组';
+                outputStatsSpan.innerText = '';
+                dlTxtBtn.disabled = true;
+                dlHtmlBtn.disabled = true;
+                dlJsonBtn.disabled = true;
+                currentGroupedData = [];
+                return;
+            }
+            
+            const prefix = promptInput.value.trim();
+            currentPrefix = prefix;
+            let batch = parseInt(batchSizeInput.value, 10);
+            if (isNaN(batch) || batch < 1) batch = 1;
+            currentBatch = batch;
+            
+            // 构建每一行的格式化文本: 行号 + 原始内容
+            const lines = currentRecords.map(rec => `行号 ${rec.rowNum} : ${rec.originalContent}`);
+            
+            // 分组
+            const groups = [];
+            for (let i = 0; i < lines.length; i += batch) {
+                groups.push(lines.slice(i, i + batch));
+            }
+            
+            const groupedTexts = [];
+            groups.forEach((group, idx) => {
+                let groupContent = '';
+                if (prefix) groupContent += prefix + '\n';
+                groupContent += `====== 异常组 ${idx+1} ======\n`;
+                groupContent += group.join('\n');
+                groupedTexts.push(groupContent);
+            });
+            
+            const fullOutput = groupedTexts.join('\n\n');
+            outputArea.value = fullOutput;
+            groupCountDisplay.innerText = `${groups.length} 组 (每组≤${batch}条)`;
+            outputStatsSpan.innerText = `总记录 ${currentRecords.length} 条 · 分组数 ${groups.length}`;
+            currentGroupedData = groupedTexts.slice();
+            
+            // 启用下载按钮
+            dlTxtBtn.disabled = false;
+            dlHtmlBtn.disabled = false;
+            dlJsonBtn.disabled = false;
+        }
+        
+        // ---------- 下载模块 ----------
+        function downloadTxt() {
+            if (!currentGroupedData.length) { alert('无可下载内容，请先运行转换'); return; }
+            const content = currentGroupedData.join('\n\n');
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `x_records_${Date.now()}.txt`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+        
+        function downloadHtml() {
+            if (!currentGroupedData.length) { alert('无数据'); return; }
+            const groupsHtml = currentGroupedData.map((content, idx) => {
+                const escaped = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                const htmlContent = escaped.replace(/\n/g, '<br>');
+                return `
+                <div style="background:#0f172a; border:1px solid #1e293b; border-radius:16px; margin-bottom:1.5rem; overflow:hidden;">
+                    <div style="background:#1e293b; padding:10px 18px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:bold; color:#f97316;">🐞 异常组 ${idx+1}</span>
+                        <button onclick="copyGroup(${idx})" style="background:#3b82f6; border:none; color:white; padding:4px 14px; border-radius:30px; cursor:pointer; font-size:12px;">📋 复制</button>
+                    </div>
+                    <div id="xgroupContent${idx}" style="padding:18px; line-height:1.6; font-family:monospace; color:#a7f3d0; font-size:13px;">${htmlContent}</div>
+                </div>`;
+            }).join('');
+            
+            const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>X异常记录提取报告</title><style>body{background:#030508;color:#e2e8f0;font-family:system-ui,sans-serif;padding:2rem;max-width:1000px;margin:0 auto;} h1{color:#f97316;} .copy-btn{background:#2563eb;}</style></head><body><h1 style="border-left:4px solid #f97316; padding-left:20px;">📌 X记录提取结果</h1><p style="color:#94a3b8;">生成时间: ${new Date().toLocaleString()} | 总组数: ${currentGroupedData.length}</p>${groupsHtml}<script>function copyGroup(id){ var text = document.getElementById('xgroupContent'+id).innerText; navigator.clipboard.writeText(text); alert('已复制组 '+(id+1)); }<\/script></body></html>`;
+            const blob = new Blob([fullHtml], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `x_records_${Date.now()}.html`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+        
+        function downloadJson() {
+            if (!currentGroupedData.length) { alert('无数据'); return; }
+            const exportObj = {
+                generatedAt: new Date().toISOString(),
+                totalRecords: currentRecords.length,
+                batchSize: currentBatch,
+                prefix: currentPrefix,
+                groups: currentGroupedData
+            };
+            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `x_records_${Date.now()}.json`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+        
+        // 全局注册copy函数 (用于导出的html内部)
+        window.copyGroup = function(idx) {
+            const el = document.getElementById(`xgroupContent${idx}`);
+            if (el) {
+                navigator.clipboard.writeText(el.innerText);
+                alert(`已复制组 ${idx+1} 内容`);
+            }
+        };
+        
+        // 事件绑定
+        fileInput.addEventListener('change', () => {
+            updatePreviewAndCount().catch(console.warn);
+            // 清空之前的结果
+            outputArea.value = '';
+            groupCountDisplay.innerText = '0 组';
+            dlTxtBtn.disabled = true;
+            dlHtmlBtn.disabled = true;
+            dlJsonBtn.disabled = true;
+            currentGroupedData = [];
+        });
+        
+        refreshStatsBtn.addEventListener('click', () => updatePreviewAndCount());
+        processBtn.addEventListener('click', runExtraction);
+        dlTxtBtn.addEventListener('click', downloadTxt);
+        dlHtmlBtn.addEventListener('click', downloadHtml);
+        dlJsonBtn.addEventListener('click', downloadJson);
+        
+        // 初始化提示
+        updatePreviewAndCount().catch(e => console.log(e));
+    })();
+</script>
+</body>
+</html>

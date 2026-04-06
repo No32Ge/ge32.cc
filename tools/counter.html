@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>沃尔玛属性解析器 · 件数/每包数量/总数量 · 支持Excel导出</title>
+    <!-- SheetJS 用于导出 Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background: #f0f2f5;
+            margin: 0;
+            padding: 24px 20px;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .card-header {
+            background: #0f172a;
+            color: white;
+            padding: 1.2rem 1.8rem;
+        }
+        .card-header h1 {
+            margin: 0 0 6px 0;
+            font-weight: 600;
+            font-size: 1.6rem;
+        }
+        .card-header p {
+            margin: 0;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        .card-body {
+            padding: 1.8rem;
+        }
+        .two-columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.8rem;
+        }
+        .input-area {
+            flex: 1.3;
+            min-width: 280px;
+        }
+        .strategy-area {
+            flex: 0.9;
+            min-width: 260px;
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 1rem;
+        }
+        .field-group {
+            margin-bottom: 1.2rem;
+        }
+        label {
+            font-weight: 600;
+            color: #0f172a;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        textarea {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 18px;
+            padding: 12px 16px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: vertical;
+            background: #fefefe;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+        .strategy-list {
+            background: white;
+            border-radius: 16px;
+            padding: 8px 0;
+            margin-top: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .strategy-item {
+            padding: 10px 14px;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 0.8rem;
+        }
+        .strategy-item:last-child {
+            border-bottom: none;
+        }
+        .strategy-name {
+            font-weight: 700;
+            color: #1e40af;
+            display: inline-block;
+            background: #e0f2fe;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            margin-right: 10px;
+        }
+        .strategy-regex {
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: #334155;
+            word-break: break-all;
+            margin-top: 6px;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+        .action-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+            justify-content: space-between;
+            align-items: center;
+        }
+        button {
+            background: #eef2ff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        button.primary {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 6px rgba(59,130,246,0.3);
+        }
+        button.primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        button.export-btn {
+            background: #10b981;
+            color: white;
+            box-shadow: 0 2px 6px rgba(16,185,129,0.3);
+        }
+        button.export-btn:hover {
+            background: #059669;
+        }
+        button:hover {
+            background: #e2e8f0;
+            transform: translateY(-1px);
+        }
+        .result-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            margin-top: 1rem;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 1000px;
+        }
+        .result-table th {
+            background: #f8fafc;
+            text-align: left;
+            padding: 14px 12px;
+            font-weight: 600;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .result-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        .match-badge {
+            display: inline-block;
+            background: #dcfce7;
+            color: #15803d;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+        .no-match-badge {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .filter-badge {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .quantity-list {
+            background: #f1f5f9;
+            padding: 5px 10px;
+            border-radius: 16px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            margin: 2px 0;
+        }
+        .stats-info {
+            background: #f1f5f9;
+            border-radius: 20px;
+            padding: 12px 18px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 0.8rem;
+        }
+        .example-btn {
+            background: #e9f5ff;
+            color: #0369a1;
+        }
+        .numeric-cell {
+            font-family: monospace;
+            font-weight: 600;
+            color: #0c4a6e;
+        }
+        .rule-hint {
+            font-size: 0.7rem;
+            background: #e6f7ff;
+            border-radius: 16px;
+            padding: 8px 12px;
+            margin-top: 12px;
+        }
+        @media (max-width: 780px) {
+            .card-body {
+                padding: 1.2rem;
+            }
+            .result-table th, .result-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h1>🧩 沃尔玛属性解析器 · Piece Count / Count Per Pack / Total Count</h1>
+            <p>严格过滤干扰项 | 自动提取物品清单 | 根据定义计算三个核心数值 | 支持导出Excel（无法解析字段显示<a style="color: inherit; text-decoration: none;" href="https://ge32.cc/tool/counterAI.html" target="_blank">X</a>，由于正则表达式难以匹配，因此需要你手动计数,或用<a style="color: inherit; text-decoration: none;" href="https://ge32.cc/tool/counterAIPro.html" target="_blank">AI</a>）</p>
+        </div>
+        <div class="card-body">
+            <div class="two-columns">
+                <div class="input-area">
+                    <div class="field-group">
+                        <label>📄 原始数据（每行一条商品描述）</label>
+                        <textarea id="dataInput" rows="14" placeholder="请粘贴商品标题或描述，每行一条。&#10;示例：&#10;药丸x50&#10;1x收纳盒;1x冰格;1x冰勺&#10;巧克力x1,糖果x1,卡片x1,玩具x1,书x1"></textarea>
+                    </div>
+                    <div class="action-bar">
+                        <button id="loadExampleBtn" class="example-btn">📋 加载测试数据</button>
+                        <button id="clearDataBtn">🗑️ 清空数据</button>
+                        <button id="matchBtn" class="primary">⚡ 解析属性 (件数/每包/总数)</button>
+                        <button id="exportExcelBtn" class="export-btn">📎 导出Excel (XLSX)</button>
+                    </div>
+                </div>
+                <div class="strategy-area">
+                    <div style="font-weight: 700; margin-bottom: 8px;">📌 过滤规则（优先级最高）</div>
+                    <div class="strategy-list" id="filterRulesList"></div>
+                    <div class="rule-hint">
+                        💡 <strong>三个数值计算逻辑（符合沃尔玛定义）</strong><br>
+                        • <strong>Number of Pieces (件数)</strong> : 所有物品数量总和（不同物品数量相加）<br>
+                        • <strong>Count Per Pack (每包数量)</strong> : 单物品 = 该物品数量；多物品套装 = 1（每种物品每包各1件）<br>
+                        • <strong>Total Count (总数量)</strong> : 单物品 = 物品数量；多物品套装 = 1（整体视为一个组合包）<br>
+                        📘 参考案例：礼品篮5种不同物品 → 件数=5，每包数量=1，总数量=1；药丸x50 → 件数=50，每包=50，总数=50
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap;">
+                    <h3 style="margin:0; font-size: 1.2rem;">📊 解析结果明细</h3>
+                    <span id="summaryText" style="background:#eef2ff; padding:4px 12px; border-radius:30px; font-size:0.75rem;"></span>
+                </div>
+                <div class="result-wrapper">
+                    <table class="result-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>原始行内容</th>
+                                <th>匹配状态</th>
+                                <th>命中策略/过滤原因</th>
+                                <th>📦 Piece Count<br>(件数)</th>
+                                <th>📦 Count Per Pack<br>(每包数量)</th>
+                                <th>📦 Total Count<br>(总数量)</th>
+                                <th>🔍 提取明细 (数量→物品)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultBody">
+                            <tr><td colspan="8" style="text-align: center; padding: 50px;">✨ 点击「解析属性」或加载示例数据</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="stats-info" id="statsFooter">
+                    <span>✅ 先过滤再匹配，包含分号/个/汉字数字混合/尺寸的行直接拦截。</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ---------- 存储导出数据 ----------
+        let currentExportData = [];   // 存储每一行的导出对象 { 原始行, 匹配状态, 策略原因, PieceCount, CountPerPack, TotalCount, 提取明细 }
+
+        // ---------- 1. 过滤函数：拦截脏数据 ----------
+        function shouldBlockLine(line) {
+            if (line.trim() === '') {
+                return { blocked: true, reason: '空行' };
+            }
+            // 1. 包含分号（英文或中文）→ 拦截（因为容易造成属性混淆）
+            if (/[;；]/.test(line)) {
+                return { blocked: true, reason: '包含分号（;或；）' };
+            }
+            // 2. 同时出现“个”和阿拉伯数字 → 拦截
+            if (/个/.test(line) && /\d/.test(line)) {
+                return { blocked: true, reason: '包含“个”和数字' };
+            }
+            // 3. 同时出现汉字数字和阿拉伯数字 → 拦截
+            const chineseNum = /[一二三四五六七八九十百千万]/;
+            if (chineseNum.test(line) && /\d/.test(line)) {
+                return { blocked: true, reason: '同时包含汉字数字和阿拉伯数字' };
+            }
+            // 4. 出现“寸”、“尺”、“cm”（不区分大小写）→ 尺寸类拦截
+            if (/[寸尺]|cm/i.test(line)) {
+                return { blocked: true, reason: '包含尺寸关键字（寸/尺/cm）' };
+            }
+            return { blocked: false, reason: '' };
+        }
+
+        // ---------- 策略0: 中文x数字（如“摆件x1”）----------
+        const strategy0 = {
+            name: "✨ 中文x数字",
+            regex: /^\s*([^\d*x*×X+，,;；\s]+)\s*[x*×]\s*(\d+)\s*$/,
+            testAndExtract: function(line) {
+                const match = line.match(this.regex);
+                if (!match) return null;
+                let itemName = match[1].trim();
+                let quantity = match[2];
+                if (!itemName || !quantity) return null;
+                if (/[\d*x*×X+，,;；]/.test(itemName)) return null;
+                return { matched: true, strategy: this.name, items: [{ quantity, name: itemName }] };
+            }
+        };
+
+        // ---------- 策略1: 数字x中文 或 x数字中文 ----------
+        const strategy1 = {
+            name: "🎯 数字x中文",
+            regex: /^\s*(?:(\d+)\s*[x*×X]\s*|\s*[x*×X]\s*(\d+))\s*([^\d*x*×X+，,;；\s]+?)\s*$/,
+            testAndExtract: function(line) {
+                const match = line.match(this.regex);
+                if (!match) return null;
+                let quantity = match[1] || match[2];
+                let itemName = match[3] ? match[3].trim() : "";
+                if (!quantity || !itemName) return null;
+                if (/[\d*x*×X]/.test(itemName)) return null;
+                return { matched: true, strategy: this.name, items: [{ quantity, name: itemName }] };
+            }
+        };
+
+        // ---------- 策略2: 多物品模式（按空格/逗号分隔，支持 x 或 * 连接）----------
+        const strategy2 = {
+            name: "📦 多物品拆分模式",
+            testAndExtract: function(line) {
+                const separators = /[ ,，]+/;
+                const parts = line.split(separators).filter(p => p.trim().length > 0);
+                const items = [];
+                for (let part of parts) {
+                    let m = part.match(/^(\d+)\s*[x*×X]\s*([^\d*x*×X+，,;；]+)$/);
+                    if (m) {
+                        let qty = m[1];
+                        let name = m[2].trim();
+                        if (qty && name && !/[\d*x*×X]/.test(name)) {
+                            items.push({ quantity: qty, name: name });
+                            continue;
+                        }
+                    }
+                    m = part.match(/^[x*×X]\s*(\d+)\s*([^\d*x*×X+，,;；]+)$/);
+                    if (m) {
+                        let qty = m[1];
+                        let name = m[2].trim();
+                        if (qty && name && !/[\d*x*×X]/.test(name)) {
+                            items.push({ quantity: qty, name: name });
+                            continue;
+                        }
+                    }
+                }
+                if (items.length === 0) return null;
+                return { matched: true, strategy: this.name, items: items };
+            }
+        };
+
+        const strategyList = [strategy0, strategy1, strategy2];
+
+        // ---------- 核心：根据提取的 items 计算三个沃尔玛属性值 ----------
+        function computeAmazonCounts(items) {
+            if (!items || items.length === 0) return null;
+            let pieceCount = 0;
+            for (let it of items) {
+                let qty = parseInt(it.quantity, 10);
+                if (isNaN(qty)) qty = 0;
+                pieceCount += qty;
+            }
+            const uniqueNames = new Set();
+            for (let it of items) {
+                uniqueNames.add(it.name.trim());
+            }
+            const isSingleType = (uniqueNames.size === 1);
+            
+            if (isSingleType) {
+                const singleQty = parseInt(items[0].quantity, 10);
+                const finalQty = isNaN(singleQty) ? pieceCount : singleQty;
+                return {
+                    pieceCount: finalQty,
+                    countPerPack: finalQty,
+                    totalCount: finalQty
+                };
+            } else {
+                return {
+                    pieceCount: pieceCount,
+                    countPerPack: 1,
+                    totalCount: 1
+                };
+            }
+        }
+
+        // DOM 元素
+        const dataTextarea = document.getElementById('dataInput');
+        const matchBtn = document.getElementById('matchBtn');
+        const loadExampleBtn = document.getElementById('loadExampleBtn');
+        const clearDataBtn = document.getElementById('clearDataBtn');
+        const exportExcelBtn = document.getElementById('exportExcelBtn');
+        const resultBody = document.getElementById('resultBody');
+        const summaryTextSpan = document.getElementById('summaryText');
+        const statsFooter = document.getElementById('statsFooter');
+        const filterRulesList = document.getElementById('filterRulesList');
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        function renderFilterRules() {
+            filterRulesList.innerHTML = `
+                <div class="strategy-item"><div><span class="strategy-name">🚫 规则1</span> 包含分号（;或；） → 拦截</div></div>
+                <div class="strategy-item"><div><span class="strategy-name">🚫 规则2</span> 同时出现“个”和数字 → 拦截</div></div>
+                <div class="strategy-item"><div><span class="strategy-name">🚫 规则3</span> 同时出现汉字数字和阿拉伯数字 → 拦截</div></div>
+                <div class="strategy-item"><div><span class="strategy-name">🚫 规则4</span> 包含“寸”/“尺”/“cm” → 拦截</div></div>
+            `;
+        }
+
+        // 执行完整解析并填充表格和导出数据
+        function performMatching() {
+            const rawText = dataTextarea.value;
+            if (!rawText.trim()) {
+                resultBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">⚠️ 暂无数据，请粘贴内容或点击「加载测试数据」</td></tr>';
+                summaryTextSpan.innerText = '无数据';
+                statsFooter.innerHTML = '<span>请先输入数据，再执行解析。</span>';
+                currentExportData = [];
+                return;
+            }
+
+            const lines = rawText.split(/\r?\n/);
+            const rowsHtml = [];
+            const exportRows = [];  // 存储导出数据
+            
+            let matchedCount = 0, blockedCount = 0, totalItemsExtracted = 0;
+            let totalPieceSum = 0, totalCountSum = 0;
+
+            for (let idx = 0; idx < lines.length; idx++) {
+                const originalLine = lines[idx];
+                const displayLine = originalLine === '' ? '⚠️ [空行]' : originalLine;
+                
+                // 1. 过滤拦截
+                const filterResult = shouldBlockLine(originalLine);
+                if (filterResult.blocked) {
+                    blockedCount++;
+                    rowsHtml.push(`
+                        <tr>
+                            <td>${idx+1}</td>
+                            <td style="white-space: pre-wrap;">${escapeHtml(displayLine)}</td>
+                            <td><span class="match-badge no-match-badge">✗ 已拦截</span></td>
+                            <td><span style="background:#fff3cd; padding:2px 8px; border-radius:20px; font-size:0.7rem;">🚫 ${escapeHtml(filterResult.reason)}</span></td>
+                            <td class="numeric-cell">X</td>
+                            <td class="numeric-cell">X</td>
+                            <td class="numeric-cell">X</td>
+                            <td><span style="color:#94a3b8;">被过滤规则拦截</span></td>
+                        </tr>
+                    `);
+                    // 导出数据：无法解析字段填 "X"
+                    exportRows.push({
+                        "行号": idx+1,
+                        "原始行内容": originalLine,
+                        "匹配状态": "已拦截",
+                        "命中策略/过滤原因": filterResult.reason,
+                        "Piece Count (件数)": "X",
+                        "Count Per Pack (每包数量)": "X",
+                        "Total Count (总数量)": "X",
+                        "提取明细 (数量→物品)": "被过滤规则拦截"
+                    });
+                    continue;
+                }
+
+                // 2. 匹配策略提取 items
+                let matchResult = null;
+                for (let strat of strategyList) {
+                    const result = strat.testAndExtract(originalLine);
+                    if (result && result.matched) {
+                        matchResult = result;
+                        break;
+                    }
+                }
+
+                if (matchResult && matchResult.items && matchResult.items.length > 0) {
+                    matchedCount++;
+                    const items = matchResult.items;
+                    const counts = computeAmazonCounts(items);
+                    if (counts) {
+                        totalItemsExtracted += items.length;
+                        totalPieceSum += counts.pieceCount;
+                        totalCountSum += counts.totalCount;
+                    }
+                    
+                    const itemsDisplay = items.map(item => `${item.quantity} → ${item.name}`).join(' ; ');
+                    const pieceVal = counts ? counts.pieceCount : '?';
+                    const perPackVal = counts ? counts.countPerPack : '?';
+                    const totalVal = counts ? counts.totalCount : '?';
+                    
+                    rowsHtml.push(`
+                        <tr>
+                            <td>${idx+1}</td>
+                            <td style="white-space: pre-wrap;">${escapeHtml(displayLine)}</td>
+                            <td><span class="match-badge">✓ 匹配</span></td>
+                            <td><span style="background:#dbeafe; padding:2px 8px; border-radius:20px; font-size:0.7rem;">${escapeHtml(matchResult.strategy)}</span></td>
+                            <td class="numeric-cell"><strong>${pieceVal}</strong></td>
+                            <td class="numeric-cell"><strong>${perPackVal}</strong></td>
+                            <td class="numeric-cell"><strong>${totalVal}</strong></td>
+                            <td><div class="quantity-list">📌 ${escapeHtml(itemsDisplay)}</div></td>
+                        </tr>
+                    `);
+                    // 导出数据（正常解析）
+                    exportRows.push({
+                        "行号": idx+1,
+                        "原始行内容": originalLine,
+                        "匹配状态": "已匹配",
+                        "命中策略/过滤原因": matchResult.strategy,
+                        "Piece Count (件数)": pieceVal,
+                        "Count Per Pack (每包数量)": perPackVal,
+                        "Total Count (总数量)": totalVal,
+                        "提取明细 (数量→物品)": itemsDisplay
+                    });
+                } else {
+                    // 通过过滤但未匹配任何格式
+                    rowsHtml.push(`
+                        <tr>
+                            <td>${idx+1}</td>
+                            <td style="white-space: pre-wrap;">${escapeHtml(displayLine)}</td>
+                            <td><span class="match-badge no-match-badge">✗ 未匹配</span></td>
+                            <td>—</td>
+                            <td class="numeric-cell">X</td>
+                            <td class="numeric-cell">X</td>
+                            <td class="numeric-cell">X</td>
+                            <td><span style="color:#94a3b8;">无匹配项（格式不符合 x/× 连接规范）</span></td>
+                        </tr>
+                    `);
+                    exportRows.push({
+                        "行号": idx+1,
+                        "原始行内容": originalLine,
+                        "匹配状态": "未匹配",
+                        "命中策略/过滤原因": "无匹配策略",
+                        "Piece Count (件数)": "X",
+                        "Count Per Pack (每包数量)": "X",
+                        "Total Count (总数量)": "X",
+                        "提取明细 (数量→物品)": "格式不符合规范，未提取到物品"
+                    });
+                }
+            }
+
+            resultBody.innerHTML = rowsHtml.join('');
+            const totalLines = lines.length;
+            const attemptedLines = totalLines - blockedCount;
+            const unmatchedCount = totalLines - matchedCount - blockedCount;
+            const matchRate = attemptedLines ? Math.round((matchedCount / attemptedLines) * 100) : 0;
+            summaryTextSpan.innerHTML = `✅ 匹配 ${matchedCount} 行 | 🚫 拦截 ${blockedCount} 行 | ❌ 未匹配 ${unmatchedCount} 行 | 🧩 提取物品总件数累计: ${totalPieceSum}`;
+            statsFooter.innerHTML = `<span>📊 总计 ${totalLines} 行，过滤后有效行 ${attemptedLines}，匹配率 ${matchRate}%。 Piece Count总和 = ${totalPieceSum} ，Total Count总和 = ${totalCountSum} 。符合沃尔玛属性定义（单物品=数量；多物品套装件数求和，每包数量=1，总数量=1）</span>`;
+            
+            // 保存导出数据
+            currentExportData = exportRows;
+        }
+
+        // 导出 Excel 文件
+        function exportToExcel() {
+            if (!currentExportData || currentExportData.length === 0) {
+                alert("没有可导出的数据，请先执行「解析属性」。");
+                return;
+            }
+            // 准备 sheet 数据，添加表头
+            const sheetData = [
+                ["行号", "原始行内容", "匹配状态", "命中策略/过滤原因", "Piece Count (件数)", "Count Per Pack (每包数量)", "Total Count (总数量)", "提取明细 (数量→物品)"]
+            ];
+            for (let row of currentExportData) {
+                sheetData.push([
+                    row["行号"],
+                    row["原始行内容"],
+                    row["匹配状态"],
+                    row["命中策略/过滤原因"],
+                    row["Piece Count (件数)"],
+                    row["Count Per Pack (每包数量)"],
+                    row["Total Count (总数量)"],
+                    row["提取明细 (数量→物品)"]
+                ]);
+            }
+            // 创建工作簿和工作表
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            // 调整列宽（可选）
+            ws['!cols'] = [
+                {wch:6},   // 行号
+                {wch:50},  // 原始行内容
+                {wch:12},  // 匹配状态
+                {wch:30},  // 命中策略/过滤原因
+                {wch:18},  // Piece Count
+                {wch:22},  // Count Per Pack
+                {wch:18},  // Total Count
+                {wch:40}   // 提取明细
+            ];
+            XLSX.utils.book_append_sheet(wb, ws, "解析结果");
+            // 生成文件名（带时间戳）
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}_${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+            const fileName = `沃尔玛属性解析_${timestamp}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // 加载丰富测试用例
+        function loadExample() {
+            dataTextarea.value = `药丸x50
+摆件x1
+1x真空封口机
+1x独立日横幅 1x细绳
+12x双螺旋 1x纸扇花 1x三角旗 6x纸球 1x五角星旗
+巧克力x1,糖果x1,卡片x1,玩具x1,书x1
+吊顶装饰x24
+x1灯串
+挂牌*1   麻绳40cm*1
+1*美国独立日对联180x30cm一对
+8 x 吊饰 + 8 x 卡 + 12 x 拉旗 + 2 x 绳子
+1x榨汁桶 1x数据线 1x盖子
+1×抽水器 1×说明书 1×电源线 1×水管
+单个拼图500片x1
+礼品篮示例: 曲奇x1,巧克力棒x1,咖啡x1,马克杯x1,贺卡x1
+6个五角星
+6个6cm球
+2尺红布
+5cm胶带
+独立日门廊鹅衣服x1
+45x45cm独立日抱枕套x1`;
+            performMatching();
+        }
+
+        function clearData() {
+            dataTextarea.value = '';
+            resultBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">✨ 数据已清空，请粘贴内容或加载示例</td></tr>';
+            summaryTextSpan.innerText = '';
+            statsFooter.innerHTML = '<span>等待数据输入...</span>';
+            currentExportData = [];
+        }
+
+        matchBtn.addEventListener('click', performMatching);
+        loadExampleBtn.addEventListener('click', loadExample);
+        clearDataBtn.addEventListener('click', clearData);
+        exportExcelBtn.addEventListener('click', exportToExcel);
+        renderFilterRules();
+
+        dataTextarea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                performMatching();
+            }
+        });
+
+        resultBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 50px;">📌 点击「加载测试数据」或粘贴内容，然后点击「解析属性」</td></tr>';
+    })();
+</script>
+</body>
+</html>

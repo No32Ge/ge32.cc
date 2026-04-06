@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>DeepSeek 批量解析器 · 并发加速版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 10% 20%, #0a0f1e, #03050b);
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(16, 22, 35, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 24px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5);
+        }
+        .cyber-input, .cyber-textarea {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 10px 14px;
+            color: #cbd5e1;
+            transition: all 0.2s;
+        }
+        .cyber-input:focus, .cyber-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+        }
+        .cyber-btn {
+            transition: all 0.2s ease;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 40px;
+        }
+        .cyber-btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
+        .terminal {
+            background: #050a12;
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            padding: 18px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            color: #a7f3d0;
+            overflow: auto;
+            white-space: pre-wrap;
+            max-height: 300px;
+        }
+        .badge-x { background: #f97316; color: #000; padding: 2px 8px; border-radius: 30px; font-size: 0.65rem; font-weight: bold; }
+        .progress-bar { height: 6px; background: #1e293b; border-radius: 4px; overflow: hidden; }
+        .progress-fill { width: 0%; height: 100%; background: #3b82f6; transition: width 0.2s; }
+        .api-key-input { font-family: monospace; letter-spacing: 1px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+<div class="max-w-7xl mx-auto">
+    <!-- 头部 -->
+    <div class="mb-8 flex flex-col md:flex-row justify-between items-center gap-3 border-b border-blue-900/50 pb-4">
+        <div>
+            <h1 class="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-orange-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
+                <i class="fa-solid fa-rocket text-blue-500"></i> DeepSeek 批量解析器 · 并发版
+            </h1>
+            <p class="text-blue-300/80 text-sm mt-1">并发请求 · 高速提取X异常记录 → 导出JSON/Excel</p>
+        </div>
+        <div class="text-xs bg-black/50 px-4 py-2 rounded-full border border-gray-700">
+            <i class="fa-regular fa-gauge-high"></i> 支持并发控制，大幅缩短等待时间
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 左侧控制面板 -->
+        <div class="lg:col-span-5 space-y-5">
+            <!-- API 配置 -->
+            <div class="glass-panel p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <i class="fa-solid fa-key text-yellow-400"></i>
+                    <h2 class="font-bold text-yellow-300 text-lg">DeepSeek 配置</h2>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">API Key <span class="text-red-400">*</span></label>
+                        <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxxxxxx" class="cyber-input w-full api-key-input">
+                        <div class="text-xs text-gray-500 mt-1">密钥仅存储于浏览器内存，不会上传任何服务器</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">模型</label>
+                        <select id="modelSelect" class="cyber-input w-full">
+                            <option value="deepseek-chat">deepseek-chat (推荐)</option>
+                            <option value="deepseek-coder">deepseek-coder</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">API 地址</label>
+                        <input type="text" id="apiUrl" value="https://api.deepseek.com/v1/chat/completions" class="cyber-input w-full text-xs">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据源 -->
+            <div class="glass-panel p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <i class="fa-solid fa-file-excel text-green-400"></i>
+                    <h2 class="font-bold text-green-300 text-lg">数据源 (Excel)</h2>
+                </div>
+                <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" class="cyber-input w-full cursor-pointer">
+                <div class="flex justify-between items-center mt-3 text-xs text-gray-400">
+                    <span><i class="fa-regular fa-clock"></i> 支持 .xlsx / .xls / .csv</span>
+                    <button id="refreshPreviewBtn" class="cyber-btn bg-gray-800/50 px-3 py-1 rounded-full text-xs"><i class="fa-solid fa-rotate-right"></i> 刷新统计</button>
+                </div>
+                <div class="mt-3 flex items-center gap-2 flex-wrap">
+                    <span class="text-gray-300 text-sm">📊 命中X记录数：</span>
+                    <span id="hitCount" class="bg-orange-500/20 text-orange-400 border border-orange-500/40 px-3 py-1 rounded-full text-sm font-mono">0</span>
+                </div>
+                <div id="fileStatus" class="text-gray-500 text-xs mt-1"></div>
+            </div>
+
+            <!-- 聚合 & 并发配置 -->
+            <div class="glass-panel p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <i class="fa-solid fa-layer-group text-purple-400"></i>
+                    <h2 class="font-bold text-purple-300 text-lg">处理设置</h2>
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2"><i class="fa-solid fa-quote-left text-purple-400"></i> 提示词 (前置指令)</label>
+                    <textarea id="userPrompt" rows="3" class="cyber-textarea w-full" placeholder="例如：请分析以下商品信息，提取件数、每包数量、总数量..."></textarea>
+                    <div class="text-xs text-gray-500 mt-1">每条请求的User消息中，会在数据前插入该提示词</div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2"><i class="fa-solid fa-arrows-spin"></i> 每组条数</label>
+                        <input type="number" id="batchSize" min="1" value="5" step="1" class="cyber-input w-full">
+                        <div class="text-[11px] text-gray-500 mt-1">记录数/组</div>
+                    </div>
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2"><i class="fa-solid fa-bolt"></i> 并发数量</label>
+                        <input type="number" id="concurrency" min="1" max="20" value="5" step="1" class="cyber-input w-full">
+                        <div class="text-[11px] text-gray-500 mt-1">同时请求数 (建议≤10)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 执行 & 导出 -->
+            <div class="glass-panel p-5 space-y-3">
+                <button id="startBtn" class="cyber-btn bg-blue-600 hover:bg-blue-500 w-full py-3 justify-center"><i class="fa-solid fa-paper-plane"></i> 开始批量解析 (并发)</button>
+                <div class="progress-bar"><div id="apiProgressFill" class="progress-fill"></div></div>
+                <div class="flex gap-3">
+                    <button id="exportJsonBtn" disabled class="cyber-btn bg-gray-700 hover:bg-gray-600 flex-1 py-2"><i class="fa-regular fa-file-code"></i> 导出JSON</button>
+                    <button id="exportExcelBtn" disabled class="cyber-btn bg-gray-700 hover:bg-gray-600 flex-1 py-2"><i class="fa-regular fa-file-excel"></i> 导出Excel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧: 预览 & 日志 -->
+        <div class="lg:col-span-7 space-y-5">
+            <!-- X记录预览 -->
+            <div class="glass-panel p-4">
+                <h3 class="font-bold text-blue-300 text-sm mb-2 flex items-center gap-2"><i class="fa-solid fa-table-list"></i> 待解析记录预览 (最多20条)</h3>
+                <div class="overflow-x-auto max-h-64 overflow-y-auto">
+                    <table class="w-full text-xs">
+                        <thead class="bg-gray-800/50">
+                            <tr><th class="p-2 text-left">行号</th><th class="p-2 text-left">原始内容</th><th class="p-2 text-left">异常字段</th></tr>
+                        </thead>
+                        <tbody id="previewBody"><tr><td colspan="3" class="text-center py-6 text-gray-500">上传Excel后自动显示</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 处理日志 & 结果 -->
+            <div class="glass-panel p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-emerald-400 text-sm"><i class="fa-solid fa-terminal"></i> 执行日志 (并发模式)</h3>
+                    <span id="groupCountBadge" class="text-gray-400 text-xs">未开始</span>
+                </div>
+                <div id="logArea" class="terminal text-xs h-64 overflow-y-auto font-mono bg-black/80">
+                    [就绪] 等待操作
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // DOM 元素
+        const apiKeyInput = document.getElementById('apiKey');
+        const modelSelect = document.getElementById('modelSelect');
+        const apiUrlInput = document.getElementById('apiUrl');
+        const excelFile = document.getElementById('excelUpload');
+        const refreshPreview = document.getElementById('refreshPreviewBtn');
+        const hitCountSpan = document.getElementById('hitCount');
+        const fileStatusSpan = document.getElementById('fileStatus');
+        const previewBody = document.getElementById('previewBody');
+        const userPromptTextarea = document.getElementById('userPrompt');
+        const batchSizeInput = document.getElementById('batchSize');
+        const concurrencyInput = document.getElementById('concurrency');
+        const startBtn = document.getElementById('startBtn');
+        const exportJsonBtn = document.getElementById('exportJsonBtn');
+        const exportExcelBtn = document.getElementById('exportExcelBtn');
+        const progressFill = document.getElementById('apiProgressFill');
+        const logArea = document.getElementById('logArea');
+        const groupCountBadge = document.getElementById('groupCountBadge');
+
+        // 存储数据
+        let xRecords = [];          // [{ rowNum, originalContent, reasonFields }]
+        let allResults = [];        // 合并后的最终结果数组
+        let currentRequestGroups = []; // 存储分组后的数据 { groupIndex, records }
+
+        // 辅助函数: 解析Excel提取X记录
+        function findHeaderIndex(headers, possibleNames) {
+            for (let i = 0; i < headers.length; i++) {
+                const cell = String(headers[i] || '').trim();
+                for (let name of possibleNames) {
+                    if (cell === name || cell.includes(name) || (name.includes('Piece') && cell.includes('件数')) || (name.includes('Count Per Pack') && cell.includes('每包数量')) || (name.includes('Total Count') && cell.includes('总数量'))) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
+
+        async function parseExcelAndExtract(file) {
+            if (!file) throw new Error('未选择文件');
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                        if (!rows.length) throw new Error('表格为空');
+                        const headerRow = rows[0].map(c => (c === undefined ? '' : String(c).trim()));
+                        const rowNumIdx = findHeaderIndex(headerRow, ['行号', '#', '序号', 'Row Number', 'RowNum']);
+                        const originalIdx = findHeaderIndex(headerRow, ['原始行内容', '原始行', 'Original Content', '原始内容', '描述']);
+                        const pieceIdx = findHeaderIndex(headerRow, ['Piece Count', '件数', 'PieceCount']);
+                        const perPackIdx = findHeaderIndex(headerRow, ['Count Per Pack', '每包数量', 'CountPerPack']);
+                        const totalIdx = findHeaderIndex(headerRow, ['Total Count', '总数量', 'TotalCount']);
+                        if (rowNumIdx === -1) throw new Error('未找到“行号”列');
+                        if (originalIdx === -1) throw new Error('未找到“原始行内容”列');
+                        const records = [];
+                        for (let i = 1; i < rows.length; i++) {
+                            const row = rows[i];
+                            const rowNum = row[rowNumIdx] !== undefined ? row[rowNumIdx] : '';
+                            const original = row[originalIdx] !== undefined ? row[originalIdx] : '';
+                            const pieceVal = pieceIdx !== -1 ? String(row[pieceIdx] || '').trim() : '';
+                            const perPackVal = perPackIdx !== -1 ? String(row[perPackIdx] || '').trim() : '';
+                            const totalVal = totalIdx !== -1 ? String(row[totalIdx] || '').trim() : '';
+                            if (pieceVal === 'X' || perPackVal === 'X' || totalVal === 'X') {
+                                let reason = [];
+                                if (pieceVal === 'X') reason.push('Piece');
+                                if (perPackVal === 'X') reason.push('PerPack');
+                                if (totalVal === 'X') reason.push('Total');
+                                records.push({ rowNum: String(rowNum), originalContent: String(original), reasonFields: reason.join(',') });
+                            }
+                        }
+                        resolve(records);
+                    } catch (err) { reject(err.message); }
+                };
+                reader.onerror = () => reject('文件读取失败');
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        async function updatePreview() {
+            const file = excelFile.files[0];
+            if (!file) {
+                fileStatusSpan.innerText = '未上传文件';
+                hitCountSpan.innerText = '0';
+                previewBody.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-gray-500">请上传Excel文件</td></tr>';
+                xRecords = [];
+                return;
+            }
+            fileStatusSpan.innerText = '解析中...';
+            try {
+                const records = await parseExcelAndExtract(file);
+                xRecords = records;
+                hitCountSpan.innerText = records.length;
+                fileStatusSpan.innerText = `✅ ${file.name} | 命中 ${records.length} 条`;
+                if (records.length === 0) {
+                    previewBody.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-gray-400">未发现X记录</td></tr>';
+                } else {
+                    const show = records.slice(0, 20);
+                    previewBody.innerHTML = show.map(rec => `
+                        <tr class="border-b border-gray-800">
+                            <td class="p-2 font-mono text-orange-300">${escapeHtml(rec.rowNum)}</td>
+                            <td class="p-2 max-w-xs truncate" title="${escapeHtml(rec.originalContent)}">${escapeHtml(rec.originalContent.length > 50 ? rec.originalContent.slice(0,50)+'…' : rec.originalContent)}</td>
+                            <td class="p-2"><span class="badge-x">${rec.reasonFields}</span></td>
+                        </tr>
+                    `).join('');
+                    if (records.length > 20) previewBody.innerHTML += `<tr><td colspan="3" class="text-center text-gray-500 text-xs">仅展示前20条，共${records.length}条</td></tr>`;
+                }
+            } catch (err) {
+                fileStatusSpan.innerText = '解析失败';
+                hitCountSpan.innerText = '错误';
+                previewBody.innerHTML = `<tr><td colspan="3" class="text-center text-red-400 py-4">${escapeHtml(err)}</td></tr>`;
+                xRecords = [];
+            }
+        }
+
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+
+        // 固定System Prompt
+        const SYSTEM_PROMPT = `你是一个沃尔玛(Walmart)数据提取AI。任务是从给定的产品文本中，为每一行计算三个核心指标，并输出一个纯JSON数组（禁止任何额外文字、禁止\`\`\`json标记）。
+
+【输出格式】
+输出一个JSON数组，每个元素是一个对象，包含以下字段：
+- "row": 整数，原始行号
+- "originalText": 字符串，原始产品描述（用于对齐校验）
+- "pieceCount": 整数或null，包装内所有独立物理物件的总数
+- "countPerPack": 整数或null，每个独立内包装中的相同物品数量
+- "totalCount": 整数或null，包装内相同主商品的总数
+
+【计算规则】
+1. 若文本中只有一种物品（如“药丸x50”、“拼图500片”），则三个数值均等于该物品的数量。
+2. 若文本中包含多种不同物品（如“1x杯,1x绳,1x贴纸”），则：
+   - pieceCount = 所有物品数量之和
+   - countPerPack = 1
+   - totalCount = 1
+3. 赠品或配件若不单独标价且未带数量，不计入 pieceCount；若并列带数量则计入。
+4. 无法确定或格式不符时，对应字段填 null（注意不是字符串"null"）。
+
+【重要】只输出纯JSON数组，不要输出任何其他解释。`;
+
+        // 构建单组的User消息
+        function buildUserMessageForGroup(groupRecords) {
+            const lines = groupRecords.map(rec => `行号 ${rec.rowNum} : ${rec.originalContent}`);
+            const userPrompt = userPromptTextarea.value.trim();
+            let content = '';
+            if (userPrompt) content += userPrompt + '\n\n';
+            content += lines.join('\n');
+            return content;
+        }
+
+        // 单次API调用
+        async function callDeepSeek(userMessage, apiKey, model, apiUrl) {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        { role: "system", content: SYSTEM_PROMPT },
+                        { role: "user", content: userMessage }
+                    ],
+                    temperature: 0,
+                    stream: false
+                })
+            });
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`API错误 ${response.status}: ${errText}`);
+            }
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content;
+            if (!content) throw new Error('API返回内容为空');
+            let jsonStr = content.trim();
+            if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
+            if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
+            if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
+            jsonStr = jsonStr.trim();
+            const parsed = JSON.parse(jsonStr);
+            if (!Array.isArray(parsed)) throw new Error('返回结果不是数组');
+            return parsed;
+        }
+
+        // 并发控制函数：限制同时执行的任务数
+        async function runWithConcurrency(tasks, concurrency) {
+            const results = [];
+            const executing = [];
+            for (let i = 0; i < tasks.length; i++) {
+                const task = tasks[i];
+                const promise = task().then(result => {
+                    results[i] = result;
+                    return result;
+                }).catch(err => {
+                    results[i] = { error: err.message };
+                });
+                executing.push(promise);
+                if (executing.length >= concurrency) {
+                    await Promise.race(executing);
+                    // 移除已完成的
+                    for (let j = 0; j < executing.length; j++) {
+                        const p = executing[j];
+                        if (await Promise.race([p, Promise.resolve()]) === p) {
+                            executing.splice(j, 1);
+                            j--;
+                        }
+                    }
+                }
+            }
+            await Promise.all(executing);
+            return results;
+        }
+
+        // 主流程
+        async function startBatchProcess() {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) { log('❌ 请填写 DeepSeek API Key', 'error'); return; }
+            if (xRecords.length === 0) { log('❌ 没有X记录，请上传包含异常值的Excel', 'error'); return; }
+
+            const batchSize = parseInt(batchSizeInput.value, 10);
+            if (isNaN(batchSize) || batchSize < 1) { log('❌ 每组条数无效', 'error'); return; }
+            let concurrency = parseInt(concurrencyInput.value, 10);
+            if (isNaN(concurrency) || concurrency < 1) concurrency = 3;
+            concurrency = Math.min(concurrency, 20); // 上限20
+
+            // 分组
+            const groups = [];
+            for (let i = 0; i < xRecords.length; i += batchSize) {
+                groups.push(xRecords.slice(i, i + batchSize));
+            }
+            log(`📦 共 ${xRecords.length} 条记录，分为 ${groups.length} 组，每组最多 ${batchSize} 条，并发数: ${concurrency}`, 'info');
+            groupCountBadge.innerText = `总组数: ${groups.length} | 并发: ${concurrency}`;
+
+            allResults = [];
+            let completedCount = 0;
+            const tasks = groups.map((group, idx) => {
+                return async () => {
+                    const userMsg = buildUserMessageForGroup(group);
+                    log(`[组 ${idx+1}/${groups.length}] 请求中...`, 'info');
+                    try {
+                        const resultArray = await callDeepSeek(userMsg, apiKey, modelSelect.value, apiUrlInput.value);
+                        log(`✅ 组 ${idx+1} 成功，获得 ${resultArray.length} 条结果`, 'success');
+                        return { success: true, data: resultArray, index: idx };
+                    } catch (err) {
+                        log(`❌ 组 ${idx+1} 失败: ${err.message}`, 'error');
+                        return { success: false, error: err.message, index: idx };
+                    } finally {
+                        completedCount++;
+                        const percent = (completedCount / groups.length) * 100;
+                        progressFill.style.width = `${percent}%`;
+                    }
+                };
+            });
+
+            const results = await runWithConcurrency(tasks, concurrency);
+            // 合并结果
+            for (const res of results) {
+                if (res.success && Array.isArray(res.data)) {
+                    allResults.push(...res.data);
+                }
+            }
+
+            log(`🎉 处理完成: 成功 ${results.filter(r=>r.success).length} 组，失败 ${results.filter(r=>!r.success).length} 组，共获得 ${allResults.length} 条结构化数据`, 'success');
+            if (allResults.length > 0) {
+                exportJsonBtn.disabled = false;
+                exportExcelBtn.disabled = false;
+                log(`💾 已就绪，可导出 JSON 或 Excel`, 'info');
+            } else {
+                exportJsonBtn.disabled = true;
+                exportExcelBtn.disabled = true;
+            }
+            setTimeout(() => progressFill.style.width = '0%', 1000);
+        }
+
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = 'mb-1';
+            const time = new Date().toLocaleTimeString();
+            let color = '#a7f3d0';
+            if (type === 'error') color = '#f87171';
+            if (type === 'success') color = '#4ade80';
+            if (type === 'warning') color = '#fbbf24';
+            div.innerHTML = `<span style="color:#6b7280">[${time}]</span> <span style="color:${color}">${escapeHtml(msg)}</span>`;
+            logArea.appendChild(div);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function exportToJSON() {
+            if (!allResults.length) { alert('无数据可导出'); return; }
+            const dataStr = JSON.stringify(allResults, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `deepseek_results_${Date.now()}.json`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            log('📁 JSON 已导出', 'success');
+        }
+
+        function exportToExcel() {
+            if (!allResults.length) { alert('无数据可导出'); return; }
+            const sheetData = [['行号', '原始文本', 'Piece Count', 'Count Per Pack', 'Total Count']];
+            for (const item of allResults) {
+                sheetData.push([
+                    item.row ?? '',
+                    item.originalText ?? '',
+                    item.pieceCount !== undefined ? item.pieceCount : 'X',
+                    item.countPerPack !== undefined ? item.countPerPack : 'X',
+                    item.totalCount !== undefined ? item.totalCount : 'X'
+                ]);
+            }
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '解析结果');
+            XLSX.writeFile(wb, `deepseek_results_${Date.now()}.xlsx`);
+            log('📁 Excel 已导出', 'success');
+        }
+
+        // 事件绑定
+        excelFile.addEventListener('change', () => { updatePreview(); exportJsonBtn.disabled = true; exportExcelBtn.disabled = true; allResults = []; });
+        refreshPreview.addEventListener('click', updatePreview);
+        startBtn.addEventListener('click', startBatchProcess);
+        exportJsonBtn.addEventListener('click', exportToJSON);
+        exportExcelBtn.addEventListener('click', exportToExcel);
+        
+        updatePreview().catch(console.warn);
+        log('✨ 已加载，支持并发请求，请配置API Key并上传Excel文件', 'info');
+    })();
+</script>
+</body>
+</html>
