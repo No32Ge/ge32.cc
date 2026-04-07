@@ -328,7 +328,7 @@
         if (grams === undefined || grams === null || grams === '') return '';
         let num = parseFloat(String(grams).trim());
         if (isNaN(num)) return '';
-        return (num * GRAM_TO_LB).toFixed(4);
+        return (num * GRAM_TO_LB).toFixed(2);
     }
     
     function cmToInches(cm) {
@@ -388,7 +388,7 @@
             let widthCm = original[widCol] !== undefined ? original[widCol] : '';
             let heightCm = original[heiCol] !== undefined ? original[heiCol] : '';
             
-            // 换算
+            // 换算保留2位小数，若输入无效则保持空字符串
             let netContentStatement = gramsToPounds(weightGram);
             let assembledProductHeight = cmToInches(heightCm);    
             let assembledProductWidth = cmToInches(widthCm);      
@@ -400,10 +400,10 @@
             newRow["Variant Group ID"] = groupId;
             newRow["Is Primary Variant"] = isPrimaryValue;
             // 保留2位小数的换算结果
-            newRow["netContentStatement"] = netContentStatement === '' ? '' : netContentStatement.toFixed(2);
-            newRow["assembledProductHeight"] = assembledProductHeight === '' ? '' : assembledProductHeight.toFixed(2);
-            newRow["assembledProductWidth"] = assembledProductWidth === '' ? '' : assembledProductWidth.toFixed(2);
-            newRow["assembledProductLength"] = assembledProductLength === '' ? '' : assembledProductLength.toFixed(2);
+            newRow["netContentStatement"] = netContentStatement === '' ? '' : netContentStatement;
+            newRow["assembledProductHeight"] = assembledProductHeight === '' ? '' : assembledProductHeight;
+            newRow["assembledProductWidth"] = assembledProductWidth === '' ? '' : assembledProductWidth;
+            newRow["assembledProductLength"] = assembledProductLength === '' ? '' : assembledProductLength;
             
             resultRows.push(newRow);
         }
