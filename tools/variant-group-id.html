@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>变体组ID + 单位换算 | 自动生成Is Primary Variant</title>
+    <!-- SheetJS 核心库 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f4f9fe 0%, #e9f0f5 100%);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Roboto', sans-serif;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 2rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+            margin-bottom: 1.8rem;
+        }
+
+        .card-header {
+            background: #1e2f3f;
+            padding: 1.2rem 2rem;
+            color: white;
+        }
+
+        .card-header h1 {
+            font-weight: 600;
+            font-size: 1.7rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-header h1::before {
+            content: "🧬";
+            font-size: 1.7rem;
+        }
+
+        .sub {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 6px;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        .toolbar-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            background: #f8fafd;
+            padding: 1.2rem 1.5rem;
+            border-radius: 1.2rem;
+            margin-bottom: 1.8rem;
+            border: 1px solid #e2edf2;
+            align-items: flex-end;
+        }
+
+        .field-group {
+            flex: 1 1 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .field-group label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4a627a;
+            letter-spacing: 0.4px;
+        }
+
+        input[type="file"], select {
+            background: white;
+            border: 1px solid #cbdde6;
+            border-radius: 1rem;
+            padding: 0.65rem 1rem;
+            font-size: 0.85rem;
+            color: #1e2a3e;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+
+        button {
+            background: white;
+            border: 1px solid #cbdde6;
+            border-radius: 1rem;
+            padding: 0.65rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+
+        button.primary {
+            background: #1e2f3f;
+            border: none;
+            color: white;
+        }
+
+        button.primary:hover {
+            background: #0f1e2c;
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: #eef3fa;
+            border-color: #cbdde6;
+        }
+
+        button.secondary:hover {
+            background: #e2eaf2;
+        }
+
+        .info-badge {
+            background: #eef2ff;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.75rem;
+            color: #1e3a8a;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preview-container {
+            border-radius: 1.2rem;
+            border: 1px solid #e9eef3;
+            overflow: hidden;
+            background: white;
+        }
+
+        .preview-header {
+            background: #f1f5f9;
+            padding: 0.8rem 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-bottom: 1px solid #e2edf2;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 520px;
+            overflow-y: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            font-family: 'SF Mono', 'JetBrains Mono', monospace;
+        }
+
+        .data-table th {
+            background: #f8fafc;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #1e2f3f;
+            border-bottom: 1px solid #e2edf2;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #ecf3f8;
+            color: #1f2a3e;
+        }
+
+        .data-table tr:hover {
+            background: #fefce8;
+        }
+
+        .rule-box {
+            background: #f0f6fa;
+            border-radius: 1rem;
+            padding: 0.8rem 1.2rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.8rem;
+            color: #1f4662;
+            border-left: 4px solid #2c6e9e;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e2f3f;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #5f7f9e;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 700px) {
+            body { padding: 1rem; }
+            .card-body { padding: 1rem; }
+            .data-table th, .data-table td { padding: 6px 4px; font-size: 0.65rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <div class="card-header">
+            <h1>变体组ID + 单位换算器</h1>
+            <div class="sub">SKU + 父SKU → 自动生成 Variant Group ID 和 Is Primary Variant · 重量(g→lb) · 尺寸(cm→英寸)</div>
+        </div>
+        <div class="card-body">
+            <div class="rule-box">
+                📌 <strong>处理逻辑（输入列仅需：SKU, 父SKU, 重量(g), 长, 宽, 高）</strong><br>
+                • <strong>Variant Group ID</strong> : 父SKU为空 → 组ID=SKU；父SKU存在 → 相同父SKU下所有SKU共用一个组ID(等于组内首个SKU)。<br>
+                • <strong>Is Primary Variant</strong> : <span style="background:#fef9e3;">自动生成，每个 Variant Group 内首次出现的 SKU 标记为 "Yes"，其余为 "No"。</span><br>
+                • <strong>重量(g)</strong> → <strong>netContentStatement</strong> : 克转英镑 (1g = 0.00220462 lb)，保留2位小数。<br>
+                • <strong>长 / 宽 / 高 (cm)</strong> → <strong>assembledProductLength/assembledProductWidth/assembledProductHeight/ </strong> : 厘米转英寸 (1cm = 0.393701 in)，保留2位小数。<br>
+                ✅ <strong>输入Excel必须包含列：SKU, 父SKU, 重量(g), 长, 宽, 高</strong> (列名不区分大小写，支持中英文变体)
+            </div>
+
+            <div class="toolbar-grid">
+                <div class="field-group" style="flex:2">
+                    <label>📂 上传 Excel (.xlsx, .xls, .csv)</label>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .xlsm, .xlsb, .csv">
+                </div>
+                <div class="field-group">
+                    <label>📄 工作表</label>
+                    <select id="sheetSelect" disabled><option>— 请先上传 —</option></select>
+                </div>
+                <div class="field-group" style="flex-direction: row; align-items: center; gap: 12px;">
+                    <button id="processBtn" class="primary">✨ 生成完整数据</button>
+                    <button id="exportExcelBtn" class="secondary">💾 导出新Excel</button>
+                </div>
+            </div>
+
+            <div class="preview-container">
+                <div class="preview-header">
+                    <div class="info-badge">📊 预览 (前200行) &nbsp; <span id="rowCountBadge">0行</span></div>
+                    <div class="info-badge">🧩 新增列: Variant Group ID, Is Primary Variant, netContentStatement, assembledProductHeight, assembledProductWidth, assembledProductLength</div>
+                </div>
+                <div class="table-wrapper" id="tableWrapper">
+                    <table class="data-table" id="previewTable">
+                        <thead><tr><th>等待操作</th></thead>
+                        <tbody><tr><td>请上传Excel，然后点击「生成完整数据」</td>}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>⚡ 纯前端处理 · Is Primary Variant 自动生成 · 单位换算精确</footer>
+</div>
+<div id="toastMsg" class="toast"></div>
+
+<script>
+    // DOM 元素
+    const fileInput = document.getElementById('fileInput');
+    const sheetSelect = document.getElementById('sheetSelect');
+    const processBtn = document.getElementById('processBtn');
+    const exportBtn = document.getElementById('exportExcelBtn');
+    const rowCountBadge = document.getElementById('rowCountBadge');
+
+    let originalWorkbook = null;
+    let currentSheetName = '';
+    let processedData = [];          // 最终处理后的数据(对象数组, 包含原始列+新增列)
+    let originalColumnsOrder = [];   // 原始列顺序(用于导出时保持)
+    
+    // 工具函数
+    function showToast(msg, dur=2200) {
+        const toast = document.getElementById('toastMsg');
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        setTimeout(() => toast.style.opacity = '0', dur);
+    }
+    
+    // 智能查找列名 (不区分大小写&去空格)
+    function findColumn(keysList, sampleRow) {
+        if (!sampleRow) return null;
+        const lowerKeys = keysList.map(k => k.toLowerCase().replace(/\s/g, ''));
+        for (let originalKey of Object.keys(sampleRow)) {
+            const clean = originalKey.toLowerCase().replace(/\s/g, '');
+            if (lowerKeys.includes(clean)) return originalKey;
+        }
+        return null;
+    }
+    
+    // 单位换算函数
+    const GRAM_TO_LB = 0.00220462;
+    const CM_TO_INCH = 0.393701;
+    
+    function gramsToPounds(grams) {
+        if (grams === undefined || grams === null || grams === '') return '';
+        let num = parseFloat(String(grams).trim());
+        if (isNaN(num)) return '';
+        return (num * GRAM_TO_LB).toFixed(4);
+    }
+    
+    function cmToInches(cm) {
+        if (cm === undefined || cm === null || cm === '') return '';
+        let num = parseFloat(String(cm).trim());
+        if (isNaN(num)) return '';
+        return (num * CM_TO_INCH).toFixed(2);
+    }
+    
+    // 核心处理：根据SKU、父SKU生成 Variant Group ID，同时自动生成 Is Primary Variant (Yes/No)
+    // 并且处理重量换算、尺寸换算
+    // rows: 原始对象数组 (包含原始字段)
+    // skuCol, parentCol, weightCol, lengthCol, widthCol, heightCol
+    // 返回增强后的数组 (包含新字段：Variant Group ID, Is Primary Variant, netContentStatement, assembledProductHeight/Width/Length)
+    function processAllData(rows, skuCol, parentCol, weightCol, lenCol, widCol, heiCol) {
+        if (!rows || rows.length === 0) return [];
+        
+        // 映射: 父SKU -> 组ID (第一个SKU)
+        const parentToGroupId = new Map();
+        // 记录每个组ID是否已经出现过(用于标记Is Primary Variant)
+        const groupFirstSeen = new Set();   // 存储已经分配过第一个SKU的组ID
+        
+        const resultRows = [];
+        
+        for (let i = 0; i < rows.length; i++) {
+            const original = rows[i];
+            // 获取关键字段原始值并trim
+            let skuRaw = original[skuCol] !== undefined && original[skuCol] !== null ? String(original[skuCol]).trim() : '';
+            let parentRaw = original[parentCol] !== undefined && original[parentCol] !== null ? String(original[parentCol]).trim() : '';
+            
+            // 1. 计算 Variant Group ID
+            let groupId = '';
+            if (parentRaw === '') {
+                groupId = skuRaw;
+                // 独立组: 自己就是组ID，后续不会通过父SKU映射
+            } else {
+                if (parentToGroupId.has(parentRaw)) {
+                    groupId = parentToGroupId.get(parentRaw);
+                } else {
+                    groupId = skuRaw;
+                    parentToGroupId.set(parentRaw, groupId);
+                }
+            }
+            
+            // 2. 自动生成 Is Primary Variant: 当前组ID是否第一次遇到
+            let isPrimaryValue = '';
+            if (!groupFirstSeen.has(groupId)) {
+                isPrimaryValue = "Yes";
+                groupFirstSeen.add(groupId);
+            } else {
+                isPrimaryValue = "No";
+            }
+            
+            // 3. 获取重量、长宽高原始值
+            let weightGram = original[weightCol] !== undefined ? original[weightCol] : '';
+            let lengthCm = original[lenCol] !== undefined ? original[lenCol] : '';
+            let widthCm = original[widCol] !== undefined ? original[widCol] : '';
+            let heightCm = original[heiCol] !== undefined ? original[heiCol] : '';
+            
+            // 换算
+            let netContentStatement = gramsToPounds(weightGram);
+            let assembledProductHeight = cmToInches(heightCm);    
+            let assembledProductWidth = cmToInches(widthCm);      
+            let assembledProductLength = cmToInches(lengthCm);    
+            
+            // 构建新对象: 先复制原始所有字段
+            const newRow = { ...original };
+            // 添加/覆盖字段（注意：原始数据中可能意外包含Is Primary Variant列，但我们会覆盖为正确值）
+            newRow["Variant Group ID"] = groupId;
+            newRow["Is Primary Variant"] = isPrimaryValue;
+            // 保留2位小数的换算结果
+            newRow["netContentStatement"] = netContentStatement === '' ? '' : netContentStatement.toFixed(2);
+            newRow["assembledProductHeight"] = assembledProductHeight === '' ? '' : assembledProductHeight.toFixed(2);
+            newRow["assembledProductWidth"] = assembledProductWidth === '' ? '' : assembledProductWidth.toFixed(2);
+            newRow["assembledProductLength"] = assembledProductLength === '' ? '' : assembledProductLength.toFixed(2);
+            
+            resultRows.push(newRow);
+        }
+        return resultRows;
+    }
+    
+    // 从当前sheet提取数据，并进行智能列匹配 (不再需要 Is Primary Variant 作为输入)
+    function extractAndProcess(workbook, sheetName) {
+        if (!workbook || !sheetName) return { success: false, error: "无工作簿或工作表" };
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) return { success: false, error: `工作表不存在` };
+        
+        let rawRows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        if (!rawRows.length) return { success: false, error: "工作表为空" };
+        
+        const sample = rawRows[0];
+        // 匹配所需列名 (仅输入必须列)
+        const skuCol = findColumn(["SKU", "Sku", "sku", "商品编码"], sample);
+        const parentCol = findColumn(["父SKU", "父级SKU", "Parent SKU", "parent sku"], sample);
+        const weightCol = findColumn(["重量(g)", "重量", "weight(g)", "Weight(g)", "克"], sample);
+        const lengthCol = findColumn(["长", "长度(cm)", "长度", "Length(cm)", "length"], sample);
+        const widthCol = findColumn(["宽", "宽度(cm)", "宽度", "Width(cm)", "width"], sample);
+        const heightCol = findColumn(["高", "高度(cm)", "高度", "Height(cm)", "height"], sample);
+        
+        const missing = [];
+        if (!skuCol) missing.push("SKU");
+        if (!parentCol) missing.push("父SKU");
+        if (!weightCol) missing.push("重量(g)");
+        if (!lengthCol) missing.push("长");
+        if (!widthCol) missing.push("宽");
+        if (!heightCol) missing.push("高");
+        if (missing.length) {
+            return { success: false, error: `缺少必要列: ${missing.join(", ")}。请检查列名是否匹配（不区分大小写，支持中英文）` };
+        }
+        
+        // 记录原始列顺序 (用于导出时保持)
+        const originalCols = Object.keys(sample);
+        
+        // 处理数据 (不依赖 Is Primary Variant 输入)
+        const enriched = processAllData(rawRows, skuCol, parentCol, weightCol, lengthCol, widthCol, heightCol);
+        
+        return {
+            success: true,
+            data: enriched,
+            originalColumns: originalCols,
+            rowCount: enriched.length
+        };
+    }
+    
+    // 渲染表格预览 (展示所有列，前200行)
+    function renderPreview(dataArray, limit = 200) {
+        if (!dataArray || dataArray.length === 0) {
+            const wrapper = document.getElementById('tableWrapper');
+            wrapper.innerHTML = `<table class="data-table"><thead><tr><th>暂无数据</th></tr></thead><tbody><tr><td>请上传并生成数据</td></tr></tbody></table>`;
+            rowCountBadge.innerText = `0行`;
+            return;
+        }
+        const total = dataArray.length;
+        rowCountBadge.innerText = `${total}行 (展示前${Math.min(limit,total)}行)`;
+        const displayRows = dataArray.slice(0, limit);
+        const allCols = Object.keys(displayRows[0] || {});
+        
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        const thead = document.createElement('thead');
+        const trHead = document.createElement('tr');
+        allCols.forEach(col => {
+            const th = document.createElement('th');
+            th.textContent = col;
+            trHead.appendChild(th);
+        });
+        thead.appendChild(trHead);
+        table.appendChild(thead);
+        
+        const tbody = document.createElement('tbody');
+        for (let row of displayRows) {
+            const tr = document.createElement('tr');
+            for (let col of allCols) {
+                const td = document.createElement('td');
+                let val = row[col];
+                if (val === undefined || val === null) val = '';
+                td.textContent = String(val);
+                td.title = String(val);
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+        const wrapper = document.getElementById('tableWrapper');
+        wrapper.innerHTML = '';
+        wrapper.appendChild(table);
+    }
+    
+    // 主处理流程 (读取当前sheet，计算并存储processedData)
+    async function runFullProcess() {
+        if (!originalWorkbook || !currentSheetName) {
+            showToast("请先上传Excel文件并选择工作表", 1800);
+            return false;
+        }
+        const result = extractAndProcess(originalWorkbook, currentSheetName);
+        if (!result.success) {
+            showToast(result.error, 4000);
+            renderPreview([]);
+            processedData = [];
+            return false;
+        }
+        processedData = result.data;
+        originalColumnsOrder = result.originalColumns;
+        renderPreview(processedData, 200);
+        showToast(`✅ 处理完成！共 ${result.rowCount} 行记录，已自动生成变体组ID、主变体标记(Is Primary Variant)及单位换算`, 2800);
+        return true;
+    }
+    
+    // 导出Excel (保持原始列顺序 + 新增列附后，确保 Is Primary Variant 列包含在内)
+    function exportToExcel() {
+        if (!processedData || processedData.length === 0) {
+            showToast("没有已处理的数据，请先点击「生成完整数据」", 1800);
+            return;
+        }
+        try {
+            const firstRow = processedData[0];
+            const allKeys = Object.keys(firstRow);
+            // 定义所有新增的派生列（包括 Is Primary Variant）
+            const extraCols = ["Variant Group ID", "Is Primary Variant", "netContentStatement", "assembledProductHeight", "assembledProductWidth", "assembledProductLength"];
+            let orderedCols = [];
+            // 先加原始列 (按照最初顺序)
+            if (originalColumnsOrder && originalColumnsOrder.length) {
+                for (let col of originalColumnsOrder) {
+                    if (!orderedCols.includes(col)) orderedCols.push(col);
+                }
+            } else {
+                // fallback: 所有不是派生列的放前面
+                for (let k of allKeys) {
+                    if (!extraCols.includes(k) && !orderedCols.includes(k)) orderedCols.push(k);
+                }
+            }
+            // 添加派生列 (确保在最后，且不重复)
+            for (let ec of extraCols) {
+                if (!orderedCols.includes(ec) && allKeys.includes(ec)) orderedCols.push(ec);
+            }
+            
+            // 构建导出数组
+            const exportRows = processedData.map(row => {
+                const newObj = {};
+                for (let col of orderedCols) {
+                    newObj[col] = row[col] !== undefined ? row[col] : "";
+                }
+                return newObj;
+            });
+            
+            const worksheet = XLSX.utils.json_to_sheet(exportRows, { header: orderedCols });
+            worksheet['!cols'] = orderedCols.map(() => ({ wch: 18 }));
+            const newWorkbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWorkbook, worksheet, "Variant_Processed");
+            const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+            XLSX.writeFile(newWorkbook, `variant_export_${timestamp}.xlsx`);
+            showToast(`📎 导出成功，共 ${processedData.length} 行，已包含 Is Primary Variant 列`, 2200);
+        } catch (err) {
+            console.error(err);
+            showToast("导出失败，请检查数据", 2000);
+        }
+    }
+    
+    // 文件上传处理
+    function handleFileUpload(file) {
+        if (!file) return;
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['xlsx','xls','xlsm','xlsb','csv'].includes(ext)) {
+            showToast("不支持该文件类型，请上传Excel文件", 1500);
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            try {
+                const workbook = XLSX.read(data, { type: 'array', defval: "" });
+                originalWorkbook = workbook;
+                const sheets = workbook.SheetNames;
+                if (!sheets.length) throw new Error("无工作表");
+                sheetSelect.innerHTML = '';
+                sheets.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    sheetSelect.appendChild(opt);
+                });
+                sheetSelect.disabled = false;
+                currentSheetName = sheets[0];
+                sheetSelect.value = currentSheetName;
+                showToast(`已加载 "${file.name}"，请点击「生成完整数据」`, 2000);
+                // 清空之前处理结果
+                processedData = [];
+                renderPreview([]);
+            } catch (err) {
+                showToast("解析失败: " + err.message, 2500);
+                originalWorkbook = null;
+                sheetSelect.disabled = true;
+                sheetSelect.innerHTML = '<option>— 请重新上传 —</option>';
+            }
+        };
+        reader.onerror = () => showToast("文件读取错误");
+        reader.readAsArrayBuffer(file);
+    }
+    
+    // 事件绑定
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) handleFileUpload(e.target.files[0]);
+        else {
+            originalWorkbook = null;
+            sheetSelect.disabled = true;
+            processedData = [];
+            renderPreview([]);
+        }
+    });
+    
+    sheetSelect.addEventListener('change', (e) => {
+        if (originalWorkbook && e.target.value) {
+            currentSheetName = e.target.value;
+            processedData = [];  // 切换工作表后需重新生成
+            renderPreview([]);
+            showToast(`已切换到工作表: ${currentSheetName}，请重新点击「生成完整数据」`, 1500);
+        }
+    });
+    
+    processBtn.addEventListener('click', async () => {
+        if (!originalWorkbook || !currentSheetName) {
+            showToast("请先上传Excel文件", 1200);
+            return;
+        }
+        await runFullProcess();
+    });
+    
+    exportBtn.addEventListener('click', () => {
+        if (!processedData.length) showToast("没有可导出的数据，请先点击「生成完整数据」", 1800);
+        else exportToExcel();
+    });
+    
+    // 拖拽上传支持
+    const dropZone = document.body;
+    function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+    ['dragenter','dragover','dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, preventDefaults, false));
+    dropZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length) {
+            const f = files[0];
+            const ext = f.name.split('.').pop().toLowerCase();
+            if (['xlsx','xls','xlsm','xlsb','csv'].includes(ext)) {
+                handleFileUpload(f);
+                fileInput.files = files;
+            } else showToast("请拖拽Excel文件", 1200);
+        }
+    });
+    
+    // 初始禁用下拉
+    sheetSelect.disabled = true;
+    renderPreview([]);
+</script>
+</body>
+</html>
