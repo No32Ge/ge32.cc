@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>通用SKU筛选器 | 可配置列与关键词 | 变体组扩展输出</title>
+    <!-- SheetJS 核心库 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(145deg, #f0f4fa 0%, #e6edf4 100%);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Roboto', sans-serif;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 2rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+            margin-bottom: 1.8rem;
+        }
+        .card-header {
+            background: #1e2f3f;
+            padding: 1.2rem 2rem;
+            color: white;
+        }
+        .card-header h1 {
+            font-weight: 600;
+            font-size: 1.7rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .card-header h1::before {
+            content: "⚙️";
+            font-size: 1.7rem;
+        }
+        .sub {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 6px;
+        }
+        .card-body {
+            padding: 2rem;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: flex-end;
+        }
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            flex: 1 1 200px;
+        }
+        .field-group label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4a627a;
+            letter-spacing: 0.4px;
+        }
+        input[type="file"], select, input[type="text"] {
+            background: white;
+            border: 1px solid #cbdde6;
+            border-radius: 1rem;
+            padding: 0.65rem 1rem;
+            font-size: 0.85rem;
+            color: #1e2a3e;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        button {
+            background: white;
+            border: 1px solid #cbdde6;
+            border-radius: 1rem;
+            padding: 0.6rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        button.primary {
+            background: #1e2f3f;
+            border: none;
+            color: white;
+        }
+        button.primary:hover {
+            background: #0f1e2c;
+            transform: translateY(-1px);
+        }
+        button.secondary {
+            background: #eef3fa;
+            border-color: #cbdde6;
+        }
+        button.secondary:hover {
+            background: #e2eaf2;
+        }
+        button.danger {
+            background: #fee2e2;
+            border-color: #f5b5b5;
+            color: #b91c1c;
+        }
+        .info-badge {
+            background: #eef2ff;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.75rem;
+            color: #1e3a8a;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .condition-group {
+            background: #f8fafd;
+            border-radius: 1.2rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e2edf2;
+        }
+        .condition-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+            margin-bottom: 0.8rem;
+        }
+        .condition-row .field-group {
+            flex: 1;
+            min-width: 160px;
+        }
+        .keywords-area {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        .keywords-area textarea {
+            width: 100%;
+            border: 1px solid #cbdde6;
+            border-radius: 1rem;
+            padding: 0.6rem;
+            font-size: 0.8rem;
+            font-family: monospace;
+            resize: vertical;
+        }
+        .preview-container, .result-container {
+            border-radius: 1.2rem;
+            border: 1px solid #e9eef3;
+            overflow: hidden;
+            background: white;
+            margin-top: 1rem;
+        }
+        .preview-header {
+            background: #f1f5f9;
+            padding: 0.8rem 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-bottom: 1px solid #e2edf2;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 360px;
+            overflow-y: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            font-family: 'SF Mono', monospace;
+        }
+        .data-table th {
+            background: #f8fafc;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        .data-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ecf3f8;
+        }
+        .sku-list {
+            background: #fefce8;
+            padding: 0.8rem;
+            border-radius: 0.8rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e2f3f;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #5f7f9e;
+            margin-top: 1rem;
+        }
+        hr {
+            margin: 1rem 0;
+            border-color: #e2edf2;
+        }
+        .add-condition-btn {
+            margin: 0.5rem 0 1rem 0;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="card">
+        <div class="card-header">
+            <h1>通用SKU筛选器 (变体组扩展)</h1>
+            <div class="sub">手动配置SKU/父SKU列 + 任意文本列及关键词 → 命中任意条件 → 提取完整父SKU组下所有SKU</div>
+        </div>
+        <div class="card-body">
+            <!-- 文件上传区 -->
+            <div class="toolbar">
+                <div class="field-group" style="flex:2">
+                    <label>📂 上传 Excel (.xlsx, .xls, .csv)</label>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .xlsm, .xlsb, .csv">
+                </div>
+                <div class="field-group">
+                    <label>📄 工作表</label>
+                    <select id="sheetSelect" disabled><option>— 请先上传 —</option></select>
+                </div>
+                <button id="loadSheetBtn" class="secondary">⟳ 加载当前工作表</button>
+            </div>
+
+            <!-- 关键列映射 (SKU, 父SKU) -->
+            <div class="toolbar" style="background:#f8fafd; padding:1rem; border-radius:1.2rem; margin-bottom:1.5rem;">
+                <div class="field-group">
+                    <label>🔑 SKU列 (必需)</label>
+                    <select id="skuColumnSelect" disabled>
+                        <option value="">— 请先加载数据 —</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>🔗 父SKU列 (必需)</label>
+                    <select id="parentSkuColumnSelect" disabled>
+                        <option value="">— 请先加载数据 —</option>
+                    </select>
+                </div>
+                <div class="info-badge" style="align-self:center;">💡 变体组扩展依据：有父SKU则按父SKU聚合，无父SKU则为独立组</div>
+            </div>
+
+            <!-- 动态过滤条件组 -->
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                <label style="font-weight:700;">📌 过滤条件 (任意条件命中即触发整组)</label>
+                <button id="addConditionBtn" class="secondary" style="padding:0.3rem 0.8rem;">+ 添加条件组</button>
+            </div>
+            <div id="conditionsContainer"></div>
+
+            <!-- 操作按钮 -->
+            <div class="toolbar" style="justify-content: space-between; margin-top: 1rem;">
+                <div>
+                    <button id="runFilterBtn" class="primary">🎯 执行筛选 & 提取SKU组</button>
+                    <button id="exportResultBtn" class="secondary">💾 导出结果SKU列表 (Excel)</button>
+                    <button id="copySkusBtn" class="secondary">📋 复制SKU列表</button>
+                </div>
+                <div class="info-badge" id="dataStatus">⚡ 未加载数据</div>
+            </div>
+
+            <!-- 原始数据预览 -->
+            <div class="preview-container">
+                <div class="preview-header">
+                    <span>📋 原始数据预览 (前100行)</span>
+                    <span id="rowCountSpan">0 行</span>
+                </div>
+                <div class="table-wrapper" id="originalTableWrapper">
+                    <table class="data-table"><thead><tr><th>等待上传文件</th></tr></thead><tbody><tr><td>请上传Excel并加载工作表</td></tr></tbody></table>
+                </div>
+            </div>
+
+            <!-- 筛选结果 -->
+            <div class="preview-container" style="margin-top: 1.5rem;">
+                <div class="preview-header">
+                    <span>✅ 筛选结果 (命中变体组 → 全部SKU)</span>
+                    <span id="resultCountSpan">0 个唯一SKU</span>
+                </div>
+                <div class="table-wrapper" id="resultTableWrapper" style="max-height: 280px;">
+                    <div class="sku-list" id="skuResultList">暂无筛选结果</div>
+                </div>
+                <div class="result-stats" id="detailStats" style="margin: 0; border-radius: 0; background:#f1f5f9; padding:0.5rem 1rem;"></div>
+            </div>
+        </div>
+    </div>
+    <footer>⚡ 通用筛选逻辑：每行在任意指定列包含对应关键词 → 该行所在变体组(同父SKU组或独立SKU)全部SKU输出 → 最终去重</footer>
+</div>
+<div id="toastMsg" class="toast"></div>
+
+<script>
+    // DOM 元素
+    const fileInput = document.getElementById('fileInput');
+    const sheetSelect = document.getElementById('sheetSelect');
+    const loadSheetBtn = document.getElementById('loadSheetBtn');
+    const skuColumnSelect = document.getElementById('skuColumnSelect');
+    const parentSkuColumnSelect = document.getElementById('parentSkuColumnSelect');
+    const conditionsContainer = document.getElementById('conditionsContainer');
+    const addConditionBtn = document.getElementById('addConditionBtn');
+    const runFilterBtn = document.getElementById('runFilterBtn');
+    const exportResultBtn = document.getElementById('exportResultBtn');
+    const copySkusBtn = document.getElementById('copySkusBtn');
+    const originalTableWrapper = document.getElementById('originalTableWrapper');
+    const skuResultListDiv = document.getElementById('skuResultList');
+    const rowCountSpan = document.getElementById('rowCountSpan');
+    const resultCountSpan = document.getElementById('resultCountSpan');
+    const detailStatsSpan = document.getElementById('detailStats');
+    const dataStatusSpan = document.getElementById('dataStatus');
+
+    let workbook = null;
+    let currentSheetName = '';
+    let rawDataRows = [];            // 原始对象数组
+    let allColumns = [];             // 当前sheet所有列名
+    let conditionGroups = [];        // 存储条件组 { column: '列名', keywords: [] }
+
+    // 默认内置两个条件组 (产品名称, 产品类型) 但是列名待数据加载后由用户选择，先存占位
+    // 初始化时添加两个默认组，但列名未定，等数据加载后用户可修改
+    function initDefaultConditions() {
+        conditionGroups = [];
+        // 添加两个默认组，列名置空，待数据加载后用户从下拉选择
+        conditionGroups.push({ id: Date.now() + 1, column: '', keywords: ['学生','儿童','幼儿园','婴儿','文具','玩具','冰块'] });
+        conditionGroups.push({ id: Date.now() + 2, column: '', keywords: ['五金','DIY','插画','超长','超重'] });
+        renderConditionsUI();
+    }
+
+    // 解析关键词文本 (支持换行和逗号)
+    function parseKeywordsFromText(text) {
+        if (!text) return [];
+        let lines = text.split(/\r?\n/);
+        let keywords = [];
+        for (let line of lines) {
+            if (line.includes(',')) {
+                let parts = line.split(',');
+                for (let p of parts) {
+                    let kw = p.trim();
+                    if (kw) keywords.push(kw);
+                }
+            } else {
+                let kw = line.trim();
+                if (kw) keywords.push(kw);
+            }
+        }
+        return [...new Set(keywords)];
+    }
+
+    // 将关键词数组转为文本展示 (每行一个)
+    function keywordsToText(keywords) {
+        return keywords.join('\n');
+    }
+
+    // 渲染动态条件组UI
+    function renderConditionsUI() {
+        if (!conditionsContainer) return;
+        if (conditionGroups.length === 0) {
+            conditionsContainer.innerHTML = '<div style="padding:1rem; text-align:center; color:#6b7280;">暂无筛选条件，点击“添加条件组”</div>';
+            return;
+        }
+        let html = '';
+        conditionGroups.forEach((group, idx) => {
+            const columnOptions = allColumns.map(col => `<option value="${escapeHtml(col)}" ${group.column === col ? 'selected' : ''}>${escapeHtml(col)}</option>`);
+            const keywordsText = keywordsToText(group.keywords);
+            html += `
+                <div class="condition-group" data-idx="${idx}">
+                    <div class="condition-row">
+                        <div class="field-group">
+                            <label>📌 选择列</label>
+                            <select class="condition-column" data-idx="${idx}">
+                                <option value="">-- 请选择列 --</option>
+                                ${columnOptions}
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label>🔍 匹配逻辑</label>
+                            <select disabled style="background:#eef2f5;"><option>包含任意关键词(不区分大小写)</option></select>
+                        </div>
+                        <div>
+                            <button class="danger remove-condition" data-idx="${idx}" style="margin-top:1.2rem;">🗑️ 删除</button>
+                        </div>
+                    </div>
+                    <div class="keywords-area">
+                        <label>📝 关键词 (每行一个 或 逗号分隔)</label>
+                        <textarea class="condition-keywords" data-idx="${idx}" rows="2" placeholder="例如: 学生&#10;儿童&#10;幼儿园">${escapeHtml(keywordsText)}</textarea>
+                    </div>
+                </div>
+            `;
+        });
+        conditionsContainer.innerHTML = html;
+        // 绑定事件
+        document.querySelectorAll('.condition-column').forEach(sel => {
+            sel.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                if (!isNaN(idx) && conditionGroups[idx]) {
+                    conditionGroups[idx].column = e.target.value;
+                }
+            });
+        });
+        document.querySelectorAll('.condition-keywords').forEach(ta => {
+            ta.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                if (!isNaN(idx) && conditionGroups[idx]) {
+                    const text = e.target.value;
+                    conditionGroups[idx].keywords = parseKeywordsFromText(text);
+                }
+            });
+        });
+        document.querySelectorAll('.remove-condition').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.dataset.idx);
+                if (!isNaN(idx)) {
+                    conditionGroups.splice(idx, 1);
+                    renderConditionsUI();
+                }
+            });
+        });
+    }
+
+    // 辅助函数
+    function showToast(msg, dur=2200) {
+        const toast = document.getElementById('toastMsg');
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        setTimeout(() => toast.style.opacity = '0', dur);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // 智能匹配列名(不区分大小写) 用于加载时自动识别建议, 但最终以用户选择为准
+    function findColumnSuggestion(keysList, columnsArray) {
+        for (let key of keysList) {
+            const found = columnsArray.find(col => col.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
+            if (found) return found;
+        }
+        return '';
+    }
+
+    // 加载当前工作表，填充列下拉列表
+    function loadCurrentSheet() {
+        if (!workbook || !currentSheetName) {
+            showToast("请先上传文件并选择工作表", 1500);
+            return false;
+        }
+        const sheet = workbook.Sheets[currentSheetName];
+        if (!sheet) { showToast("工作表无效", 1500); return false; }
+        let jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        if (!jsonRows.length) { showToast("工作表无数据", 1500); return false; }
+        rawDataRows = jsonRows;
+        allColumns = Object.keys(rawDataRows[0] || {});
+        if (allColumns.length === 0) { showToast("无有效列", 1500); return false; }
+
+        // 填充列选择下拉 (SKU, 父SKU)
+        let columnOptions = '<option value="">-- 请选择SKU列 --</option>';
+        allColumns.forEach(col => { columnOptions += `<option value="${escapeHtml(col)}">${escapeHtml(col)}</option>`; });
+        skuColumnSelect.innerHTML = columnOptions;
+        parentSkuColumnSelect.innerHTML = columnOptions;
+        // 智能预选SKU列
+        const suggestSku = findColumnSuggestion(['SKU','Sku','sku','商品编码'], allColumns);
+        const suggestParent = findColumnSuggestion(['父SKU','父级SKU','Parent SKU','parent sku'], allColumns);
+        if (suggestSku) skuColumnSelect.value = suggestSku;
+        if (suggestParent) parentSkuColumnSelect.value = suggestParent;
+        skuColumnSelect.disabled = false;
+        parentSkuColumnSelect.disabled = false;
+
+        // 更新条件组中的列下拉选项
+        renderConditionsUI();
+
+        // 渲染原始数据表格
+        renderOriginalTable(rawDataRows, 100);
+        rowCountSpan.innerText = `${rawDataRows.length} 行`;
+        dataStatusSpan.innerText = `✅ 已加载: ${rawDataRows.length} 行 | 列数: ${allColumns.length}`;
+        showToast(`成功加载工作表，共 ${rawDataRows.length} 行`, 1800);
+        return true;
+    }
+
+    function renderOriginalTable(rows, limit=100) {
+        if (!rows || rows.length === 0) {
+            originalTableWrapper.innerHTML = `<table class="data-table"><thead><tr><th>暂无数据</th></tr></thead><tbody><tr><td>请加载工作表</td></tr></tbody></table>`;
+            return;
+        }
+        const displayRows = rows.slice(0, limit);
+        const cols = Object.keys(displayRows[0] || {});
+        if (cols.length === 0) return;
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        const thead = document.createElement('thead');
+        const trHead = document.createElement('tr');
+        cols.forEach(col => { const th = document.createElement('th'); th.textContent = col; trHead.appendChild(th); });
+        thead.appendChild(trHead);
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        for (let row of displayRows) {
+            const tr = document.createElement('tr');
+            for (let col of cols) {
+                const td = document.createElement('td');
+                let val = row[col];
+                if (val === undefined || val === null) val = '';
+                td.textContent = String(val).substring(0, 80);
+                td.title = String(val);
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+        originalTableWrapper.innerHTML = '';
+        originalTableWrapper.appendChild(table);
+    }
+
+    // 检查一行是否命中任意条件组
+    function isRowHit(row, conditions, columnMappingActual) {
+        for (let cond of conditions) {
+            const colName = cond.column;
+            if (!colName) continue;
+            const cellValue = row[colName];
+            if (cellValue === undefined || cellValue === null) continue;
+            const strValue = String(cellValue);
+            const lowerVal = strValue.toLowerCase();
+            const hit = cond.keywords.some(kw => lowerVal.includes(kw.toLowerCase()));
+            if (hit) return true;
+        }
+        return false;
+    }
+
+    // 执行筛选
+    function runFilter() {
+        const skuCol = skuColumnSelect.value;
+        const parentCol = parentSkuColumnSelect.value;
+        if (!skuCol || !parentCol) {
+            showToast("请先选择SKU列和父SKU列", 1800);
+            return;
+        }
+        if (!rawDataRows.length) {
+            showToast("请先加载数据", 1500);
+            return;
+        }
+        // 收集有效条件组 (列不为空且有关键词)
+        const activeConditions = [];
+        for (let cond of conditionGroups) {
+            if (cond.column && cond.keywords && cond.keywords.length > 0) {
+                activeConditions.push(cond);
+            }
+        }
+        if (activeConditions.length === 0) {
+            showToast("请至少配置一个有效的过滤条件 (选择列并填写关键词)", 2000);
+            return;
+        }
+
+        // 第一步：找出命中行
+        const hitRows = rawDataRows.filter(row => isRowHit(row, activeConditions, {}));
+        if (hitRows.length === 0) {
+            skuResultListDiv.innerHTML = '<div style="color:#b91c1c; padding:1rem;">未命中任何条件，请调整关键词或列。</div>';
+            resultCountSpan.innerText = '0 个SKU';
+            detailStatsSpan.innerHTML = '未命中任何条件。';
+            window.lastFilteredSkus = [];
+            return;
+        }
+
+        // 第二步：收集需要扩展的组标识 (父SKU 或 SKU自身)
+        const groupsToExpand = new Set();
+        for (let row of hitRows) {
+            let sku = row[skuCol] ? String(row[skuCol]).trim() : '';
+            let parentSku = row[parentCol] ? String(row[parentCol]).trim() : '';
+            if (!sku) continue;
+            if (parentSku !== '') {
+                groupsToExpand.add(parentSku);
+            } else {
+                groupsToExpand.add(sku);
+            }
+        }
+
+        // 第三步：构建 组标识 -> 组内所有SKU 映射
+        const groupToSkus = new Map();
+        for (let row of rawDataRows) {
+            let sku = row[skuCol] ? String(row[skuCol]).trim() : '';
+            let parentSku = row[parentCol] ? String(row[parentCol]).trim() : '';
+            if (!sku) continue;
+            let groupKey = (parentSku !== '') ? parentSku : sku;
+            if (!groupToSkus.has(groupKey)) groupToSkus.set(groupKey, new Set());
+            groupToSkus.get(groupKey).add(sku);
+        }
+
+        // 第四步：提取结果SKU
+        const resultSkusSet = new Set();
+        for (let groupId of groupsToExpand) {
+            const skus = groupToSkus.get(groupId);
+            if (skus) {
+                skus.forEach(sku => resultSkusSet.add(sku));
+            }
+        }
+        const resultSkus = Array.from(resultSkusSet);
+        window.lastFilteredSkus = resultSkus;
+
+        // 展示结果
+        if (resultSkus.length === 0) {
+            skuResultListDiv.innerHTML = '<div>未找到完整变体组SKU (可能数据异常)</div>';
+            resultCountSpan.innerText = '0 个SKU';
+            detailStatsSpan.innerHTML = `命中原始行数: ${hitRows.length}，但无有效SKU组。`;
+            return;
+        }
+        const skuHtml = resultSkus.map(sku => `<span style="display:inline-block; background:#eef2ff; padding:4px 12px; margin:4px; border-radius:20px;">${escapeHtml(sku)}</span>`).join('');
+        skuResultListDiv.innerHTML = `<div style="padding:0.5rem;">${skuHtml}</div>`;
+        resultCountSpan.innerText = `${resultSkus.length} 个唯一SKU`;
+        detailStatsSpan.innerHTML = `📌 命中原始记录 ${hitRows.length} 行 → 涉及 ${groupsToExpand.size} 个变体组 → 最终提取 ${resultSkus.length} 个SKU。`;
+        showToast(`筛选完成，共返回 ${resultSkus.length} 个SKU`, 2000);
+    }
+
+    function exportSkusToExcel() {
+        if (!window.lastFilteredSkus || window.lastFilteredSkus.length === 0) {
+            showToast("没有可导出的SKU列表，请先执行筛选", 1500);
+            return;
+        }
+        const data = window.lastFilteredSkus.map(sku => ({ "筛选结果SKU": sku }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Filtered_SKUs");
+        const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+        XLSX.writeFile(wb, `filtered_skus_${timestamp}.xlsx`);
+        showToast(`导出成功，共 ${window.lastFilteredSkus.length} 个SKU`, 1800);
+    }
+
+    async function copySkus() {
+        if (!window.lastFilteredSkus || window.lastFilteredSkus.length === 0) {
+            showToast("暂无筛选结果可复制", 1200);
+            return;
+        }
+        const text = window.lastFilteredSkus.join('\n');
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast(`已复制 ${window.lastFilteredSkus.length} 个SKU`, 1500);
+        } catch(err) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast("复制成功 (兼容模式)", 1500);
+        }
+    }
+
+    // 文件上传处理
+    function handleFileUpload(file) {
+        if (!file) return;
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['xlsx','xls','xlsm','xlsb','csv'].includes(ext)) {
+            showToast("不支持的文件类型", 1500);
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            try {
+                const wb = XLSX.read(data, { type: 'array', defval: "" });
+                workbook = wb;
+                const sheets = wb.SheetNames;
+                if (!sheets.length) throw new Error("无工作表");
+                sheetSelect.innerHTML = '';
+                sheets.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    sheetSelect.appendChild(opt);
+                });
+                sheetSelect.disabled = false;
+                currentSheetName = sheets[0];
+                sheetSelect.value = currentSheetName;
+                loadCurrentSheet();
+                showToast(`已加载 "${file.name}"`, 1800);
+            } catch(err) {
+                showToast("解析失败: " + err.message, 2500);
+                workbook = null;
+                sheetSelect.disabled = true;
+                rawDataRows = [];
+                renderOriginalTable([]);
+            }
+        };
+        reader.onerror = () => showToast("文件读取错误");
+        reader.readAsArrayBuffer(file);
+    }
+
+    // 事件绑定
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) handleFileUpload(e.target.files[0]);
+        else { workbook = null; sheetSelect.disabled = true; rawDataRows = []; renderOriginalTable([]); dataStatusSpan.innerText = "⚡ 未加载数据"; }
+    });
+    loadSheetBtn.addEventListener('click', () => {
+        if (workbook && sheetSelect.value) {
+            currentSheetName = sheetSelect.value;
+            loadCurrentSheet();
+        } else showToast("请先上传文件", 1000);
+    });
+    sheetSelect.addEventListener('change', (e) => {
+        if (workbook && e.target.value) currentSheetName = e.target.value;
+    });
+    addConditionBtn.addEventListener('click', () => {
+        conditionGroups.push({ id: Date.now(), column: '', keywords: [] });
+        renderConditionsUI();
+    });
+    runFilterBtn.addEventListener('click', runFilter);
+    exportResultBtn.addEventListener('click', exportSkusToExcel);
+    copySkusBtn.addEventListener('click', copySkus);
+
+    // 拖拽上传
+    const dropZone = document.body;
+    function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+    ['dragenter','dragover','dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, preventDefaults, false));
+    dropZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length) {
+            const f = files[0];
+            const ext = f.name.split('.').pop().toLowerCase();
+            if (['xlsx','xls','xlsm','xlsb','csv'].includes(ext)) {
+                handleFileUpload(f);
+                fileInput.files = files;
+            } else showToast("请拖拽Excel文件", 1200);
+        }
+    });
+
+    // 初始化默认条件组UI
+    initDefaultConditions();
+</script>
+</body>
+</html>

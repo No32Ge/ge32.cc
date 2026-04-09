@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>变体组ID + 单位换算 | 自动生成Is Primary Variant</title>
+    <title>变体组ID + 单位换算 | 主变体随机(非首位)</title>
     <!-- SheetJS 核心库 -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
@@ -242,14 +242,14 @@
 <div class="app-container">
     <div class="card">
         <div class="card-header">
-            <h1>变体组ID + 单位换算器</h1>
-            <div class="sub">SKU + 父SKU → 自动生成 Variant Group ID 和 Is Primary Variant · 重量(g→lb) · 尺寸(cm→英寸)</div>
+            <h1>变体组ID + 单位换算 · 主变体随机</h1>
+            <div class="sub">SKU + 父SKU → 自动生成 Variant Group ID 和 Is Primary Variant (多SKU组内随机非首位) · 重量(g→lb) · 尺寸(cm→英寸)</div>
         </div>
         <div class="card-body">
             <div class="rule-box">
                 📌 <strong>处理逻辑（输入列仅需：SKU, 父SKU, 重量(g), 长, 宽, 高）</strong><br>
                 • <strong>Variant Group ID</strong> : 父SKU为空 → 组ID=SKU；父SKU存在 → 相同父SKU下所有SKU共用一个组ID(等于组内首个SKU)。<br>
-                • <strong>Is Primary Variant</strong> : <span style="background:#fef9e3;">自动生成，每个 Variant Group 内首次出现的 SKU 标记为 "Yes"，其余为 "No"。</span><br>
+                • <strong>Is Primary Variant</strong> : <span style="background:#fef9e3;">每个 Variant Group 内：若仅1个SKU → 标记为 "Yes"；若≥2个SKU → 从第二个及以后的SKU中随机选择一个标记为 "Yes"，其余为 "No" (避免首位被自动设为主变体，实现差异化)。</span><br>
                 • <strong>重量(g)</strong> → <strong>netContentStatement</strong> : 克转英镑 (1g = 0.00220462 lb)，保留2位小数。<br>
                 • <strong>长 / 宽 / 高 (cm)</strong> → <strong>assembledProductLength/assembledProductWidth/assembledProductHeight/ </strong> : 厘米转英寸 (1cm = 0.393701 in)，保留2位小数。<br>
                 ✅ <strong>输入Excel必须包含列：SKU, 父SKU, 重量(g), 长, 宽, 高</strong> (列名不区分大小写，支持中英文变体)
@@ -278,13 +278,13 @@
                 <div class="table-wrapper" id="tableWrapper">
                     <table class="data-table" id="previewTable">
                         <thead><tr><th>等待操作</th></thead>
-                        <tbody><tr><td>请上传Excel，然后点击「生成完整数据」</td>}</tbody>
+                        <tbody><tr><td>请上传Excel，然后点击「生成完整数据」</td></tr></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
-    <footer>⚡ 纯前端处理 · Is Primary Variant 自动生成 · 单位换算精确</footer>
+    <footer>⚡ 纯前端处理 · 主变体随机(非首位) · 单位换算精确</footer>
 </div>
 <div id="toastMsg" class="toast"></div>
 
@@ -338,32 +338,27 @@
         return (num * CM_TO_INCH).toFixed(2);
     }
     
-    // 核心处理：根据SKU、父SKU生成 Variant Group ID，同时自动生成 Is Primary Variant (Yes/No)
-    // 并且处理重量换算、尺寸换算
-    // rows: 原始对象数组 (包含原始字段)
-    // skuCol, parentCol, weightCol, lengthCol, widthCol, heightCol
-    // 返回增强后的数组 (包含新字段：Variant Group ID, Is Primary Variant, netContentStatement, assembledProductHeight/Width/Length)
+    // 核心处理：生成 Variant Group ID，并应用“多SKU组随机非首位”规则
+    // 返回增强后的数组 (包含新字段)
     function processAllData(rows, skuCol, parentCol, weightCol, lenCol, widCol, heiCol) {
         if (!rows || rows.length === 0) return [];
         
-        // 映射: 父SKU -> 组ID (第一个SKU)
-        const parentToGroupId = new Map();
-        // 记录每个组ID是否已经出现过(用于标记Is Primary Variant)
-        const groupFirstSeen = new Set();   // 存储已经分配过第一个SKU的组ID
+        // ---------- 第一阶段：建立分组映射 (按出现顺序) ----------
+        const parentToGroupId = new Map();    // 父SKU -> 组ID
+        const groupInfo = new Map();          // 组ID -> { indices: [行索引], primaryIdx: null (稍后赋值) }
         
-        const resultRows = [];
+        // 先分配组ID并收集索引 (同时存储原始行数据及换算结果)
+        const tempRows = []; // 存储 { original, groupId, netContent, height, width, length }
         
         for (let i = 0; i < rows.length; i++) {
             const original = rows[i];
-            // 获取关键字段原始值并trim
             let skuRaw = original[skuCol] !== undefined && original[skuCol] !== null ? String(original[skuCol]).trim() : '';
             let parentRaw = original[parentCol] !== undefined && original[parentCol] !== null ? String(original[parentCol]).trim() : '';
             
-            // 1. 计算 Variant Group ID
+            // 计算组ID
             let groupId = '';
             if (parentRaw === '') {
                 groupId = skuRaw;
-                // 独立组: 自己就是组ID，后续不会通过父SKU映射
             } else {
                 if (parentToGroupId.has(parentRaw)) {
                     groupId = parentToGroupId.get(parentRaw);
@@ -373,44 +368,74 @@
                 }
             }
             
-            // 2. 自动生成 Is Primary Variant: 当前组ID是否第一次遇到
-            let isPrimaryValue = '';
-            if (!groupFirstSeen.has(groupId)) {
-                isPrimaryValue = "Yes";
-                groupFirstSeen.add(groupId);
-            } else {
-                isPrimaryValue = "No";
-            }
-            
-            // 3. 获取重量、长宽高原始值
+            // 单位换算
             let weightGram = original[weightCol] !== undefined ? original[weightCol] : '';
             let lengthCm = original[lenCol] !== undefined ? original[lenCol] : '';
             let widthCm = original[widCol] !== undefined ? original[widCol] : '';
             let heightCm = original[heiCol] !== undefined ? original[heiCol] : '';
             
-            // 换算保留2位小数，若输入无效则保持空字符串
-            let netContentStatement = gramsToPounds(weightGram);
-            let assembledProductHeight = cmToInches(heightCm);    
-            let assembledProductWidth = cmToInches(widthCm);      
-            let assembledProductLength = cmToInches(lengthCm);    
+            const netContent = gramsToPounds(weightGram);
+            const assembledHeight = cmToInches(heightCm);
+            const assembledWidth = cmToInches(widthCm);
+            const assembledLength = cmToInches(lengthCm);
             
-            // 构建新对象: 先复制原始所有字段
+            tempRows.push({
+                original,
+                groupId,
+                netContentStatement: netContent === '' ? '' : netContent,
+                assembledProductHeight: assembledHeight === '' ? '' : assembledHeight,
+                assembledProductWidth: assembledWidth === '' ? '' : assembledWidth,
+                assembledProductLength: assembledLength === '' ? '' : assembledLength
+            });
+            
+            // 记录到groupInfo
+            if (!groupInfo.has(groupId)) {
+                groupInfo.set(groupId, { indices: [] });
+            }
+            groupInfo.get(groupId).indices.push(i);
+        }
+        
+        // ---------- 第二阶段：为每个组确定 primary 索引 ----------
+        for (let [groupId, info] of groupInfo.entries()) {
+            const idxList = info.indices;
+            if (idxList.length === 1) {
+                // 只有一个SKU，设为Yes (索引0)
+                info.primaryIdx = 0;
+            } else {
+                // 多于1个：从第二个开始随机选一个 (索引范围 1 到 length-1)
+                const randomOffset = Math.floor(Math.random() * (idxList.length - 1)) + 1; // 1 .. len-1
+                info.primaryIdx = randomOffset;
+            }
+        }
+        
+        // ---------- 第三阶段：构建最终结果，设置 Is Primary Variant ----------
+        const resultRows = [];
+        for (let i = 0; i < tempRows.length; i++) {
+            const temp = tempRows[i];
+            const original = temp.original;
+            const groupId = temp.groupId;
+            const info = groupInfo.get(groupId);
+            
+            // 判断当前行是否是该组内被选中的primary (相对位置)
+            const positionInGroup = info.indices.indexOf(i);
+            const isPrimary = (positionInGroup === info.primaryIdx) ? "Yes" : "No";
+            
+            // 构建新行
             const newRow = { ...original };
-            // 添加/覆盖字段（注意：原始数据中可能意外包含Is Primary Variant列，但我们会覆盖为正确值）
             newRow["Variant Group ID"] = groupId;
-            newRow["Is Primary Variant"] = isPrimaryValue;
-            // 保留2位小数的换算结果
-            newRow["netContentStatement"] = netContentStatement === '' ? '' : netContentStatement;
-            newRow["assembledProductHeight"] = assembledProductHeight === '' ? '' : assembledProductHeight;
-            newRow["assembledProductWidth"] = assembledProductWidth === '' ? '' : assembledProductWidth;
-            newRow["assembledProductLength"] = assembledProductLength === '' ? '' : assembledProductLength;
+            newRow["Is Primary Variant"] = isPrimary;
+            newRow["netContentStatement"] = temp.netContentStatement;
+            newRow["assembledProductHeight"] = temp.assembledProductHeight;
+            newRow["assembledProductWidth"] = temp.assembledProductWidth;
+            newRow["assembledProductLength"] = temp.assembledProductLength;
             
             resultRows.push(newRow);
         }
+        
         return resultRows;
     }
     
-    // 从当前sheet提取数据，并进行智能列匹配 (不再需要 Is Primary Variant 作为输入)
+    // 从当前sheet提取数据，并进行智能列匹配
     function extractAndProcess(workbook, sheetName) {
         if (!workbook || !sheetName) return { success: false, error: "无工作簿或工作表" };
         const sheet = workbook.Sheets[sheetName];
@@ -420,7 +445,7 @@
         if (!rawRows.length) return { success: false, error: "工作表为空" };
         
         const sample = rawRows[0];
-        // 匹配所需列名 (仅输入必须列)
+        // 匹配所需列名
         const skuCol = findColumn(["SKU", "Sku", "sku", "商品编码"], sample);
         const parentCol = findColumn(["父SKU", "父级SKU", "Parent SKU", "parent sku"], sample);
         const weightCol = findColumn(["重量(g)", "重量", "weight(g)", "Weight(g)", "克"], sample);
@@ -439,10 +464,10 @@
             return { success: false, error: `缺少必要列: ${missing.join(", ")}。请检查列名是否匹配（不区分大小写，支持中英文）` };
         }
         
-        // 记录原始列顺序 (用于导出时保持)
+        // 记录原始列顺序
         const originalCols = Object.keys(sample);
         
-        // 处理数据 (不依赖 Is Primary Variant 输入)
+        // 处理数据（新规则）
         const enriched = processAllData(rawRows, skuCol, parentCol, weightCol, lengthCol, widthCol, heightCol);
         
         return {
@@ -453,7 +478,7 @@
         };
     }
     
-    // 渲染表格预览 (展示所有列，前200行)
+    // 渲染表格预览
     function renderPreview(dataArray, limit = 200) {
         if (!dataArray || dataArray.length === 0) {
             const wrapper = document.getElementById('tableWrapper');
@@ -497,7 +522,7 @@
         wrapper.appendChild(table);
     }
     
-    // 主处理流程 (读取当前sheet，计算并存储processedData)
+    // 主处理流程
     async function runFullProcess() {
         if (!originalWorkbook || !currentSheetName) {
             showToast("请先上传Excel文件并选择工作表", 1800);
@@ -513,11 +538,11 @@
         processedData = result.data;
         originalColumnsOrder = result.originalColumns;
         renderPreview(processedData, 200);
-        showToast(`✅ 处理完成！共 ${result.rowCount} 行记录，已自动生成变体组ID、主变体标记(Is Primary Variant)及单位换算`, 2800);
+        showToast(`✅ 处理完成！共 ${result.rowCount} 行，主变体标记已按“非首位随机”规则生成`, 2800);
         return true;
     }
     
-    // 导出Excel (保持原始列顺序 + 新增列附后，确保 Is Primary Variant 列包含在内)
+    // 导出Excel
     function exportToExcel() {
         if (!processedData || processedData.length === 0) {
             showToast("没有已处理的数据，请先点击「生成完整数据」", 1800);
@@ -526,26 +551,21 @@
         try {
             const firstRow = processedData[0];
             const allKeys = Object.keys(firstRow);
-            // 定义所有新增的派生列（包括 Is Primary Variant）
             const extraCols = ["Variant Group ID", "Is Primary Variant", "netContentStatement", "assembledProductHeight", "assembledProductWidth", "assembledProductLength"];
             let orderedCols = [];
-            // 先加原始列 (按照最初顺序)
             if (originalColumnsOrder && originalColumnsOrder.length) {
                 for (let col of originalColumnsOrder) {
                     if (!orderedCols.includes(col)) orderedCols.push(col);
                 }
             } else {
-                // fallback: 所有不是派生列的放前面
                 for (let k of allKeys) {
                     if (!extraCols.includes(k) && !orderedCols.includes(k)) orderedCols.push(k);
                 }
             }
-            // 添加派生列 (确保在最后，且不重复)
             for (let ec of extraCols) {
                 if (!orderedCols.includes(ec) && allKeys.includes(ec)) orderedCols.push(ec);
             }
             
-            // 构建导出数组
             const exportRows = processedData.map(row => {
                 const newObj = {};
                 for (let col of orderedCols) {
@@ -560,7 +580,7 @@
             XLSX.utils.book_append_sheet(newWorkbook, worksheet, "Variant_Processed");
             const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
             XLSX.writeFile(newWorkbook, `variant_export_${timestamp}.xlsx`);
-            showToast(`📎 导出成功，共 ${processedData.length} 行，已包含 Is Primary Variant 列`, 2200);
+            showToast(`📎 导出成功，共 ${processedData.length} 行，主变体已差异化`, 2200);
         } catch (err) {
             console.error(err);
             showToast("导出失败，请检查数据", 2000);
@@ -594,7 +614,6 @@
                 currentSheetName = sheets[0];
                 sheetSelect.value = currentSheetName;
                 showToast(`已加载 "${file.name}"，请点击「生成完整数据」`, 2000);
-                // 清空之前处理结果
                 processedData = [];
                 renderPreview([]);
             } catch (err) {
@@ -622,7 +641,7 @@
     sheetSelect.addEventListener('change', (e) => {
         if (originalWorkbook && e.target.value) {
             currentSheetName = e.target.value;
-            processedData = [];  // 切换工作表后需重新生成
+            processedData = [];
             renderPreview([]);
             showToast(`已切换到工作表: ${currentSheetName}，请重新点击「生成完整数据」`, 1500);
         }
