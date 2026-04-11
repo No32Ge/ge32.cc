@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>代码学习测试区</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <header>
+            <h1>代码学习测试区</h1>
+        </header>
+        <div class="container">
+            <div id="list"></div>
+        </div>
+
+        <script>
+            const items = [
+                {
+                    "title": "JSON生成excel表格",
+                    "desc": "将JSON数据转换为Excel表格格式，支持自定义列名和数据类型，方便数据导出和分享。",
+                    "html": '<textarea id="jsonInput" placeholder="请输入JSON数据"></textarea>',
+                    "function": function(jsonData) {  // 修正拼写，并接受参数
+                        console.log("JSON生成Excel功能被调用", jsonData);
+                        alert("功能被调用，输入内容：" + jsonData);
+                    }
+                }
+            ];
+
+            function renderList(itemsArray) {
+                const list = itemsArray.map((item, index) => `
+                    <div class="item">
+                        <h2>${item.title}</h2>
+                        <p>${item.desc}</p>
+                        ${item.html}
+                        <button onclick="callFunction(${index})">调用功能</button>
+                    </div>
+                `);
+                document.getElementById('list').innerHTML = list.join('');
+            }
+
+            // 全局函数供按钮调用
+            window.callFunction = function(index) {
+                const item = items[index];
+                if (item && item.function) {
+                    // 获取textarea的值（如果有）
+                    const textarea = document.getElementById('jsonInput');
+                    const inputValue = textarea ? textarea.value : '无输入数据';
+                    item.function(inputValue);
+                }
+            };
+
+            renderList(items);
+        </script>
+    </body>
+</html>
