@@ -11,7 +11,7 @@
 
 <body>
     <header>
-        <h1>代码学习测试区</h1>
+        <h1>调试测试区</h1>
     </header>
     <div class="container">
         <div id="list"></div>
@@ -28,6 +28,7 @@
                         alert("请先输入JSON数据！");
                         return;
                     }
+
 
                     console.log("JSON生成Excel功能被调用", jsonData);
                     alert("功能被调用，输入内容：" + jsonData);
@@ -47,6 +48,8 @@
                     const resultPre = document.getElementById('jsonResult');
                     resultPre.style.display = 'block';
                     resultPre.textContent = '正在转换，请稍候...';
+                    const resultPreParent = resultPre.parentElement;
+                    console.log("pre元素:", resultPre.innerHTML);
 
                     // 读取并转换Excel
                     const reader = new FileReader();
@@ -64,17 +67,38 @@
 
                             // 转换为JSON（自动识别表头）
                             const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-                                defval: "",      // 空单元格默认值
+                                 defval: "",     // 空单元格默认值
                                 raw: false       // 将数字、日期等转为文本格式
                             });
 
                             // 美化输出
                             const formattedJson = JSON.stringify(jsonData, null, 2);
                             resultPre.textContent = formattedJson;
+                            jsonResult.FileReader = null; // 释放FileReader对象
+                            // 一行代码查看父元素的完整结构
+
+                            const parentNode =  document.getElementById('fileInput')?.parentElement;
+                            if(parentNode) {
+                                console.log("父元素结构:", parentNode.innerHTML);
+                                const copybutton = document.createElement('button');
+                                copybutton.textContent = '复制JSON';
+                                copybutton.style.marginTop = '10px';
+                                copybutton.onclick = function() {
+                                    navigator.clipboard.writeText(formattedJson).then(() => {
+                                        alert('JSON已复制到剪贴板！');
+                                    }).catch(err => {
+                                        alert('复制失败，请手动复制：' + err);
+                                    });
+                                };
+                                parentNode.appendChild(resultPre); // 将结果显示在父元素下方
+                            } else {
+                                console.warn("未找到父元素");
+                            }
 
                             // 可选：复制到剪贴板的按钮
                             console.log("转换成功，共", jsonData.length, "条数据");
                             alert(`转换成功！共 ${jsonData.length} 条数据，已显示在下方`);
+
 
                         } catch (error) {
                             console.error("转换失败:", error);
@@ -133,7 +157,6 @@
                 item.function(inputValue);
             }
         };
-
         renderList(items);
     </script>
 </body>

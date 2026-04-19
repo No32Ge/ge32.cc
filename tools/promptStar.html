@@ -398,6 +398,7 @@
                 const checkboxes = fieldCheckboxList.querySelectorAll('input[type="checkbox"]');
                 const selected = [];
                 for (let cb of checkboxes) {
+                    console.log("filename",cb.dataset.fieldname)
                     if (cb.checked) selected.push(cb.dataset.fieldname);
                 }
                 return selected;
@@ -640,14 +641,16 @@
 
             function downloadTxt() {
                 if (!currentResultText) { alert('NO DATA'); return; }
-                const filename = `Ge32_Extract_${Date.now()}.txt`;
+                const fileName = document.getElementById("excelFileInput").files[0]?.name || 'output';
+                const filename = `${fileName}_Extract_${Date.now()}.txt`;
                 const blob = new Blob([currentResultText], { type: 'text/plain;charset=utf-8' });
                 const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
             }
 
             function downloadHtml() {
                 if (!currentGroupContents.length) { alert('NO DATA'); return; }
-                const filename = `Ge32_Extract_${Date.now()}.html`;
+                const fileName = document.getElementById("excelFileInput").files[0]?.name || 'output';
+                const filename = `${fileName}_Extract_${Date.now()}.html`;
                 const recordItems = currentGroupContents.map((content, index) => {
                     const escaped = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
                     const htmlContent = escaped.replace(/\n/g, '<br>');
@@ -683,8 +686,9 @@
             }
 
             function downloadJson() {
+                const fileName = document.getElementById("excelFileInput").files[0]?.name || 'output';
                 if (!currentGroupContents.length) { alert('NO DATA'); return; }
-                const filename = `Ge32_Extract_${Date.now()}.json`;
+                const filename = `${fileName}_Extract_${Date.now()}.json`;
                 const blob = new Blob([JSON.stringify(currentGroupContents, null, 2)], { type: 'application/json' });
                 const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
             }
@@ -698,5 +702,7 @@
             fileInput.addEventListener('change', hideError);
         })();
     </script>
+    <!-- // 资源导入补丁 -->
+    <script src="../plug/import.js"></script>
 </body>
 </html>
