@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>SKU上架SOP · 进度追踪</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com">
+  </script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-deep: #05070a;
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-hover: rgba(59, 130, 246, 0.5);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --glow-blue: rgba(59, 130, 246, 0.5);
+      --nav-bg: rgba(8, 12, 20, 0.85);
+      --nav-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background-color: var(--bg-deep);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      min-height: 100vh;
+      margin: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 太空背景容器 */
+    .stars-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      background: radial-gradient(circle at 30% 20%, #0f172a 0%, #080c14 40%, #05070a 70%, #020408 100%);
+      overflow: hidden;
+    }
+
+    /* 星云光斑 */
+    .nebula {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.04;
+      pointer-events: none;
+      animation: nebulaDrift 25s infinite ease-in-out;
+    }
+
+    .nebula-1 {
+      width: 600px;
+      height: 600px;
+      background: #3b82f6;
+      top: -15%;
+      left: -10%;
+    }
+
+    .nebula-2 {
+      width: 500px;
+      height: 500px;
+      background: #8b5cf6;
+      bottom: -20%;
+      right: -8%;
+      animation-delay: -10s;
+    }
+
+    .nebula-3 {
+      width: 400px;
+      height: 400px;
+      background: #10b981;
+      top: 60%;
+      left: 60%;
+      animation-delay: -18s;
+    }
+
+    @keyframes nebulaDrift {
+      0%,
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+      25% {
+        transform: translate(60px, -40px) scale(1.15);
+      }
+      50% {
+        transform: translate(-30px, 50px) scale(0.9);
+      }
+      75% {
+        transform: translate(-50px, -30px) scale(1.1);
+      }
+    }
+
+    /* 普通星星 */
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: twinkle var(--duration) infinite ease-in-out;
+      animation-delay: var(--delay);
+    }
+
+    @keyframes twinkle {
+      0%,
+      100% {
+        opacity: 0.2;
+        transform: scale(0.8);
+      }
+      30% {
+        opacity: 1;
+        transform: scale(1.5);
+      }
+      60% {
+        opacity: 0.3;
+        transform: scale(1);
+      }
+      85% {
+        opacity: 0.8;
+        transform: scale(1.3);
+      }
+    }
+
+    /* ✨ 流星效果 ✨ */
+    .shooting-star {
+      position: absolute;
+      width: 2.5px;
+      height: 2.5px;
+      background: white;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: shoot var(--shoot-duration) var(--shoot-delay) infinite linear;
+      opacity: 0;
+      box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.6), 0 0 20px 4px rgba(59, 130, 246, 0.4);
+    }
+
+    .shooting-star::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 100px;
+      height: 1.8px;
+      background: linear-gradient(to left, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
+      border-radius: 1px;
+      box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.5);
+    }
+
+    @keyframes shoot {
+      0% {
+        opacity: 0;
+        transform: translate(0, 0) rotate(-35deg);
+      }
+      3% {
+        opacity: 1;
+      }
+      10% {
+        opacity: 0;
+        transform: translate(-450px, 280px) rotate(-35deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-450px, 280px) rotate(-35deg);
+      }
+    }
+
+    /* 主内容玻璃卡片 */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.025);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      transition: all 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(59, 130, 246, 0.08);
+    }
+
+    .neon-text {
+      text-shadow: 0 0 20px rgba(59, 130, 246, 0.55), 0 0 60px rgba(59, 130, 246, 0.15);
+    }
+
+    /* 时间线 */
+    .timeline-line {
+      position: absolute;
+      left: 28px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.3) 10%, rgba(139, 92, 246, 0.4) 50%, rgba(16, 185, 129, 0.3) 90%, transparent);
+      z-index: 0;
+    }
+
+    .timeline-node {
+      position: absolute;
+      left: 20px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      z-index: 3;
+      border: 3px solid;
+      transition: all 0.4s ease;
+    }
+
+    .step-card:hover .timeline-node {
+      transform: scale(1.4);
+      box-shadow: 0 0 25px currentColor;
+    }
+
+    .timeline-node.completed {
+      background: currentColor;
+      box-shadow: 0 0 16px currentColor;
+      border-color: transparent !important;
+    }
+
+    .timeline-node.completed::after {
+      content: "✓";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 10px;
+      font-weight: bold;
+      color: #05070a;
+      line-height: 1;
+    }
+
+    .node-clean { border-color: #ef4444; background: rgba(239, 68, 68, 0.2); }
+    .node-transform { border-color: #3b82f6; background: rgba(59, 130, 246, 0.2); }
+    .node-extract { border-color: #06b6d4; background: rgba(6, 182, 212, 0.2); }
+    .node-standardize { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.2); }
+    .node-content { border-color: #10b981; background: rgba(16, 185, 129, 0.2); }
+    .node-output { border-color: #f59e0b; background: rgba(245, 158, 11, 0.2); }
+
+    /* 标签 */
+    .tag-badge {
+      font-size: 0.65rem;
+      padding: 2px 10px;
+      border-radius: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-weight: 700;
+      border: 1px solid;
+    }
+    .tag-clean { background: rgba(239, 68, 68, 0.08); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+    .tag-transform { background: rgba(59, 130, 246, 0.08); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3); }
+    .tag-extract { background: rgba(6, 182, 212, 0.08); color: #22d3ee; border-color: rgba(6, 182, 212, 0.3); }
+    .tag-standardize { background: rgba(139, 92, 246, 0.08); color: #a78bfa; border-color: rgba(139, 92, 246, 0.3); }
+    .tag-content { background: rgba(16, 185, 129, 0.08); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+    .tag-output { background: rgba(245, 158, 11, 0.08); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+
+    /* 固定式右侧导航 */
+    .fixed-nav {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      background: var(--nav-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--nav-border);
+      border-radius: 40px;
+      padding: 14px 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    }
+
+    .nav-step-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      color: #94a3b8;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+    .nav-step-btn:hover {
+      border-color: rgba(59, 130, 246, 0.7);
+      color: white;
+      background: rgba(59, 130, 246, 0.15);
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.3);
+    }
+    .nav-step-btn.completed {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: #10b981;
+      color: #10b981;
+      font-size: 0.9rem;
+    }
+    .nav-step-btn.completed::after {
+      content: "✓";
+      font-weight: bold;
+    }
+    .nav-step-btn.completed span {
+      display: none;
+    }
+
+    .reset-btn {
+      margin-top: 6px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .reset-btn:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: #ef4444;
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+    }
+
+    .complete-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      border: 1px solid;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .complete-btn.mark-done { color: #10b981; border-color: rgba(16, 185, 129, 0.4); }
+    .complete-btn.mark-done:hover { background: rgba(16, 185, 129, 0.12); border-color: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.3); }
+    .complete-btn.mark-undone { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); }
+    .complete-btn.mark-undone:hover { background: rgba(245, 158, 11, 0.12); border-color: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.3); }
+
+    .step-card { animation: fadeInUp 0.6s ease forwards; opacity: 0; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 响应式 */
+    @media (max-width: 768px) {
+      .fixed-nav { right: 10px; padding: 10px 5px; gap: 6px; border-radius: 30px; }
+      .nav-step-btn { width: 28px; height: 28px; font-size: 0.7rem; }
+      .reset-btn { width: 28px; height: 28px; }
+      .timeline-line { left: 20px; }
+      .timeline-node { left: 14px; width: 14px; height: 14px; }
+    }
+
+    @media (max-width: 480px) {
+      .fixed-nav { right: 6px; padding: 8px 4px; border-radius: 24px; }
+      .nav-step-btn { width: 24px; height: 24px; font-size: 0.65rem; }
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+  </style>
+</head>
+
+<body>
+  <!-- 星空背景（含星云+星星+流星） -->
+  <div class="stars-container" id="stars">
+    <div class="nebula nebula-1"></div>
+    <div class="nebula nebula-2"></div>
+    <div class="nebula nebula-3"></div>
+  </div>
+
+  <!-- 固定式右侧步骤导航 -->
+  <nav class="fixed-nav" id="fixed-step-nav" aria-label="步骤快速导航">
+    <button class="reset-btn" id="reset-progress-btn" title="重置所有进度" aria-label="重置所有步骤进度">
+      <i class="fa-solid fa-arrow-rotate-left"></i>
+    </button>
+  </nav>
+
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10 min-h-screen max-w-4xl">
+
+    <!-- 头部 -->
+    <header class="text-center mb-12 md:mb-20">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 border border-white/10 rounded-full bg-white/[0.02] mb-6 backdrop-blur-sm">
+        <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+        <span class="text-xs font-bold tracking-[0.25em] uppercase text-gray-400">Standard Operating Procedure</span>
+      </div>
+      <h1 id="sop-title" class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-4 neon-text italic uppercase leading-tight"></h1>
+      <p id="sop-subtitle" class="text-gray-400 text-base sm:text-lg md:text-xl font-light tracking-[0.15em] uppercase mb-6"></p>
+
+      <div class="max-w-md mx-auto mt-8" id="progress-area">
+        <div class="flex justify-between items-center mb-2 text-xs font-bold tracking-[0.2em] uppercase text-gray-500">
+          <span>完成进度</span>
+          <span id="progress-label">0 / 0 步骤</span>
+        </div>
+        <div class="progress-bar-container h-2.5 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+          <div class="progress-bar-fill h-full rounded-xl" id="progress-bar-fill" style="width: 0%; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #10b981);"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- SOP 时间线 -->
+    <div class="relative" id="sop-timeline-wrapper">
+      <div class="timeline-line"></div>
+      <div class="space-y-10 md:space-y-14" id="sop-steps-container"></div>
+    </div>
+
+    <div id="empty-state" class="hidden text-center py-20">
+      <div class="text-6xl mb-6 text-gray-700"><i class="fa-solid fa-circle-exclamation"></i></div>
+      <p class="text-gray-500 text-lg font-light tracking-wider uppercase">暂无流程配置数据</p>
+    </div>
+
+    <footer class="mt-20 md:mt-32 pb-10 text-center text-gray-600 text-xs tracking-[0.25em] uppercase">
+      &copy; 2026 Ge32 Aerospace & AI. SOP Pipeline · Progress Tracking Active.
+    </footer>
+  </div>
+
+  <script>
+    (function() {
+      // ---------- JSON 配置 ----------
+      const sopConfig = {
+        pageTitle: "SKU LISTING SOP",
+        pageSubtitle: "Data Cleansing • Transformation • Optimization • Deployment",
+        steps: [
+          { id: 1, name: "第一遍数据清洗", desc: "对原始SKU数据进行初步筛查，识别并标记违规SKU。基于规则引擎自动检测不符合上架规范的条目，包括敏感词过滤、禁售品类排查、格式异常检测等。", url: "https://www.ge32.cc/sop/tools/smart-sku-filter-pro.html", icon: "fa-solid fa-shield-halved", tag: "数据清洗", tagClass: "tag-clean", nodeClass: "node-clean", stepColor: "#ef4444" },
+          { id: 2, name: "单位转化与SKU补齐", desc: "将公制单位批量转化为英制单位，同时基于父SKU与子SKU关系自动补全合并SKU信息，生成完整的变体组结构。", url: "https://www.ge32.cc/sop/tools/variant-group-id-pro.html", icon: "fa-solid fa-arrows-spin", tag: "数据转换", tagClass: "tag-transform", nodeClass: "node-transform", stepColor: "#3b82f6" },
+          { id: 3, name: "包含计数提取", desc: "从产品描述中智能提取包装数量、件数及总计数，将非结构化文字转化为结构化数字字段。", url: "https://www.ge32.cc/tools/counter.html", icon: "fa-solid fa-calculator", tag: "数据提取", tagClass: "tag-extract", nodeClass: "node-extract", stepColor: "#06b6d4" },
+          { id: 4, name: "颜色类型标准化", desc: "通过拼写纠错与模糊匹配，将随意填写的颜色名称统一归化为标准颜色类型，消除颜色描述不一致。", url: "https://www.ge32.cc/tools/colorConverter.html", icon: "fa-solid fa-swatchbook", tag: "数据标准化", tagClass: "tag-standardize", nodeClass: "node-standardize", stepColor: "#8b5cf6" },
+          { id: 5, name: "数据完善与文案撰写", desc: "撰写产品Listing标题、五点描述及关键词，利用AI批量生成高质量电商文案。", url: "https://www.ge32.cc/tools/promptStar.html", icon: "fa-solid fa-pen-fancy", tag: "内容创作", tagClass: "tag-content", nodeClass: "node-content", stepColor: "#10b981" },
+          { id: 6, name: "第二次数据清洗", desc: "对完善后的SKU数据进行二次审查，确保未引入新合规问题，拦截遗漏违规项。", url: "https://www.ge32.cc/sop/tools/smart-sku-filter-pro.html", icon: "fa-solid fa-magnifying-glass-chart", tag: "数据清洗", tagClass: "tag-clean", nodeClass: "node-clean", stepColor: "#ef4444" },
+          { id: 7, name: "上架表格转化", desc: "将最终SKU数据转化为适配电商平台上架要求的表格格式，支持导出标准Excel模板。", url: "https://www.ge32.cc/tools/JsonToExcel.html", icon: "fa-solid fa-rocket", tag: "最终输出", tagClass: "tag-output", nodeClass: "node-output", stepColor: "#f59e0b" }
+        ]
+      };
+
+      // ---------- localStorage 进度管理 ----------
+      const STORAGE_KEY = 'sop_sku_progress';
+
+      function loadProgress() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const data = JSON.parse(raw);
+            if (typeof data === 'object' && data !== null) return data;
+          }
+        } catch (e) {}
+        return {};
+      }
+
+      function saveProgress(progressMap) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(progressMap));
+      }
+
+      function resetProgress() {
+        localStorage.removeItem(STORAGE_KEY);
+        renderAll();
+      }
+
+      function toggleStepComplete(stepId) {
+        const progress = loadProgress();
+        const key = String(stepId);
+        if (progress[key]) {
+          delete progress[key];
+        } else {
+          progress[key] = true;
+        }
+        saveProgress(progress);
+        renderAll();
+      }
+
+      function isStepCompleted(stepId) {
+        const progress = loadProgress();
+        return !!progress[String(stepId)];
+      }
+
+      function getCompletedCount() {
+        const progress = loadProgress();
+        return Object.keys(progress).filter(k => progress[k] === true).length;
+      }
+
+      function escapeHtml(str) {
+        if (typeof str !== 'string') return String(str);
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+      }
+
+      // ---------- 渲染函数 ----------
+      function renderHeader() {
+        document.getElementById('sop-title').textContent = sopConfig.pageTitle;
+        document.getElementById('sop-subtitle').textContent = sopConfig.pageSubtitle;
+      }
+
+      function renderProgressBar() {
+        const total = sopConfig.steps.length;
+        const completed = getCompletedCount();
+        const percent = total > 0 ? (completed / total) * 100 : 0;
+        document.getElementById('progress-bar-fill').style.width = percent + '%';
+        document.getElementById('progress-label').textContent = `${completed} / ${total} 步骤已完成`;
+      }
+
+      function renderFixedNav() {
+        const navContainer = document.getElementById('fixed-step-nav');
+        if (!navContainer) return;
+        const steps = sopConfig.steps;
+        const resetBtn = document.getElementById('reset-progress-btn');
+        navContainer.innerHTML = '';
+        steps.forEach(step => {
+          const completed = isStepCompleted(step.id);
+          const btn = document.createElement('button');
+          btn.className = 'nav-step-btn' + (completed ? ' completed' : '');
+          btn.setAttribute('title', `${step.name}${completed ? ' (已完成)' : ''}`);
+          btn.setAttribute('aria-label', `跳转到步骤 ${step.id}: ${step.name}`);
+          if (!completed) {
+            btn.innerHTML = `<span>${step.id}</span>`;
+          }
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = document.getElementById('step-card-' + step.id);
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+          navContainer.appendChild(btn);
+        });
+        if (resetBtn) {
+          navContainer.appendChild(resetBtn);
+        } else {
+          const newReset = document.createElement('button');
+          newReset.id = 'reset-progress-btn';
+          newReset.className = 'reset-btn';
+          newReset.title = '重置所有进度';
+          newReset.innerHTML = '<i class="fa-solid fa-arrow-rotate-left"></i>';
+          newReset.addEventListener('click', resetProgress);
+          navContainer.appendChild(newReset);
+        }
+      }
+
+      function renderStepCards() {
+        const container = document.getElementById('sop-steps-container');
+        const emptyState = document.getElementById('empty-state');
+        const steps = sopConfig.steps;
+        if (!container || !steps.length) {
+          if (emptyState) emptyState.classList.remove('hidden');
+          return;
+        }
+        emptyState.classList.add('hidden');
+
+        container.innerHTML = steps.map((step, index) => {
+          const completed = isStepCompleted(step.id);
+          const hasUrl = step.url && step.url.trim() !== '' && step.url.trim() !== '#';
+          const delay = index * 0.08;
+          return `
+            <div class="step-card glass-card p-6 sm:p-8 rounded-2xl ml-12 sm:ml-16 md:ml-20 relative" id="step-card-${step.id}" style="animation-delay: ${delay}s;" tabindex="0">
+              <div class="timeline-node ${step.nodeClass} ${completed ? 'completed' : ''}" style="top:32px; left:-44px;"></div>
+              <div class="absolute -right-6 -top-6 w-28 h-28 rounded-full blur-3xl opacity-[0.04]" style="background:${step.stepColor};"></div>
+              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                <div class="flex items-start gap-4 flex-1 min-w-0">
+                  <span class="text-5xl sm:text-6xl font-black italic opacity-15 select-none flex-shrink-0 leading-none" style="color:${step.stepColor};">${String(step.id).padStart(2,'0')}</span>
+                  <div class="min-w-0">
+                    <h3 class="text-lg sm:text-xl font-bold tracking-tight text-white mb-1">${escapeHtml(step.name)}</h3>
+                    <span class="tag-badge ${step.tagClass} sm:hidden inline-flex mb-2"><i class="${escapeHtml(step.icon)} text-xs"></i> ${escapeHtml(step.tag)}</span>
+                  </div>
+                </div>
+                <span class="tag-badge ${step.tagClass} hidden sm:inline-flex flex-shrink-0 mt-1"><i class="${escapeHtml(step.icon)} text-xs"></i> ${escapeHtml(step.tag)}</span>
+              </div>
+              <p class="text-gray-400 text-sm leading-relaxed mb-5">${escapeHtml(step.desc)}</p>
+              <div class="pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-xs text-gray-600 tracking-[0.15em] uppercase">步骤 ${step.id}/${steps.length}</span>
+                  <button class="complete-btn ${completed ? 'mark-undone' : 'mark-done'}" data-step-id="${step.id}" aria-label="${completed ? '标记为未完成' : '标记为已完成'}">
+                    <i class="fa-solid ${completed ? 'fa-rotate-left' : 'fa-check'}"></i> ${completed ? '撤销完成' : '标记完成'}
+                  </button>
+                </div>
+                ${hasUrl ? `
+                  <a href="${escapeHtml(step.url)}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/25 transition-all" style="color:${step.stepColor};">
+                    打开工具 <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                  </a>` : '<span class="text-xs text-gray-600 italic">无关联工具</span>'}
+              </div>
+            </div>`;
+        }).join('');
+
+        document.querySelectorAll('.complete-btn').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            const stepId = parseInt(this.dataset.stepId, 10);
+            if (!isNaN(stepId)) toggleStepComplete(stepId);
+          });
+        });
+      }
+
+      function renderAll() {
+        renderHeader();
+        renderProgressBar();
+        renderFixedNav();
+        renderStepCards();
+      }
+
+      // ---------- 星空背景（含流星）----------
+      function createStars() {
+        const container = document.getElementById('stars');
+        if (!container) return;
+        const fragment = document.createDocumentFragment();
+
+        // 普通星星
+        for (let i = 0; i < 160; i++) {
+          const star = document.createElement('div');
+          star.className = 'star';
+          const size = Math.random() * 2.2 + 1;
+          star.style.width = size + 'px';
+          star.style.height = size + 'px';
+          star.style.left = Math.random() * 100 + '%';
+          star.style.top = Math.random() * 100 + '%';
+          star.style.setProperty('--duration', (Math.random() * 4 + 2) + 's');
+          star.style.setProperty('--delay', (Math.random() * 5) + 's');
+          fragment.appendChild(star);
+        }
+
+        // 流星（3~5颗，不同延迟和位置）
+        const meteorCount = 4;
+        for (let i = 0; i < meteorCount; i++) {
+          const meteor = document.createElement('div');
+          meteor.className = 'shooting-star';
+          meteor.style.left = Math.random() * 70 + 15 + '%';
+          meteor.style.top = Math.random() * 35 + 5 + '%';
+          meteor.style.setProperty('--shoot-duration', (Math.random() * 2 + 3) + 's');
+          meteor.style.setProperty('--shoot-delay', (Math.random() * 8 + i * 4) + 's');
+          fragment.appendChild(meteor);
+        }
+
+        container.appendChild(fragment);
+      }
+
+      // ---------- 初始化 ----------
+      function init() {
+        createStars();
+        renderAll();
+        document.getElementById('reset-progress-btn')?.addEventListener('click', resetProgress);
+        console.log('✨ 星空、流星与SOP进度追踪已激活');
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+      window.sopConfig = sopConfig;
+      window.sopRenderAll = renderAll;
+      window.sopResetProgress = resetProgress;
+    })();
+  </script>
+</body>
+</html>

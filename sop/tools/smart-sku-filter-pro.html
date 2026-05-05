@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>通用SKU筛选器 · GE32</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- CodeMirror 核心 + JavaScript 语法高亮 + 主题 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      overflow-x: hidden;
+      background: radial-gradient(circle at 30% 20%, #0f172a, #05070a);
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .stars-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: -1;
+      overflow: hidden;
+      background: radial-gradient(circle at 30% 20%, #0f172a 0%, #080c14 40%, #05070a 70%, #020408 100%);
+    }
+    .star { position: absolute; background: white; border-radius: 50%; pointer-events: none; animation: twinkle var(--duration) infinite ease-in-out; animation-delay: var(--delay); }
+    @keyframes twinkle { 0%,100%{ opacity:0.2; transform:scale(0.8); } 30%{ opacity:1; transform:scale(1.5); } 60%{ opacity:0.3; transform:scale(1); } 85%{ opacity:0.8; transform:scale(1.3); } }
+    .shooting-star { position: absolute; width:2px; height:2px; background:white; border-radius:50%; pointer-events:none; animation:shoot var(--shoot-duration) var(--shoot-delay) infinite linear; opacity:0; box-shadow:0 0 8px 2px rgba(255,255,255,0.6),0 0 20px 4px rgba(59,130,246,0.4); }
+    .shooting-star::after { content:''; position:absolute; top:50%; transform:translateY(-50%); width:80px; height:1.5px; background:linear-gradient(to left, rgba(255,255,255,0.95), transparent); border-radius:1px; }
+    @keyframes shoot { 0%{ opacity:0; transform:translate(0,0) rotate(-35deg); } 3%{ opacity:1; } 10%{ opacity:0; transform:translate(-400px,250px) rotate(-35deg); } 100%{ opacity:0; transform:translate(-400px,250px) rotate(-35deg); } }
+    .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: 1.5rem; transition: all 0.3s ease; }
+    .glass-card:hover { border-color: rgba(59,130,246,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .input-glass { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 0.9rem; padding: 0.5rem 0.8rem; color: white; font-size: 0.8rem; outline: none; transition: border 0.2s; }
+    .input-glass:focus { border-color: #3b82f6; }
+    .input-glass option { background: #1e293b; color: white; }
+    .btn-glass { padding: 0.45rem 1rem; border-radius: 2rem; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.3s; cursor: pointer; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: #cbd5e1; }
+    .btn-glass:hover { background: rgba(255,255,255,0.1); border-color: rgba(59,130,246,0.6); color: white; }
+    .btn-primary { background: #1e2f3f; border-color: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2d4a6b; }
+    .btn-danger { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+    .condition-group { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 1rem; margin-bottom: 0.8rem; overflow: hidden; }
+    .condition-header { display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 1rem; cursor: pointer; user-select: none; background: rgba(255,255,255,0.02); }
+    .condition-body { padding: 0 1rem 1rem; display: none; }
+    .condition-body.open { display: block; }
+    .CodeMirror { height: auto !important; min-height: 100px; border-radius: 0.6rem; border: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem; }
+    .table-wrapper { max-height: 400px; overflow: auto; border-radius: 0.8rem; border: 1px solid rgba(255,255,255,0.08); }
+    .data-table th { background: rgba(30,41,59,0.9); position: sticky; top: 0; z-index: 2; }
+    .data-table td, .data-table th { padding: 0.5rem 0.8rem; white-space: nowrap; font-size: 0.75rem; }
+    /* 自定义复选框 */
+    .checkbox-glass { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #cbd5e1; cursor: pointer; }
+    .checkbox-glass input[type="checkbox"] { appearance: none; width: 1rem; height: 1rem; border: 1px solid rgba(255,255,255,0.3); border-radius: 0.25rem; background: rgba(255,255,255,0.05); cursor: pointer; position: relative; }
+    .checkbox-glass input[type="checkbox"]:checked { background: #3b82f6; border-color: #3b82f6; }
+    .checkbox-glass input[type="checkbox"]:checked::after { content: "✓"; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: white; font-size: 0.7rem; }
+    .checkbox-glass input[type="checkbox"]:disabled { opacity: 0.4; cursor: not-allowed; }
+    .checkbox-glass input[type="checkbox"]:disabled + span { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <div class="stars-container" id="stars"></div>
+
+  <div class="max-w-7xl mx-auto px-4 py-8 relative z-10 space-y-6">
+    <!-- 头部 -->
+    <div class="glass-card p-6 flex flex-wrap justify-between items-center">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+          <i class="fa-solid fa-filter text-blue-400"></i> 通用SKU筛选器 · 最终版
+        </h1>
+        <p class="text-gray-400 text-sm mt-1">聚合判断 · 自定义函数 · 命中条件追溯导出</p>
+      </div>
+      <div class="flex gap-2 mt-3 md:mt-0">
+        <button id="saveConfigBtn" class="btn-glass btn-primary"><i class="fa-solid fa-floppy-disk"></i> 保存配置</button>
+        <button id="exportConfigsBtn" class="btn-glass"><i class="fa-solid fa-download"></i> 导出</button>
+        <button id="importConfigsBtn" class="btn-glass" onclick="document.getElementById('importConfigFile').click()"><i class="fa-solid fa-upload"></i> 导入</button>
+        <input type="file" id="importConfigFile" accept=".json" class="hidden">
+      </div>
+    </div>
+
+    <!-- 文件上传 & 列映射 -->
+    <div class="glass-card p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="text-xs font-bold uppercase text-gray-400">📂 上传 Excel</label>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="input-glass w-full mt-1">
+      </div>
+      <div>
+        <label class="text-xs font-bold uppercase text-gray-400">📄 工作表</label>
+        <select id="sheetSelect" disabled class="input-glass w-full mt-1"><option>— 请先上传 —</option></select>
+      </div>
+      <div class="flex items-end">
+        <button id="loadSheetBtn" class="btn-glass w-full"><i class="fa-solid fa-arrows-rotate"></i> 加载工作表</button>
+      </div>
+      <div>
+        <label class="text-xs font-bold uppercase text-gray-400">🔑 SKU列</label>
+        <select id="skuColumnSelect" disabled class="input-glass w-full mt-1"></select>
+      </div>
+      <div>
+        <label class="text-xs font-bold uppercase text-gray-400">🔗 父SKU列</label>
+        <select id="parentSkuColumnSelect" disabled class="input-glass w-full mt-1"></select>
+      </div>
+      <div class="flex items-center text-xs text-gray-500"><i class="fa-solid fa-circle-info mr-2"></i> 父SKU为空视为独立组</div>
+    </div>
+
+    <!-- 条件构建器 -->
+    <div class="glass-card p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold"><i class="fa-solid fa-code-branch text-purple-400 mr-2"></i>筛选条件</h2>
+        <div class="flex gap-2 flex-wrap">
+          <button id="addSimpleConditionBtn" class="btn-glass"><i class="fa-solid fa-plus"></i> 简单条件</button>
+          <button id="addAggConditionBtn" class="btn-glass"><i class="fa-solid fa-chart-simple"></i> 聚合条件</button>
+          <button id="addCustomConditionBtn" class="btn-glass"><i class="fa-solid fa-code"></i> 自定义函数</button>
+          <button id="toggleAllConditionsBtn" class="btn-glass"><i class="fa-solid fa-compress"></i> 全部折叠</button>
+        </div>
+      </div>
+      <div id="conditionsContainer" class="space-y-2"></div>
+      <div class="flex items-center gap-4 mt-4 text-sm">
+        <span class="text-gray-400">条件组逻辑：</span>
+        <select id="globalLogicSelect" class="input-glass w-auto">
+          <option value="OR">任一命中 (OR)</option>
+          <option value="AND">全部命中 (AND)</option>
+        </select>
+        <span class="text-gray-500 text-xs">（条件组之间的关系）</span>
+      </div>
+    </div>
+
+    <!-- 操作栏 + 导出选项 -->
+    <div class="flex flex-wrap gap-3 items-center justify-between">
+      <div class="flex gap-2 flex-wrap items-center">
+        <button id="runFilterBtn" class="btn-glass btn-primary"><i class="fa-solid fa-play"></i> 执行筛选</button>
+        <button id="exportResultBtn" class="btn-glass"><i class="fa-solid fa-file-export"></i> 导出结果</button>
+        <button id="copySkusBtn" class="btn-glass"><i class="fa-solid fa-copy"></i> 复制SKU</button>
+        <div class="ml-4 flex items-center gap-4">
+          <label class="checkbox-glass">
+            <input type="checkbox" id="exportFullCheckbox" />
+            <span>导出完整行数据</span>
+          </label>
+          <label class="checkbox-glass">
+            <input type="checkbox" id="exportMatchInfoCheckbox" disabled />
+            <span>附加命中条件字段</span>
+          </label>
+        </div>
+      </div>
+      <div class="text-sm text-gray-400" id="dataStatus">⚡ 未加载数据</div>
+    </div>
+
+    <!-- 原始数据预览 (分页) -->
+    <div class="glass-card p-6">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-semibold"><i class="fa-solid fa-table mr-2"></i>原始数据预览</h2>
+        <div class="flex items-center gap-3 text-sm">
+          <span id="rowCountSpan">0 行</span>
+          <button id="prevPageBtn" class="btn-glass text-xs" disabled>上一页</button>
+          <span id="pageIndicator">1/1</span>
+          <button id="nextPageBtn" class="btn-glass text-xs" disabled>下一页</button>
+        </div>
+      </div>
+      <div class="table-wrapper" id="originalTableWrapper"></div>
+    </div>
+
+    <!-- 结果展示 -->
+    <div class="glass-card p-6">
+      <h2 class="font-semibold mb-3"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i>筛选结果</h2>
+      <div class="flex flex-wrap gap-4 mb-3 text-sm">
+        <span id="resultCountSpan">0 个SKU</span>
+        <span id="detailStats" class="text-gray-400"></span>
+      </div>
+      <div class="max-h-60 overflow-y-auto bg-white/5 rounded-xl p-4 font-mono text-sm" id="skuResultList">暂无结果</div>
+      <details class="mt-4">
+        <summary class="cursor-pointer text-blue-400 text-sm">查看命中行详情（前100行）</summary>
+        <div class="table-wrapper mt-2 max-h-60" id="hitDetailsWrapper"></div>
+      </details>
+    </div>
+
+    <!-- 已保存配置 -->
+    <div class="glass-card p-6">
+      <h3 class="font-semibold mb-3"><i class="fa-solid fa-database mr-2"></i>已保存方案</h3>
+      <div id="configListContainer" class="flex flex-wrap gap-2"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+
+  <script>
+    (function() {
+      let workbook = null, currentSheetName = '', rawDataRows = [], allColumns = [];
+      let conditionGroups = [];
+      let globalLogic = 'OR';
+      let currentPage = 1, pageSize = 50;
+      let lastFilteredSkus = [], lastHitRows = [];
+      let lastMatchDetails = []; // { row, matchedConditions: string[] }
+      const editorInstances = new Map();
+
+      const $ = id => document.getElementById(id);
+      const fileInput = $('fileInput'), sheetSelect = $('sheetSelect'), loadSheetBtn = $('loadSheetBtn');
+      const skuCol = $('skuColumnSelect'), parentCol = $('parentSkuColumnSelect');
+      const conditionsContainer = $('conditionsContainer');
+      const addSimpleBtn = $('addSimpleConditionBtn'), addAggBtn = $('addAggConditionBtn'), addCustomBtn = $('addCustomConditionBtn');
+      const toggleAllBtn = $('toggleAllConditionsBtn');
+      const globalLogicSelect = $('globalLogicSelect');
+      const runFilterBtn = $('runFilterBtn'), exportBtn = $('exportResultBtn'), copyBtn = $('copySkusBtn');
+      const originalWrapper = $('originalTableWrapper'), rowCount = $('rowCountSpan');
+      const prevBtn = $('prevPageBtn'), nextBtn = $('nextPageBtn'), pageInd = $('pageIndicator');
+      const resultList = $('skuResultList'), resultCount = $('resultCountSpan'), detailStats = $('detailStats');
+      const hitWrapper = $('hitDetailsWrapper'), dataStatus = $('dataStatus');
+      const configList = $('configListContainer');
+      const saveConfigBtn = $('saveConfigBtn'), exportConfigsBtn = $('exportConfigsBtn'), importConfigFile = $('importConfigFile');
+      const exportFullCheck = $('exportFullCheckbox'), exportMatchCheck = $('exportMatchInfoCheckbox');
+
+      const parseNumeric = (v) => {
+        if (v === null || v === undefined) return NaN;
+        let s = String(v).trim();
+        if (s.endsWith('%')) return parseFloat(s.slice(0,-1))/100;
+        return parseFloat(s);
+      };
+      const extractNumber = (cell) => {
+        if (cell === undefined || cell === null) return NaN;
+        let s = String(cell).replace(/,/g, '').trim();
+        if (s.endsWith('%')) return parseFloat(s.slice(0,-1))/100;
+        return parseFloat(s);
+      };
+      const esc = s => String(s||'').replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+
+      const STATE_KEY = 'sku_filter_current_state_v6';
+      function saveCurrentState() {
+        conditionGroups.forEach(g => {
+          if (g.type === 'custom' && editorInstances.has(g.id)) g.customCode = editorInstances.get(g.id).getValue();
+        });
+        const state = {
+          skuColumn: skuCol.value,
+          parentSkuColumn: parentCol.value,
+          globalLogic,
+          conditionGroups: JSON.parse(JSON.stringify(conditionGroups))
+        };
+        localStorage.setItem(STATE_KEY, JSON.stringify(state));
+      }
+      function loadCurrentState() {
+        try {
+          const saved = localStorage.getItem(STATE_KEY);
+          if (saved) {
+            const state = JSON.parse(saved);
+            if (state.skuColumn) skuCol.value = state.skuColumn;
+            if (state.parentSkuColumn) parentCol.value = state.parentSkuColumn;
+            globalLogic = state.globalLogic || 'OR';
+            globalLogicSelect.value = globalLogic;
+            if (state.conditionGroups) conditionGroups = state.conditionGroups;
+            return true;
+          }
+        } catch (e) {}
+        return false;
+      }
+
+      function initConditions() {
+        if (!loadCurrentState()) {
+          conditionGroups = [
+            { id: Date.now()+1, type:'simple', column:'', matchType:'include', keywords:['学生','儿童'], collapsed:false },
+            { id: Date.now()+2, type:'simple', column:'', matchType:'gt', numericValue:100, collapsed:false }
+          ];
+        }
+        renderConditions();
+      }
+
+      function renderConditions() {
+        if (!conditionsContainer) return;
+        editorInstances.forEach((cm, id) => {
+          const el = cm.getWrapperElement();
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        });
+        editorInstances.clear();
+
+        if (!conditionGroups.length) {
+          conditionsContainer.innerHTML = '<div class="text-gray-500 text-sm p-4 text-center">暂无筛选条件，点击上方按钮添加</div>';
+          return;
+        }
+        let html = '';
+        conditionGroups.forEach((g, idx) => {
+          const colOpts = allColumns.map(c => `<option value="${esc(c)}" ${g.column===c?'selected':''}>${esc(c)}</option>`).join('');
+          const isAgg = g.type === 'aggregate';
+          const isCustom = g.type === 'custom';
+          const isOpen = !g.collapsed;
+          const matchType = g.matchType || 'include';
+          html += `
+          <div class="condition-group" data-idx="${idx}" data-condid="${g.id}">
+            <div class="condition-header" data-idx="${idx}">
+              <div class="flex items-center gap-3">
+                <i class="fa-solid ${isOpen?'fa-chevron-down':'fa-chevron-right'} text-gray-400 text-xs"></i>
+                <span class="text-sm font-medium">条件 ${idx+1}：${g.column || '未选择列'} ${isAgg ? '（聚合）' : isCustom ? '（自定义）' : ''}</span>
+                <span class="text-xs text-gray-500">${matchType === 'custom' ? '自定义函数' : matchType}</span>
+              </div>
+              <button class="btn-glass btn-danger text-xs remove-condition" data-idx="${idx}"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            <div class="condition-body ${isOpen ? 'open' : ''}">
+              <div class="flex flex-wrap items-end gap-3 mt-2">
+                <div class="flex-1 min-w-[150px]"><label class="text-xs text-gray-400">目标列</label><select class="input-glass w-full condition-column" data-idx="${idx}"><option value="">-- 选择列 --</option>${colOpts}</select></div>
+                <div class="w-32"><label class="text-xs text-gray-400">匹配逻辑</label>
+                  <select class="input-glass w-full condition-matchtype" data-idx="${idx}">
+                    <option value="include" ${matchType==='include'?'selected':''}>包含关键词</option>
+                    <option value="exclude" ${matchType==='exclude'?'selected':''}>不包含</option>
+                    <option value="exists" ${matchType==='exists'?'selected':''}>存在</option>
+                    <option value="notExists" ${matchType==='notExists'?'selected':''}>不存在</option>
+                    <option value="gt" ${matchType==='gt'?'selected':''}>大于</option>
+                    <option value="lt" ${matchType==='lt'?'selected':''}>小于</option>
+                    <option value="eq" ${matchType==='eq'?'selected':''}>等于</option>
+                    <option value="gte" ${matchType==='gte'?'selected':''}>≥</option>
+                    <option value="lte" ${matchType==='lte'?'selected':''}>≤</option>
+                    <option value="custom" ${matchType==='custom'?'selected':''}>自定义函数</option>
+                  </select>
+                </div>
+                ${isAgg ? `
+                <div class="w-32"><label class="text-xs text-gray-400">聚合列</label><select class="input-glass w-full condition-aggcol" data-idx="${idx}"><option value="">-- 列 --</option>${colOpts}</select></div>
+                <div class="w-32"><label class="text-xs text-gray-400">函数</label><select class="input-glass w-full condition-aggfunc" data-idx="${idx}"><option value="avg" ${g.aggFunc==='avg'?'selected':''}>平均值</option><option value="max" ${g.aggFunc==='max'?'selected':''}>最大值</option><option value="min" ${g.aggFunc==='min'?'selected':''}>最小值</option><option value="sum" ${g.aggFunc==='sum'?'selected':''}>总和</option></select></div>` : ''}
+              </div>
+              <div class="mt-3">
+                ${matchType === 'custom' ? `<label class="text-xs text-gray-400 mb-1 block">自定义JS函数 <span class="text-gray-500">(参数: row, parentRows; 需return布尔值)</span></label><div class="custom-editor-container" id="editor-container-${g.id}"></div>` 
+                : (['gt','lt','eq','gte','lte'].includes(matchType) ? `<label class="text-xs text-gray-400">比较数值（支持50%）</label><input type="text" class="input-glass w-full condition-numeric" data-idx="${idx}" value="${g.numericValue??''}" placeholder="100 或 30%">` 
+                : (['exists','notExists'].includes(matchType) ? '' : `<label class="text-xs text-gray-400">关键词（每行一个或逗号分隔）</label><textarea class="input-glass w-full condition-keywords" data-idx="${idx}" rows="2">${(g.keywords||[]).join('\n')}</textarea>`))}
+              </div>
+            </div>
+          </div>`;
+        });
+        conditionsContainer.innerHTML = html;
+
+        conditionGroups.forEach(g => {
+          if (g.type === 'custom') {
+            const container = document.getElementById(`editor-container-${g.id}`);
+            if (container) {
+              const code = g.customCode || `// 打印当前行数据及同父SKU行数\nconsole.log('当前行数据:', row);\nconsole.log('同父SKU行数:', parentRows.length);\n// 返回 false 表示该行不触发此条件\nreturn false;`;
+              const cm = CodeMirror(container, { value: code, mode: 'javascript', theme: 'material-darker', lineNumbers: true, matchBrackets: true, tabSize: 2, indentUnit: 2, viewportMargin: Infinity });
+              cm.setSize('100%', 'auto');
+              editorInstances.set(g.id, cm);
+              setTimeout(() => cm.refresh(), 50);
+            }
+          }
+        });
+
+        // 事件绑定
+        document.querySelectorAll('.condition-header').forEach(header => {
+          header.addEventListener('click', e => {
+            if (e.target.closest('.remove-condition')) return;
+            const idx = header.dataset.idx;
+            conditionGroups[idx].collapsed = !conditionGroups[idx].collapsed;
+            renderConditions(); saveCurrentState();
+          });
+        });
+        document.querySelectorAll('.condition-column').forEach(el => el.addEventListener('change', e => {
+          conditionGroups[el.dataset.idx].column = el.value; renderConditions(); saveCurrentState();
+        }));
+        document.querySelectorAll('.condition-matchtype').forEach(el => el.addEventListener('change', e => {
+          const idx = el.dataset.idx;
+          conditionGroups[idx].matchType = el.value;
+          conditionGroups[idx].type = (el.value === 'custom') ? 'custom' : conditionGroups[idx].type === 'custom' ? 'simple' : conditionGroups[idx].type;
+          renderConditions(); saveCurrentState();
+        }));
+        document.querySelectorAll('.condition-aggcol, .condition-aggfunc').forEach(el => el.addEventListener('change', e => {
+          conditionGroups[el.dataset.idx][el.dataset.type === 'column' ? 'aggColumn' : 'aggFunc'] = el.value; saveCurrentState();
+        }));
+        document.querySelectorAll('.condition-keywords').forEach(el => el.addEventListener('change', e => {
+          conditionGroups[el.dataset.idx].keywords = el.value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean); saveCurrentState();
+        }));
+        document.querySelectorAll('.condition-numeric').forEach(el => el.addEventListener('change', e => {
+          const val = parseNumeric(el.value);
+          conditionGroups[el.dataset.idx].numericValue = isNaN(val) ? null : val; saveCurrentState();
+        }));
+        document.querySelectorAll('.remove-condition').forEach(btn => btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const idx = btn.dataset.idx;
+          const condId = conditionGroups[idx]?.id;
+          if (condId && editorInstances.has(condId)) {
+            editorInstances.get(condId).getWrapperElement().remove();
+            editorInstances.delete(condId);
+          }
+          conditionGroups.splice(idx,1);
+          renderConditions(); saveCurrentState();
+        }));
+      }
+
+      function toggleAllConditions() {
+        const allCollapsed = conditionGroups.every(g => g.collapsed);
+        conditionGroups.forEach(g => g.collapsed = !allCollapsed);
+        renderConditions(); saveCurrentState();
+      }
+
+      function checkCustom(row, cond, parentMap) {
+        if (editorInstances.has(cond.id)) cond.customCode = editorInstances.get(cond.id).getValue();
+        if (!cond.customCode) return false;
+        const parentKey = row[parentCol.value] || row[skuCol.value];
+        const parentRows = parentMap.get(parentKey) || [];
+        try {
+          const fn = new Function('row', 'parentRows', cond.customCode);
+          return Boolean(fn(row, parentRows));
+        } catch(e) { console.error('自定义函数执行错误:', e); return false; }
+      }
+
+      function checkSimple(row, cond) {
+        const col = cond.column; if(!col) return false;
+        const cell = row[col];
+        const mt = cond.matchType;
+        if (mt === 'exists') return cell !== undefined && cell !== null && String(cell).trim() !== '';
+        if (mt === 'notExists') return cell === undefined || cell === null || String(cell).trim() === '';
+        if (['gt','lt','eq','gte','lte'].includes(mt)) {
+          const num = extractNumber(cell);
+          if (isNaN(num) || cond.numericValue === null || isNaN(cond.numericValue)) return false;
+          switch(mt) { case 'gt': return num > cond.numericValue; case 'lt': return num < cond.numericValue; case 'eq': return Math.abs(num - cond.numericValue) < 1e-12; case 'gte': return num >= cond.numericValue; case 'lte': return num <= cond.numericValue; }
+        }
+        if (mt === 'include' || mt === 'exclude') {
+          const str = String(cell||'').toLowerCase();
+          const kws = (cond.keywords||[]).map(k=>k.toLowerCase());
+          if (!kws.length) return false;
+          return mt === 'include' ? kws.some(kw => str.includes(kw)) : !kws.some(kw => str.includes(kw));
+        }
+        return false;
+      }
+
+      function checkAggregate(row, cond, parentMap) {
+        const parentKey = row[parentCol.value] || row[skuCol.value];
+        const groupRows = parentMap.get(parentKey);
+        if (!groupRows?.length) return false;
+        const values = groupRows.map(r => extractNumber(r[cond.aggColumn])).filter(v => !isNaN(v));
+        if (!values.length) return false;
+        let aggVal;
+        switch(cond.aggFunc) { case 'avg': aggVal = values.reduce((a,b)=>a+b,0)/values.length; break; case 'max': aggVal = Math.max(...values); break; case 'min': aggVal = Math.min(...values); break; case 'sum': aggVal = values.reduce((a,b)=>a+b,0); break; }
+        if (isNaN(cond.numericValue)) return false;
+        switch(cond.matchType) { case 'gt': return aggVal > cond.numericValue; case 'lt': return aggVal < cond.numericValue; case 'eq': return Math.abs(aggVal - cond.numericValue) < 1e-12; case 'gte': return aggVal >= cond.numericValue; case 'lte': return aggVal <= cond.numericValue; }
+        return false;
+      }
+
+      function runFilter() {
+        if (!skuCol.value || !parentCol.value) return alert('请选择SKU列和父SKU列');
+        if (!rawDataRows.length) return alert('请先加载数据');
+        saveCurrentState();
+        const active = conditionGroups.filter(g => {
+          if (g.type === 'custom') return g.customCode?.trim();
+          if (!g.column && g.type !== 'custom') return false;
+          if (['exists','notExists'].includes(g.matchType)) return true;
+          if (['include','exclude'].includes(g.matchType)) return g.keywords?.length;
+          if (['gt','lt','eq','gte','lte'].includes(g.matchType)) return !isNaN(g.numericValue);
+          return false;
+        });
+        if (!active.length) return alert('至少配置一个有效条件');
+
+        const parentMap = new Map();
+        rawDataRows.forEach(row => {
+          const key = (row[parentCol.value] || row[skuCol.value])?.toString().trim();
+          if (!parentMap.has(key)) parentMap.set(key, []);
+          parentMap.get(key).push(row);
+        });
+
+        const hitDetails = [];
+        rawDataRows.forEach(row => {
+          const matchResults = active.map(cond => {
+            if (cond.type === 'aggregate') return checkAggregate(row, cond, parentMap);
+            if (cond.type === 'custom') return checkCustom(row, cond, parentMap);
+            return checkSimple(row, cond);
+          });
+          const isHit = globalLogic === 'AND' ? matchResults.every(Boolean) : matchResults.some(Boolean);
+          if (isHit) {
+            const matchedNames = active.reduce((arr, cond, i) => {
+              if (matchResults[i]) arr.push(`条件${conditionGroups.indexOf(cond)+1}: ${cond.column || '自定义'}`);
+              return arr;
+            }, []);
+            hitDetails.push({ row, matchedConditions: matchedNames });
+          }
+        });
+
+        lastMatchDetails = hitDetails;
+        lastHitRows = hitDetails.map(d => d.row);
+        const allSkus = new Set();
+        hitDetails.forEach(({row}) => {
+          const sku = row[skuCol.value]?.toString().trim();
+          if (sku) allSkus.add(sku);
+        });
+        lastFilteredSkus = Array.from(allSkus);
+
+        resultList.innerHTML = lastFilteredSkus.length ? lastFilteredSkus.map(s => `<span class="inline-block bg-blue-900/30 border border-blue-500/30 rounded-full px-3 py-1 m-1 text-xs">${esc(s)}</span>`).join('') : '<div class="text-gray-500">未命中任何条件</div>';
+        resultCount.textContent = `${lastFilteredSkus.length} 个SKU`;
+        detailStats.textContent = `命中 ${hitDetails.length} 行`;
+
+        if (hitDetails.length) {
+          const cols = Object.keys(hitDetails[0].row);
+          let t = '<table class="data-table w-full"><thead><tr>';
+          cols.forEach(c => t += `<th>${esc(c)}</th>`);
+          t += '</tr></thead><tbody>';
+          hitDetails.slice(0,100).forEach(({row}) => {
+            t += '<tr>';
+            cols.forEach(c => t += `<td>${esc(String(row[c]||'').substring(0,60))}</td>`);
+            t += '</tr>';
+          });
+          t += '</tbody></table>';
+          hitWrapper.innerHTML = t;
+        } else hitWrapper.innerHTML = '';
+      }
+
+      function exportResult() {
+        if (!lastMatchDetails.length) return alert('无筛选结果');
+        if (exportFullCheck.checked) {
+          const addMatchCol = exportMatchCheck.checked;
+          const data = lastMatchDetails.map(({row, matchedConditions}) => {
+            const newRow = { ...row };
+            if (addMatchCol) newRow['命中条件'] = matchedConditions.join('; ');
+            return newRow;
+          });
+          const ws = XLSX.utils.json_to_sheet(data);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "结果详情");
+          XLSX.writeFile(wb, `filtered_full_${Date.now()}.xlsx`);
+        } else {
+          if (!lastFilteredSkus.length) return alert('无SKU');
+          const ws = XLSX.utils.json_to_sheet(lastFilteredSkus.map(s=>({SKU:s})));
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "SKUs");
+          XLSX.writeFile(wb, `filtered_skus_${Date.now()}.xlsx`);
+        }
+      }
+
+      // 其他函数保持不变...
+      function renderTable() {
+        if (!rawDataRows.length) { originalWrapper.innerHTML = '<div class="p-4 text-gray-500">无数据</div>'; return; }
+        const totalPages = Math.ceil(rawDataRows.length / pageSize);
+        if (currentPage > totalPages) currentPage = totalPages;
+        const pageRows = rawDataRows.slice((currentPage-1)*pageSize, currentPage*pageSize);
+        const cols = Object.keys(rawDataRows[0]);
+        let html = '<table class="data-table w-full"><thead><tr>';
+        cols.forEach(c => html += `<th>${esc(c)}</th>`);
+        html += '</tr></thead><tbody>';
+        pageRows.forEach(row => { html += '<tr>'; cols.forEach(c => html += `<td>${esc(String(row[c]||'').substring(0,80))}</td>`); html += '</tr>'; });
+        html += '</tbody></table>';
+        originalWrapper.innerHTML = html;
+        rowCount.textContent = `${rawDataRows.length} 行`;
+        pageInd.textContent = `${currentPage}/${totalPages}`;
+        prevBtn.disabled = currentPage <= 1;
+        nextBtn.disabled = currentPage >= totalPages;
+      }
+      function changePage(d) { const t = Math.ceil(rawDataRows.length/pageSize); currentPage = Math.min(Math.max(1, currentPage+d), t); renderTable(); }
+      
+      function loadSheet() {
+        if (!workbook||!currentSheetName) return;
+        const json = XLSX.utils.sheet_to_json(workbook.Sheets[currentSheetName], {defval:""});
+        if (!json.length) return alert('无数据');
+        rawDataRows = json;
+        allColumns = Object.keys(rawDataRows[0]);
+        skuCol.innerHTML = parentCol.innerHTML = `<option value="">-- 选择列 --</option>${allColumns.map(c=>`<option>${esc(c)}</option>`).join('')}`;
+        skuCol.value = allColumns.find(c=>/sku|商品编码/i.test(c))||'';
+        parentCol.value = allColumns.find(c=>/父.*sku|parent/i.test(c))||'';
+        skuCol.disabled = parentCol.disabled = false;
+        currentPage=1; renderTable(); renderConditions(); dataStatus.textContent=`✅ 已加载 ${rawDataRows.length} 行`; saveCurrentState();
+      }
+      function handleFile(file) {
+        const r=new FileReader(); r.onload=e=>{
+          workbook=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+          sheetSelect.innerHTML=workbook.SheetNames.map(n=>`<option>${n}</option>`).join('');
+          sheetSelect.disabled=false; currentSheetName=workbook.SheetNames[0]; sheetSelect.value=currentSheetName; loadSheet();
+        }; r.readAsArrayBuffer(file);
+      }
+
+      function loadConfigs() { try{ return JSON.parse(localStorage.getItem('sku_filter_configs_v5'))||[]; }catch{return[];} }
+      function saveConfigs(configs) { localStorage.setItem('sku_filter_configs_v5', JSON.stringify(configs)); renderConfigList(); }
+      function getCurrentConfig() { conditionGroups.forEach(g=>{if(g.type==='custom'&&editorInstances.has(g.id))g.customCode=editorInstances.get(g.id).getValue();}); return {skuColumn:skuCol.value,parentSkuColumn:parentCol.value,globalLogic,conditionGroups:JSON.parse(JSON.stringify(conditionGroups))}; }
+      function applyConfig(cfg) { if(cfg.skuColumn&&allColumns.includes(cfg.skuColumn))skuCol.value=cfg.skuColumn; if(cfg.parentSkuColumn&&allColumns.includes(cfg.parentSkuColumn))parentCol.value=cfg.parentSkuColumn; globalLogic=cfg.globalLogic||'OR'; globalLogicSelect.value=globalLogic; conditionGroups=cfg.conditionGroups||[]; renderConditions(); saveCurrentState(); }
+      function renderConfigList() {
+        const configs=loadConfigs();
+        if(!configs.length){configList.innerHTML='<span class="text-gray-500 text-sm">暂无保存</span>';return;}
+        configList.innerHTML=configs.map((c,i)=>`<div class="bg-white/5 border border-white/10 rounded-full px-4 py-2 flex items-center gap-2 text-sm"><span>📋 ${esc(c.name)}</span><button class="text-blue-400 hover:text-blue-300" data-apply="${i}">应用</button><button class="text-red-400 hover:text-red-300" data-delete="${i}">删除</button></div>`).join('');
+        configList.querySelectorAll('[data-apply]').forEach(b=>b.addEventListener('click',e=>applyConfig(loadConfigs()[e.target.dataset.apply].config)));
+        configList.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',e=>{const cfgs=loadConfigs();cfgs.splice(e.target.dataset.delete,1);saveConfigs(cfgs);}));
+      }
+
+      function createStars() {
+        const c=$('stars'); if(!c)return; const f=document.createDocumentFragment();
+        for(let i=0;i<150;i++){const s=document.createElement('div');s.className='star';s.style.width=s.style.height=Math.random()*2.5+1+'px';s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';s.style.setProperty('--duration',Math.random()*4+2+'s');s.style.setProperty('--delay',Math.random()*5+'s');f.appendChild(s);}
+        for(let i=0;i<3;i++){const m=document.createElement('div');m.className='shooting-star';m.style.left=Math.random()*70+15+'%';m.style.top=Math.random()*35+5+'%';m.style.setProperty('--shoot-duration',Math.random()*2+3+'s');m.style.setProperty('--shoot-delay',Math.random()*8+i*4+'s');f.appendChild(m);}
+        c.appendChild(f);
+      }
+
+      // 事件绑定
+      fileInput.addEventListener('change',e=>e.target.files[0]&&handleFile(e.target.files[0]));
+      loadSheetBtn.addEventListener('click',()=>{if(workbook){currentSheetName=sheetSelect.value;loadSheet();}});
+      addSimpleBtn.addEventListener('click',()=>{conditionGroups.push({id:Date.now(),type:'simple',column:'',matchType:'include',keywords:[],collapsed:false});renderConditions();saveCurrentState();});
+      addAggBtn.addEventListener('click',()=>{conditionGroups.push({id:Date.now(),type:'aggregate',column:'',matchType:'gt',aggColumn:'',aggFunc:'avg',numericValue:null,collapsed:false});renderConditions();saveCurrentState();});
+      addCustomBtn.addEventListener('click',()=>{conditionGroups.push({id:Date.now(),type:'custom',column:'',matchType:'custom',customCode:'',collapsed:false});renderConditions();saveCurrentState();});
+      toggleAllBtn.addEventListener('click',toggleAllConditions);
+      globalLogicSelect.addEventListener('change',e=>{globalLogic=e.target.value;saveCurrentState();});
+      runFilterBtn.addEventListener('click',runFilter);
+      exportBtn.addEventListener('click',exportResult);
+      copyBtn.addEventListener('click',()=>{if(!lastFilteredSkus.length)alert('无结果');navigator.clipboard.writeText(lastFilteredSkus.join('\n')).then(()=>alert('已复制'));});
+      prevBtn.addEventListener('click',()=>changePage(-1));
+      nextBtn.addEventListener('click',()=>changePage(1));
+      saveConfigBtn.addEventListener('click',()=>{const n=prompt('名称');if(!n)return;const cfgs=loadConfigs();cfgs.push({name:n,config:getCurrentConfig()});saveConfigs(cfgs);});
+      exportConfigsBtn.addEventListener('click',()=>{const b=new Blob([JSON.stringify(loadConfigs(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='sku_configs.json';a.click();});
+      importConfigFile.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const cfgs=JSON.parse(ev.target.result);saveConfigs(cfgs);alert(`导入${cfgs.length}个`);}catch{alert('无效JSON');}importConfigFile.value='';};r.readAsText(f);});
+      exportFullCheck.addEventListener('change',()=>{exportMatchCheck.disabled = !exportFullCheck.checked; if(!exportFullCheck.checked) exportMatchCheck.checked = false;});
+      skuCol.addEventListener('change',saveCurrentState);
+      parentCol.addEventListener('change',saveCurrentState);
+      document.body.addEventListener('dragover',e=>e.preventDefault());
+      document.body.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+
+      createStars();
+      initConditions();
+      renderConfigList();
+    })();
+  </script>
+</body>
+</html>

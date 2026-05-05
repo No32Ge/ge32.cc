@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>变体组生成器 · 回调引擎 · 星空星云</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js">
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            background: radial-gradient(circle at 30% 20%, #0f172a, #05070a);
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .stars-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            background: radial-gradient(circle at 30% 20%, #0f172a 0%, #080c14 40%, #05070a 70%, #020408 100%);
+        }
+        .nebula {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.06;
+            pointer-events: none;
+            animation: nebulaDrift 30s infinite ease-in-out;
+        }
+        .nebula-1 {
+            width: 700px;
+            height: 700px;
+            background: #3b82f6;
+            top: -20%;
+            left: -15%;
+        }
+        .nebula-2 {
+            width: 600px;
+            height: 600px;
+            background: #8b5cf6;
+            bottom: -25%;
+            right: -10%;
+            animation-delay: -15s;
+        }
+        .nebula-3 {
+            width: 500px;
+            height: 500px;
+            background: #10b981;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -25s;
+        }
+        @keyframes nebulaDrift {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(50px, -30px) scale(1.2);
+            }
+            50% {
+                transform: translate(-20px, 40px) scale(0.9);
+            }
+            75% {
+                transform: translate(-40px, -20px) scale(1.15);
+            }
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: twinkle var(--duration) infinite ease-in-out;
+            animation-delay: var(--delay);
+        }
+        @keyframes twinkle {
+            0%,
+            100% {
+                opacity: 0.2;
+                transform: scale(0.8);
+            }
+            30% {
+                opacity: 0.8;
+                transform: scale(1.4);
+            }
+            60% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+            85% {
+                opacity: 0.6;
+                transform: scale(1.2);
+            }
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.5rem;
+            transition: all 0.3s;
+        }
+        .glass-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .input-glass {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 0.9rem;
+            padding: 0.5rem 0.8rem;
+            color: white;
+            font-size: 0.8rem;
+            outline: none;
+        }
+        .input-glass:focus {
+            border-color: #3b82f6;
+        }
+        .input-glass option {
+            background: #1e293b;
+            color: white;
+        }
+        .btn-glass {
+            padding: 0.45rem 1rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            letter-spacing: 0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.04);
+            color: #cbd5e1;
+        }
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(59, 130, 246, 0.6);
+            color: white;
+        }
+        .btn-primary {
+            background: #1e2f3f;
+            border-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2d4a6b;
+        }
+
+        .CodeMirror {
+            height: auto !important;
+            min-height: 100px;
+            border-radius: 0.6rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+        }
+        .log-area {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 0.8rem;
+            padding: 0.8rem;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+        .log-entry {
+            margin: 2px 0;
+            color: #94a3b8;
+        }
+        .log-entry.error {
+            color: #f87171;
+        }
+        .log-entry.success {
+            color: #34d399;
+        }
+        .checkbox-glass {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            cursor: pointer;
+        }
+        .checkbox-glass input[type="checkbox"] {
+            appearance: none;
+            width: 1rem;
+            height: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 0.25rem;
+            background: rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+        .checkbox-glass input[type="checkbox"]:checked {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+        .checkbox-glass input[type="checkbox"]:checked::after {
+            content: "✓";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 0.7rem;
+        }
+        .toggle-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .toggle-header i.fa-chevron-down,
+        .toggle-header i.fa-chevron-right {
+            transition: transform 0.2s;
+        }
+
+        /* 折叠/展开状态 */
+        .collapsed-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .expanded-content {
+            max-height: 600px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .expanded-content-mapping {
+            max-height: 200px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        /* 全屏模式 */
+        .fullscreen-card {
+            position: fixed !important;
+            inset: 1.5rem !important;
+            z-index: 100 !important;
+            background: rgba(8, 12, 20, 0.96) !important;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            border: 1px solid rgba(59, 130, 246, 0.4) !important;
+            border-radius: 1.5rem !important;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.8) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            transition: all 0.3s ease;
+        }
+        .fullscreen-card .expanded-content,
+        .fullscreen-card .expanded-content-mapping {
+            flex: 1 !important;
+            max-height: none !important;
+            overflow: hidden !important;
+        }
+        .fullscreen-card .CodeMirror {
+            height: 100% !important;
+        }
+        .fullscreen-card #codeEditorContainer,
+        .fullscreen-card #mappingEditorContainer {
+            height: 100% !important;
+        }
+        .fullscreen-card #codeEditorContainer .CodeMirror,
+        .fullscreen-card #mappingEditorContainer .CodeMirror {
+            height: 100% !important;
+            min-height: 200px;
+        }
+
+        /* 映射编辑器容器 */
+        #mappingEditorContainer {
+            height: 100px !important;
+            overflow: hidden;
+        }
+        #mappingEditorContainer .CodeMirror {
+            height: 100px !important;
+            min-height: 100px;
+        }
+
+        /* 代码编辑器容器 */
+        #codeEditorContainer {
+            height: 420px;
+            overflow: hidden;
+        }
+        #codeEditorContainer .CodeMirror {
+            height: 420px !important;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars-container" id="stars">
+        <div class="nebula nebula-1"></div>
+        <div class="nebula nebula-2"></div>
+        <div class="nebula nebula-3"></div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8 relative z-10 space-y-6">
+        <!-- 头部 -->
+        <div class="glass-card p-6 flex flex-wrap justify-between items-center">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                    <i class="fa-solid fa-layer-group text-blue-400"></i> 变体组生成器 · 回调引擎
+                </h1>
+                <p class="text-gray-400 text-sm mt-1">映射 & 函数独立编辑 · 折叠/全屏 · 日志输出匹配列</p>
+            </div>
+            <div class="flex gap-2 mt-3 md:mt-0">
+                <button id="saveConfigBtn" class="btn-glass btn-primary"><i class="fa-solid fa-floppy-disk"></i> 保存方案</button>
+                <button id="exportConfigBtn" class="btn-glass"><i class="fa-solid fa-download"></i> 导出方案</button>
+                <button id="importConfigBtn" class="btn-glass" onclick="document.getElementById('importConfigFile').click()"><i class="fa-solid fa-upload"></i> 导入</button>
+                <input type="file" id="importConfigFile" accept=".json" class="hidden">
+            </div>
+        </div>
+
+        <!-- 文件上传 & 核心列 -->
+        <div class="glass-card p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div><label class="text-xs font-bold uppercase text-gray-400">📂 上传 Excel</label><input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="input-glass w-full mt-1"></div>
+            <div><label class="text-xs font-bold uppercase text-gray-400">📄 工作表</label><select id="sheetSelect" disabled class="input-glass w-full mt-1"><option>— 请先上传 —</option></select></div>
+            <div class="flex items-end"><button id="loadSheetBtn" class="btn-glass w-full"><i class="fa-solid fa-arrows-rotate"></i> 加载</button></div>
+            <div><label class="text-xs font-bold uppercase text-gray-400">🔑 SKU列</label><select id="skuColSelect" disabled class="input-glass w-full mt-1"></select></div>
+            <div><label class="text-xs font-bold uppercase text-gray-400">🔗 父SKU列</label><select id="parentColSelect" disabled class="input-glass w-full mt-1"></select></div>
+            <div class="text-xs text-gray-500 flex items-end">其余映射在下方编辑</div>
+        </div>
+
+        <!-- 映射配置 (可折叠 + 全屏) -->
+        <div class="glass-card p-6" id="mappingCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="mappingToggleHeader">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i id="mappingToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+                    <i class="fa-solid fa-map-pin text-cyan-400 mr-2"></i> 列映射 (JSON)
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="mappingFullscreenBtn" class="btn-glass" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetMappingBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                </div>
+            </div>
+            <div id="mappingCollapseWrapper" class="expanded-content-mapping">
+                <div id="mappingEditorContainer"></div>
+            </div>
+        </div>
+
+        <!-- 处理函数 (可折叠 + 全屏) -->
+        <div class="glass-card p-6" id="codeCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="codeToggleHeader">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i id="codeToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+                    <i class="fa-solid fa-code text-purple-400 mr-2"></i> 处理函数
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="codeFullscreenBtn" class="btn-glass" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetCodeBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                </div>
+            </div>
+            <div id="codeCollapseWrapper" class="expanded-content">
+                <div id="codeEditorContainer"></div>
+            </div>
+        </div>
+
+        <!-- 操作栏 -->
+        <div class="flex flex-wrap gap-3 items-center justify-between">
+            <div class="flex gap-2">
+                <button id="runProcessBtn" class="btn-glass btn-primary"><i class="fa-solid fa-play"></i> 执行处理</button>
+                <button id="exportResultBtn" class="btn-glass"><i class="fa-solid fa-file-export"></i> 导出结果</button>
+            </div>
+            <div class="flex items-center gap-4">
+                <label class="checkbox-glass"><input type="checkbox" id="exportFullCheckbox" /> <span>导出全部列</span></label>
+                <label class="checkbox-glass"><input type="checkbox" id="exportNewColsCheckbox" checked /> <span>导出生成列</span></label>
+                <span class="text-sm text-gray-400" id="dataStatus">⚡ 就绪</span>
+            </div>
+        </div>
+
+        <!-- 运行日志 -->
+        <div class="glass-card p-6">
+            <h2 class="font-semibold mb-3"><i class="fa-solid fa-terminal mr-2"></i>运行日志</h2>
+            <div id="logArea" class="log-area">等待操作...</div>
+        </div>
+
+        <!-- 方案列表 -->
+        <div class="glass-card p-6">
+            <h3 class="font-semibold mb-3"><i class="fa-solid fa-folder-open mr-2"></i>已保存方案</h3>
+            <div id="configListContainer" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js">
+    </script>
+    <script>
+        (function() {
+            let workbook = null,
+                currentSheetName = '',
+                rawDataRows = [],
+                allColumns = [];
+            let processedData = [];
+            let codeEditor = null,
+                mappingEditor = null;
+
+            const $ = id => document.getElementById(id);
+            const fileInput = $('fileInput'),
+                sheetSelect = $('sheetSelect'),
+                loadSheetBtn = $('loadSheetBtn');
+            const skuColSelect = $('skuColSelect'),
+                parentColSelect = $('parentColSelect');
+            const mappingContainer = $('mappingEditorContainer');
+            const codeContainer = $('codeEditorContainer');
+            const mappingCard = $('mappingCard');
+            const codeCard = $('codeCard');
+            const mappingToggleHeader = $('mappingToggleHeader');
+            const mappingToggleIcon = $('mappingToggleIcon');
+            const mappingCollapseWrapper = $('mappingCollapseWrapper');
+            const mappingFullscreenBtn = $('mappingFullscreenBtn');
+            const codeToggleHeader = $('codeToggleHeader');
+            const codeToggleIcon = $('codeToggleIcon');
+            const codeCollapseWrapper = $('codeCollapseWrapper');
+            const codeFullscreenBtn = $('codeFullscreenBtn');
+            const runProcessBtn = $('runProcessBtn'),
+                exportBtn = $('exportResultBtn');
+            const exportFullCheck = $('exportFullCheckbox'),
+                exportNewCheck = $('exportNewColsCheckbox');
+            const dataStatus = $('dataStatus'),
+                logArea = $('logArea');
+            const saveConfigBtn = $('saveConfigBtn'),
+                exportConfigBtn = $('exportConfigBtn');
+            const importConfigFile = $('importConfigFile');
+            const resetMappingBtn = $('resetMappingBtn'),
+                resetCodeBtn = $('resetCodeBtn');
+            const configListContainer = $('configListContainer');
+
+            // 日志
+            function log(msg, type = 'info') {
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+                logArea.appendChild(entry);
+                logArea.scrollTop = logArea.scrollHeight;
+            }
+
+            // 默认映射和代码
+            const DEFAULT_MAPPING = JSON.stringify({
+                weight: '重量(g)',
+                length: '长',
+                width: '宽',
+                height: '高'
+            }, null, 2);
+
+            const DEFAULT_CODE = [
+                '// ═══════════════════════════════════════════════════════════════',
+                '// 变体组生成器 · 处理函数说明书',
+                '// ═══════════════════════════════════════════════════════════════',
+                '// ',
+                '// 📌 本函数通过自执行回调的方式运行，最终返回处理后的数据数组。',
+                '//    你只需编辑函数体内部的逻辑，最后 return 一个对象数组即可。',
+                '//',
+                '// 📥 可用参数（由系统自动注入，无需手动传入）：',
+                '//    rows        - 原始数据数组，每个元素是 Excel 的一行（对象格式，键为列名）',
+                '//    columns     - 列映射对象，来自左侧"列映射" JSON 编辑器',
+                '//                  示例：{ weight: "重量(g)", length: "长", width: "宽", height: "高" }',
+                '//                  使用时：columns.weight → "重量(g)"，然后用 r[columns.weight] 读取单元格',
+                '//    skuCol      - 用户在界面上选择的 SKU 列名（字符串）',
+                '//    parentCol   - 用户在界面上选择的 父SKU 列名（字符串）',
+                '//',
+                '// 📤 返回值要求：',
+                '//    必须返回一个对象数组，每个对象代表处理后的 Excel 一行。',
+                '//    对象可以保留原始字段（通过展开运算符 ...r），也可以新增自定义字段。',
+                '//',
+                '// ═══════════════════════════════════════════════════════════════',
+                'return (function(rows, columns, skuCol, parentCol) {',
+                '    ',
+                '    // ─────────────────── 1. 常量定义 ───────────────────',
+                '    // 单位换算系数（可根据业务需求修改）',
+                '    const GRAM_TO_LB = 0.00220462;  // 克 → 磅',
+                '    const CM_TO_INCH = 0.393701;    // 厘米 → 英寸',
+                '    ',
+                '    // 安全数值解析：非数字返回 NaN',
+                '    const toNum = v => isNaN(parseFloat(v)) ? NaN : parseFloat(v);',
+                '',
+                '    ',
+                '    // ─────────────────── 2. 数据分组 ───────────────────',
+                '    // parentMap：记录每个 父SKU 首次出现时分配的 组ID',
+                '    // groupInfo：记录每个 组ID 对应的成员索引集合',
+                '    // tempRows ：暂存每行的中间数据（包括换算后的尺寸/重量）',
+                '    const parentMap = new Map();',
+                '    const groupInfo = new Map();',
+                '    const tempRows = [];',
+                '',
+                '    // 遍历每一行原始数据',
+                '    for (let i = 0; i < rows.length; i++) {',
+                '        const r = rows[i];',
+                '',
+                '        // 读取 SKU 和 父SKU（处理空值情况）',
+                '        const sku = String(r[skuCol] || "").trim();',
+                '        const parent = String(r[parentCol] || "").trim();',
+                '',
+                '        // ★ 组ID 分配规则：',
+                '        //    - 若 父SKU 为空：该 SKU 独立成组（组ID = 自身 SKU）',
+                '        //    - 若 父SKU 已出现过：复用之前分配的组ID',
+                '        //    - 若 父SKU 首次出现：以当前 SKU 作为该组的组ID',
+                '        let groupId = parent ',
+                '            ? (parentMap.has(parent) ? parentMap.get(parent) : sku) ',
+                '            : sku;',
+                '        if (parent && !parentMap.has(parent)) parentMap.set(parent, groupId);',
+                '',
+                '        // 单位换算（使用 columns 映射读取对应的列）',
+                '        const net = toNum(r[columns.weight]) ',
+                '            ? (toNum(r[columns.weight]) * GRAM_TO_LB).toFixed(2) ',
+                '            : "";',
+                '        const l = toNum(r[columns.length]) ',
+                '            ? (toNum(r[columns.length]) * CM_TO_INCH).toFixed(2) ',
+                '            : "";',
+                '        const w = toNum(r[columns.width]) ',
+                '            ? (toNum(r[columns.width]) * CM_TO_INCH).toFixed(2) ',
+                '            : "";',
+                '        const h = toNum(r[columns.height]) ',
+                '            ? (toNum(r[columns.height]) * CM_TO_INCH).toFixed(2) ',
+                '            : "";',
+                '',
+                '        // 暂存行数据（保留原始字段，附加内部使用的临时字段）',
+                '        tempRows.push({ ',
+                '            ...r, ',
+                '            _groupId: groupId,   // 临时：所属组ID',
+                '            _net: net,           // 临时：换算后的重量(磅)',
+                '            _l: l,               // 临时：换算后的长度(英寸)',
+                '            _w: w,               // 临时：换算后的宽度(英寸)',
+                '            _h: h                // 临时：换算后的高度(英寸)',
+                '        });',
+                '',
+                '        // 将当前行的索引加入对应组',
+                '        if (!groupInfo.has(groupId)) groupInfo.set(groupId, { indices: [] });',
+                '        groupInfo.get(groupId).indices.push(i);',
+                '    }',
+                '',
+                '    ',
+                '    // ─────────────────── 3. 确定主变体 ───────────────────',
+                '    // ★ 主变体规则（非首位随机）：',
+                '    //    - 若组内只有 1 个 SKU → 该 SKU 为主变体（索引 0）',
+                '    //    - 若组内 ≥ 2 个 SKU → 从第 2 个及以后随机选一个作为主变体',
+                '    //    （避免电商平台默认取首位变体导致主图雷同）',
+                '    for (let [gid, info] of groupInfo) {',
+                '        const idxs = info.indices;',
+                '        if (idxs.length === 1) {',
+                '            info.primaryIdx = 0;',
+                '        } else {',
+                '            // 随机范围：1 到 idxs.length-1（即跳过第一个）',
+                '            info.primaryIdx = 1 + Math.floor(Math.random() * (idxs.length - 1));',
+                '        }',
+                '    }',
+                '',
+                '    ',
+                '    // ─────────────────── 4. 构建最终结果 ───────────────────',
+                '    // 遍历所有暂存行，补充正式输出字段',
+                '    return tempRows.map((t, i) => {',
+                '        const info = groupInfo.get(t._groupId);',
+                '        const pos = info.indices.indexOf(i);  // 当前行在组内的位置',
+                '        ',
+                '        return {',
+                '            ...t,  // 保留原始字段和临时字段（临时字段可后续在导出时排除）',
+                '            ',
+                '            // 正式输出字段 ↓',
+                '            "Variant Group ID": t._groupId,   // 变体组ID',
+                '            "Is Primary Variant": (pos === info.primaryIdx) ? "Yes" : "No",',
+                '            netContentStatement: t._net,       // 净含量声明（磅）',
+                '            assembledProductLength: t._l,      // 组装后长度（英寸）',
+                '            assembledProductWidth: t._w,       // 组装后宽度（英寸）',
+                '            assembledProductHeight: t._h,      // 组装后高度（英寸）',
+                '        };',
+                '    });',
+                '',
+                '})(rows, columns, skuCol, parentCol);',
+                '// ═══════════════════════════════════════════════════════════════',
+                '// 💡 自定义提示：',
+                '//    - 如需修改输出字段名，直接改 return 对象中的键名即可。',
+                '//    - 如需增加额外列（如 "销售状态"），在 return 对象中新增字段。',
+                '//    - 如果不需要某些原始列出现在最终结果，解构时排除即可。',
+                '//    - 变量 rows/columns/skuCol/parentCol 由外部自动注入，不要删除。',
+                '// ═══════════════════════════════════════════════════════════════'
+            ].join('\n');
+
+            let currentConfig = {
+                name: '默认方案',
+                mapping: DEFAULT_MAPPING,
+                code: DEFAULT_CODE,
+                skuColumn: '',
+                parentSkuColumn: ''
+            };
+
+            const esc = s => String(s || '').replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[
+                m]));
+
+            // 配置管理
+            function loadConfigs() { try { return JSON.parse(localStorage.getItem(
+                    'variant_gen_configs_v2')) || []; } catch { return []; } }
+
+            function saveConfigs(configs) { localStorage.setItem('variant_gen_configs_v2', JSON.stringify(
+                configs));
+                renderConfigList(); }
+
+            function getCurrentFullConfig() {
+                return {
+                    name: currentConfig.name || '未命名',
+                    skuColumn: skuColSelect.value,
+                    parentSkuColumn: parentColSelect.value,
+                    mapping: mappingEditor ? mappingEditor.getValue() : currentConfig.mapping,
+                    code: codeEditor ? codeEditor.getValue() : currentConfig.code
+                };
+            }
+
+            function applyConfig(cfg) {
+                if (cfg.skuColumn && allColumns.includes(cfg.skuColumn)) skuColSelect.value = cfg.skuColumn;
+                if (cfg.parentSkuColumn && allColumns.includes(cfg.parentSkuColumn)) parentColSelect.value = cfg
+                    .parentSkuColumn;
+                if (mappingEditor && cfg.mapping) mappingEditor.setValue(cfg.mapping);
+                if (codeEditor && cfg.code) codeEditor.setValue(cfg.code);
+                currentConfig.name = cfg.name || '未命名';
+            }
+
+            function renderConfigList() {
+                const configs = loadConfigs();
+                if (!configs.length) { configListContainer.innerHTML =
+                        '<span class="text-gray-500 text-sm">暂无方案</span>'; return; }
+                configListContainer.innerHTML = configs.map((c, i) => `
+                    <div class="bg-white/5 border border-white/10 rounded-full px-4 py-2 flex items-center gap-2 text-sm">
+                        <span>📋 ${esc(c.name)}</span>
+                        <button class="text-blue-400 hover:text-blue-300" data-apply="${i}">应用</button>
+                        <button class="text-red-400 hover:text-red-300" data-delete="${i}">删除</button>
+                    </div>`).join('');
+                configListContainer.querySelectorAll('[data-apply]').forEach(b => b.addEventListener('click', e => {
+                    applyConfig(loadConfigs()[e.target.dataset.apply]);
+                    log('方案已应用', 'success');
+                }));
+                configListContainer.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', e => {
+                    const cfgs = loadConfigs();
+                    cfgs.splice(e.target.dataset.delete, 1);
+                    saveConfigs(cfgs);
+                }));
+            }
+
+            // 执行处理 (回调引擎)
+            function runProcess() {
+                if (!rawDataRows.length) { log('请先加载数据', 'error'); return; }
+                const skuCol = skuColSelect.value,
+                    parentCol = parentColSelect.value;
+                if (!skuCol || !parentCol) { log('请选择SKU列和父SKU列', 'error'); return; }
+
+                let columns;
+                try {
+                    columns = JSON.parse(mappingEditor.getValue());
+                } catch (e) {
+                    log('映射配置JSON格式错误', 'error');
+                    return;
+                }
+                columns.sku = skuCol;
+                columns.parentSku = parentCol;
+
+                try {
+                    const userCode = codeEditor.getValue();
+                    const fn = new Function('rows', 'columns', 'skuCol', 'parentCol', userCode);
+                    const result = fn(rawDataRows, columns, skuCol, parentCol);
+                    if (!Array.isArray(result)) throw new Error('函数必须返回数组');
+                    processedData = result;
+                    log(`✅ 处理完成，共 ${processedData.length} 行`, 'success');
+                    dataStatus.textContent = `✅ 已处理 ${processedData.length} 行`;
+                } catch (e) {
+                    log(`❌ 执行错误: ${e.message}`, 'error');
+                    console.error(e);
+                }
+            }
+
+            // 导出
+            function exportData() {
+                if (!processedData.length) { log('无数据可导出', 'error'); return; }
+                const fullExport = exportFullCheck.checked;
+                const exportNew = exportNewCheck.checked;
+                const allCols = Object.keys(processedData[0]);
+                let exportCols = [];
+                if (fullExport) {
+                    exportCols = allCols;
+                } else {
+                    const defaultNew = ['Variant Group ID', 'Is Primary Variant', 'netContentStatement',
+                        'assembledProductLength', 'assembledProductWidth', 'assembledProductHeight'
+                    ];
+                    const skuCol = skuColSelect.value;
+                    if (exportNew) {
+                        exportCols = [skuCol, ...defaultNew.filter(c => allCols.includes(c))];
+                    } else {
+                        exportCols = [skuCol];
+                    }
+                }
+                const exportRows = processedData.map(row => {
+                    const obj = {};
+                    exportCols.forEach(c => obj[c] = row[c] ?? '');
+                    return obj;
+                });
+                try {
+                    const ws = XLSX.utils.json_to_sheet(exportRows);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "结果");
+                    XLSX.writeFile(wb, `variant_result_${Date.now()}.xlsx`);
+                    log(`📎 导出成功`, 'success');
+                } catch (e) {
+                    log('导出失败', 'error');
+                }
+            }
+
+            // 加载数据（增强日志）
+            function loadSheet() {
+                if (!workbook || !currentSheetName) return;
+                try {
+                    const sheet = workbook.Sheets[currentSheetName];
+                    const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                    if (!json.length) { log('工作表为空', 'error'); return; }
+                    rawDataRows = json;
+                    allColumns = Object.keys(json[0]);
+                    const opts = allColumns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+                    skuColSelect.innerHTML = parentColSelect.innerHTML =
+                        `<option value="">-- 选择列 --</option>${opts}`;
+                    skuColSelect.disabled = parentColSelect.disabled = false;
+
+                    const find = (keys) => allColumns.find(c => keys.some(k => c.toLowerCase().includes(k)));
+                    const matchedSku = find(['sku', '商品编码']) || '';
+                    const matchedParent = find(['父', 'parent']) || '';
+                    skuColSelect.value = matchedSku;
+                    parentColSelect.value = matchedParent;
+
+                    log(`📊 已加载工作表 "${currentSheetName}"，共 ${rawDataRows.length} 行，${allColumns.length} 列`,
+                        'info');
+                    if (matchedSku) log(`🔑 自动匹配SKU列: "${matchedSku}"`, 'success');
+                    else log('⚠️ 未找到SKU列，请手动选择', 'error');
+                    if (matchedParent) log(`🔗 自动匹配父SKU列: "${matchedParent}"`, 'success');
+                    else log('⚠️ 未找到父SKU列，请手动选择', 'error');
+
+                    // 映射列检查
+                    try {
+                        const mapping = JSON.parse(mappingEditor.getValue());
+                        Object.entries(mapping).forEach(([key, colName]) => {
+                            if (allColumns.includes(colName)) {
+                                log(`📌 映射列 "${colName}" (${key}) 存在`, 'info');
+                            } else {
+                                log(`❌ 映射列 "${colName}" (${key}) 不存在于表格中`, 'error');
+                            }
+                        });
+                    } catch (e) {}
+
+                    dataStatus.textContent = `✅ 已加载 ${rawDataRows.length} 行`;
+                } catch (e) {
+                    log('加载工作表失败', 'error');
+                }
+            }
+
+            function handleFile(file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                        sheetSelect.innerHTML = workbook.SheetNames.map(n => `<option>${n}</option>`).join('');
+                        sheetSelect.disabled = false;
+                        currentSheetName = workbook.SheetNames[0];
+                        sheetSelect.value = currentSheetName;
+                        loadSheet();
+                        log(`📁 文件 "${file.name}" 已加载`, 'info');
+                    } catch (ex) { log('文件解析失败', 'error'); }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            // ─────────────── 折叠功能（映射配置）───────────────
+            function initMappingCollapse() {
+                const saved = localStorage.getItem('mapping_editor_collapsed');
+                const collapsed = saved === 'true';
+                applyMappingCollapse(collapsed, false);
+
+                mappingToggleHeader.addEventListener('click', () => {
+                    const isNowCollapsed = mappingCollapseWrapper.classList.contains(
+                        'expanded-content-mapping');
+                    const newCollapsed = isNowCollapsed;
+                    applyMappingCollapse(newCollapsed, true);
+                    localStorage.setItem('mapping_editor_collapsed', newCollapsed ? 'true' : 'false');
+                });
+            }
+
+            function applyMappingCollapse(collapsed, animate) {
+                if (collapsed) {
+                    mappingCollapseWrapper.className = 'collapsed-content';
+                    mappingToggleIcon.className = 'fa-solid fa-chevron-right text-gray-400';
+                } else {
+                    mappingCollapseWrapper.className = 'expanded-content-mapping';
+                    mappingToggleIcon.className = 'fa-solid fa-chevron-down text-gray-400';
+                }
+                if (animate && mappingEditor) {
+                    setTimeout(() => mappingEditor.refresh(), 350);
+                }
+            }
+
+            // ─────────────── 折叠功能（处理函数）───────────────
+            function initCodeCollapse() {
+                const saved = localStorage.getItem('code_editor_collapsed');
+                const collapsed = saved === 'true';
+                applyCodeCollapse(collapsed, false);
+
+                codeToggleHeader.addEventListener('click', () => {
+                    const isNowCollapsed = codeCollapseWrapper.classList.contains('expanded-content');
+                    const newCollapsed = isNowCollapsed;
+                    applyCodeCollapse(newCollapsed, true);
+                    localStorage.setItem('code_editor_collapsed', newCollapsed ? 'true' : 'false');
+                });
+            }
+
+            function applyCodeCollapse(collapsed, animate) {
+                if (collapsed) {
+                    codeCollapseWrapper.className = 'collapsed-content';
+                    codeToggleIcon.className = 'fa-solid fa-chevron-right text-gray-400';
+                } else {
+                    codeCollapseWrapper.className = 'expanded-content';
+                    codeToggleIcon.className = 'fa-solid fa-chevron-down text-gray-400';
+                }
+                if (animate && codeEditor) {
+                    setTimeout(() => codeEditor.refresh(), 350);
+                }
+            }
+
+            // ─────────────── 全屏功能 ───────────────
+            function toggleFullscreen(cardEl, editorInstance, btnEl) {
+                const isFullscreen = cardEl.classList.contains('fullscreen-card');
+                if (isFullscreen) {
+                    cardEl.classList.remove('fullscreen-card');
+                    btnEl.innerHTML = '<i class="fa-solid fa-expand"></i>';
+                    // 恢复默认高度
+                    if (editorInstance) {
+                        setTimeout(() => {
+                            editorInstance.refresh();
+                            editorInstance.setSize('100%', 'auto');
+                        }, 100);
+                    }
+                } else {
+                    cardEl.classList.add('fullscreen-card');
+                    btnEl.innerHTML = '<i class="fa-solid fa-compress"></i>';
+                    if (editorInstance) {
+                        setTimeout(() => {
+                            editorInstance.refresh();
+                            editorInstance.setSize('100%', '100%');
+                        }, 100);
+                    }
+                }
+            }
+
+            mappingFullscreenBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFullscreen(mappingCard, mappingEditor, mappingFullscreenBtn);
+            });
+
+            codeFullscreenBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFullscreen(codeCard, codeEditor, codeFullscreenBtn);
+            });
+
+            // ESC 退出全屏
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (mappingCard.classList.contains('fullscreen-card')) {
+                        toggleFullscreen(mappingCard, mappingEditor, mappingFullscreenBtn);
+                    }
+                    if (codeCard.classList.contains('fullscreen-card')) {
+                        toggleFullscreen(codeCard, codeEditor, codeFullscreenBtn);
+                    }
+                }
+            });
+
+            // 星空
+            function createStars() {
+                const c = $('stars');
+                if (!c) return;
+                const frag = document.createDocumentFragment();
+                for (let i = 0; i < 120; i++) {
+                    const s = document.createElement('div');
+                    s.className = 'star';
+                    s.style.width = s.style.height = Math.random() * 2 + 1 + 'px';
+                    s.style.left = Math.random() * 100 + '%';
+                    s.style.top = Math.random() * 100 + '%';
+                    s.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+                    s.style.setProperty('--delay', Math.random() * 4 + 's');
+                    frag.appendChild(s);
+                }
+                c.appendChild(frag);
+            }
+
+            function initEditors() {
+                mappingEditor = CodeMirror(mappingContainer, {
+                    value: currentConfig.mapping,
+                    mode: 'application/json',
+                    theme: 'material-darker',
+                    lineNumbers: true,
+                    matchBrackets: true,
+                    tabSize: 2
+                });
+                codeEditor = CodeMirror(codeContainer, {
+                    value: currentConfig.code,
+                    mode: 'javascript',
+                    theme: 'material-darker',
+                    lineNumbers: true,
+                    matchBrackets: true,
+                    tabSize: 2,
+                    indentUnit: 2,
+                    viewportMargin: Infinity
+                });
+                mappingEditor.setSize('100%', '100px');
+                codeEditor.setSize('100%', '420px');
+            }
+
+            // 事件绑定
+            fileInput.addEventListener('change', e => e.target.files[0] && handleFile(e.target.files[0]));
+            loadSheetBtn.addEventListener('click', () => { if (workbook) { currentSheetName = sheetSelect.value;
+                    loadSheet(); } });
+            runProcessBtn.addEventListener('click', runProcess);
+            exportBtn.addEventListener('click', exportData);
+            saveConfigBtn.addEventListener('click', () => {
+                const name = prompt('方案名称：', currentConfig.name || '新方案');
+                if (!name) return;
+                const cfgs = loadConfigs();
+                const newCfg = getCurrentFullConfig();
+                newCfg.name = name;
+                const exist = cfgs.findIndex(c => c.name === name);
+                if (exist >= 0) cfgs[exist] = newCfg;
+                else cfgs.push(newCfg);
+                saveConfigs(cfgs);
+                currentConfig.name = name;
+                log('方案已保存', 'success');
+            });
+            exportConfigBtn.addEventListener('click', () => {
+                const blob = new Blob([JSON.stringify(loadConfigs(), null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'variant_configs.json';
+                a.click();
+            });
+            importConfigFile.addEventListener('change', e => {
+                const f = e.target.files[0];
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    try {
+                        const cfgs = JSON.parse(ev.target.result);
+                        saveConfigs(cfgs);
+                        log(`导入 ${cfgs.length} 个方案`, 'success');
+                    } catch { log('无效JSON文件', 'error'); }
+                    importConfigFile.value = '';
+                };
+                r.readAsText(f);
+            });
+            resetMappingBtn.addEventListener('click', () => { mappingEditor.setValue(DEFAULT_MAPPING); });
+            resetCodeBtn.addEventListener('click', () => { codeEditor.setValue(DEFAULT_CODE); });
+            document.body.addEventListener('dragover', e => e.preventDefault());
+            document.body.addEventListener('drop', e => {
+                e.preventDefault();
+                if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+            });
+
+            createStars();
+            initEditors();
+            initMappingCollapse();
+            initCodeCollapse();
+            renderConfigList();
+            log('🚀 系统就绪，请上传Excel文件');
+        })();
+    </script>
+</body>
+</html>
