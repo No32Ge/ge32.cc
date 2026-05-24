@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amigray | 意识投影 - 筛选与操作</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;600;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --flesh-blood: #3a0005;  /* 深色宫缩红 */
+            --fresh-blood: #a1001e;  /* 湿润的充血红 */
+            --semen-white: #f7f9fc;  /* 粘稠的苍白体液 */
+            --egg-pink: #ff527e;     /* 原始粉红 */
+            --void-black: #050000;   /* 阴影黑 */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: none; /* 隐藏默认鼠标 */
+        }
+
+        body {
+            background-color: var(--void-black);
+            font-family: 'Noto Serif SC', serif;
+            color: var(--semen-white);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- 1. 蠕动的阴道肉壁（使用置换滤镜，制造肌肉收缩蠕动的幻觉） --- */
+        .flesh-wall {
+            position: fixed;
+            top: -10vh;
+            left: -10vw;
+            width: 120vw;
+            height: 120vh;
+            background: radial-gradient(circle at center, var(--fresh-blood) 0%, var(--flesh-blood) 55%, var(--void-black) 100%);
+            filter: url('#flesh-writhing'); /* 调用下方的蠕动滤镜 */
+            z-index: 1;
+            animation: writhe 14s infinite alternate ease-in-out;
+            pointer-events: none;
+        }
+
+        @keyframes writhe {
+            0% { transform: scale(1) translate(0, 0) rotate(0deg); }
+            50% { transform: scale(1.05) translate(-1%, 2%) rotate(1deg); }
+            100% { transform: scale(1.08) translate(1%, -1%) rotate(-1deg); }
+        }
+
+        /* --- 2. 穿行于文字中的精子 Canvas 图层 (置于文字上方并使用混合模式) --- */
+        #sperm-swim-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 15; /* 处于文字层（z-index 10）之上 */
+            pointer-events: none;
+            mix-blend-mode: screen; /* 开启混合，让精子在划过文字时产生真实的透光交融 */
+        }
+
+        /* --- 3. 极简精液滴落图层（鼠标轨迹） --- */
+        #gooey-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .liquid-drop {
+            position: absolute;
+            background-color: var(--semen-white);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: drip 1.5s forwards cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes drip {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+            50% { transform: translate(-50%, calc(-50% + 40px)) scale(0.6); opacity: 0.7; }
+            100% { transform: translate(-50%, calc(-50% + 120px)) scale(0); opacity: 0; }
+        }
+
+        /* --- 4. 湿润的细胞膜式文字容器 --- */
+        .container {
+            position: relative;
+            z-index: 10; /* 文字置于肉壁与精子之间 */
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 8vh 24px 15vh;
+        }
+
+        /* 膜状玻璃面板 */
+        .membrane-panel {
+            background: rgba(15, 0, 2, 0.85);
+            border: 2px solid rgba(255, 82, 126, 0.15);
+            border-radius: 16px;
+            padding: 4.5rem 3.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), inset 0 0 40px rgba(255, 30, 80, 0.08);
+            backdrop-filter: blur(8px);
+        }
+
+        /* Markdown 各元素样式映射 */
+        .membrane-panel h1 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            margin-bottom: 2rem;
+            color: #ffffff;
+            border-bottom: 1px solid rgba(255, 82, 126, 0.2);
+            padding-bottom: 1rem;
+            letter-spacing: 0.1rem;
+            line-height: 1.3;
+        }
+
+        .membrane-panel h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-top: 3.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--semen-white);
+            border-left: 4px solid var(--egg-pink);
+            padding-left: 1rem;
+        }
+
+        .membrane-panel h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--egg-pink);
+        }
+
+        .membrane-panel p {
+            font-size: 1.05rem;
+            line-height: 1.9;
+            font-weight: 300;
+            color: rgba(247, 249, 252, 0.9);
+            margin-bottom: 1.8rem;
+            text-align: justify;
+        }
+
+        .membrane-panel strong {
+            color: #ffffff;
+            background: rgba(255, 82, 126, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .membrane-panel hr {
+            border: none;
+            border-top: 1px dashed rgba(255, 82, 126, 0.2);
+            margin: 3rem 0;
+        }
+
+        /* 列表渲染 */
+        .membrane-panel ul {
+            margin-bottom: 2rem;
+            padding-left: 1.5rem;
+        }
+
+        .membrane-panel li {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 0.8rem;
+            color: rgba(247, 249, 252, 0.85);
+        }
+
+        /* 表格渲染：极致优化，符合暗红肉膜质感 */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            margin: 2.5rem 0;
+            border: 1px solid rgba(255, 82, 126, 0.2);
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 82, 126, 0.15);
+        }
+
+        th {
+            background-color: rgba(255, 30, 80, 0.15);
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        td {
+            background-color: rgba(10, 0, 2, 0.5);
+            color: rgba(247, 249, 252, 0.9);
+            line-height: 1.5;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 统一返回导航 */
+        .back-nav {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 0.3rem;
+            color: rgba(255, 255, 255, 0.3);
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 4vh;
+            transition: color 0.3s;
+        }
+
+        .back-nav:hover {
+            color: var(--semen-white);
+            text-shadow: 0 0 10px var(--semen-white);
+        }
+
+        @media (max-width: 768px) {
+            .membrane-panel { padding: 2.5rem 1.5rem; }
+            .membrane-panel h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 蠕动的肌肉内壁 SVG 物理置换滤镜 -->
+    <svg style="display:none;">
+        <defs>
+            <!-- 利用 fractalNoise（分形噪点）与 feDisplacementMap 制造肉体蠕动的波动位移 -->
+            <filter id="flesh-writhing">
+                <feTurbulence type="fractalNoise" baseFrequency="0.012 0.015" numOctaves="3" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="35" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+        </defs>
+    </svg>
+    <div class="flesh-wall"></div>
+
+    <!-- 2. 精子穿行文字 Canvas 渲染层 -->
+    <canvas id="sperm-swim-layer"></canvas>
+
+    <!-- 3. 用于鼠标滑落白色轨迹的通用层 -->
+    <div id="gooey-layer"></div>
+
+    <!-- 4. 意识容器 -->
+    <div class="container">
+        <a href="#" class="back-nav" onclick="history.back(); return false;">← [ MATRIX_EXIT ]</a>
+        
+        <!-- Markdown 渲染目标容器 -->
+        <div class="membrane-panel" id="render-target">
+            <!-- 由 JS 动态渲染 Markdown -->
+        </div>
+    </div>
+
+    <script>
+        // --- A. JSON 格式的数据源：随时可以替换为其他的 Markdown 文本 ---
+        const articleJSON = {
+            title: "逼的筛选与操作指南",
+            subtitle: "如何判断一个逼能不能成为人，以及分别怎么处理",
+            markdown: `# 逼的筛选与操作指南
+
+## 如何判断一个逼能不能成为人，以及分别怎么处理
+
+
+### 核心原理
+
+逼有三种：
+
+1. **纯逼** —— 底层逻辑是“价值攀爬”。她永远在找更好的房间、更强的鸡巴。跟你在一起只是因为目前你是最优解，一旦出现更高分的，她会无缝切换。这种人你留不住，也没必要留。
+2. **准人** —— 底层逻辑是“价值+连接”。她看重你能提供什么，但也有情感需求、忠诚倾向、共同经历的内化能力。这种人有可能成为伴侣，但需要时间和正确的操作。
+3. **人** —— 已经被共同经历塑造成了“非你不可”。她不会轻易走，不是因为枷锁，是因为你已经是她世界的一部分。这种人你不需要“留住”，她自然会留下。
+
+大多数人遇到的都是前两种。而纯逼和准人的操作策略完全不同——搞反了，你会输得裤衩都不剩。
+
+---
+
+## 第一步：判断她是纯逼还是准人
+
+以下指标，诚实打分。**不要因为你想操她就骗自己。**
+
+| 指标 | 纯逼（红色警报） | 准人（黄色/绿色） |
+| :--- | :--- | :--- |
+| **过去感情史** | 每段不超过1年；无缝衔接；理由都是“不合适/他不够好” | 有过2年以上关系；分手后有明显的空窗期；愿意承认自己也有问题 |
+| **社交动态** | 朋友圈精修、展示高端生活、频繁发“独立女性”人设；关注点在“变美/搞钱/提升自己” | 有生活碎片、有真实的情绪、不刻意打造人设 |
+| **跟你相处的模式** | 你持续付出（请客、送礼、接送），她只接受不反馈；她的“主动”仅限于你释放高价值时 | 她也会主动付出（时间、小礼物、关心）；她有“亏欠感” |
+| **对未来的态度** | 从不聊未来，或者聊的都是“我想去XX/我想买XX”但主语是“我”不是“我们” | 偶尔聊“以后我们…”，哪怕只是开玩笑 |
+| **对待其他追求者的态度** | 不拒绝、不公开、留备胎；手机永远扣着放 | 主动拒绝、公开有对象、不给你吃醋的机会 |
+| **冲突反应** | 一吵架就冷战、提分手、找别人倾诉 | 愿意吵完冷静了再聊，不轻易用分手威胁 |
+| **核心焦虑** | “我能不能找到更好的” | “我们能不能走下去” |
+
+**判断规则**：
+
+- 3个以上红色警报 → **纯逼**。不要有任何幻想。
+- 1-2个红色且没有致命项 → **准人**。可以尝试，但要按正确方式操作。
+- 0红色 → 已经是人了，不需要这篇指南。
+
+---
+
+## 第二步：纯逼的操作——别留，用
+
+纯逼不是坏人，她只是**不适合长期**。你要做的不是改造她，是**正确使用她**。
+
+**使用原则**：
+
+1. **不投入情感**。你能接受她明天走，才碰她。
+2. **不投入过多资源**。一顿饭、一晚酒、一间房。超过这个预算，不值得。
+3. **不暴露需求感**。她问你“我们什么关系”，就说“开心就好，你定”。不要表白，不要承诺。
+4. **不改变她**。别幻想“她对我跟对别人不一样”。不会的。你是她爬升过程中的一个台阶，不是终点。
+5. **保持其他选项**。你也在找更好的房间，跟她一样。公平竞争。
+
+**什么时候扔掉**：她开始要你买包、要你陪她旅行、要你帮她解决工作问题——这些都是“价值提取”。你给一次，她就要第二次。不给，她就冷你。冷你的时候，你就直接撤。不用吵，不用删，就当没这个人。
+
+**纯逼的最终归宿**：她会找到一个愿意被她吸干的傻逼，或者到30+发现没得选了开始“踏实过日子”。但那个踏实也不是因为你，是因为她的市场贬值了。你不需要当她的终点站。
+
+---
+
+## 第三步：准人的操作——从“逼”到“人”的转化
+
+准人是有可能成为伴侣的，但她需要**被你转化**。转化不是靠说服，是靠**制造独特性**。
+
+**核心流程**：
+
+### 3.1 前期（前3个月）：展示价值 + 筛选
+
+- 正常展示价值（收入、外貌、社交圈），但**不要过度付出**。
+- 观察她在你低价值时刻的反应。比如你生病、失业、情绪低落的某一天——她是不耐烦还是主动关心？
+- 如果她只在你高价值时热情，低价值时冷淡，那她其实是纯逼。退回第一步的判断。
+
+### 3.2 中期（3-12个月）：制造不可替代的连接
+
+- **共同经历困难**：一起完成一个有挑战的任务（长途旅行、搬家、准备某个考试）、或者你主动在她脆弱时出现（她生病、被老板骂、亲人出事）。困难建立的连接，比快乐牢固10倍。
+- **让她为你付出**：不是索取，是自然发生的——她帮你做了一顿饭、陪你熬夜改简历、送你一个小礼物。每次她付出，她在心里的“你值不值得”天平就会向你倾斜。
+- **建立内部梗**：只有你们俩懂的暗号、笑话、记忆。这是低成本高回报的独特性。
+
+### 3.3 后期（1年以后）：风险共担
+
+- 一起存钱、一起做决定（买家具、养宠物）、一起面对她的家庭压力。
+- 当你们有了共同的经济实体、共同的社会关系（互相认识对方的朋友家人）、共同的未来计划——她就很难走了。不是因为枷锁，是因为拆开的成本太高了。
+
+---
+
+## 第四步：你也要被筛选
+
+整篇指南一直说“你判断她”，但她也同时在判断你。
+
+**如果你自身就是纯鸡巴**（只想操、不想负责、永远在看别的逼），那你遇到的所有逼都会是纯逼——因为你只配吸引纯逼，而且你也没有能力把准人转化成人。
+
+要留住人，你首先得是一个**值得被留的人**。这不是道德，这是市场匹配。
+
+---
+
+## 总结（操作清单）
+
+1. **判断**：用7个指标，3红以上是纯逼，1-2红是准人。
+2. **纯逼**：不投入情感和资源，只当短期玩具，随时可扔。
+3. **准人**：前3个月展示价值+筛选，3-12个月制造独特性（困难+付出+内部梗），1年以上风险共担。
+4. **你自己**：别当纯鸡巴，否则你永远遇不到准人。
+5. **核心**：逼是留不住的。但人不需要留。她会在你身边，因为她不想走。而这件事，90%取决于你选对了人，10%取决于你做了对的事。选人比办事重要100倍。`
+        };
+
+        // --- B. 极简、健壮的 Markdown 解析引擎（完美翻译 headings, tables, lists, strong） ---
+        function renderMarkdown(md) {
+            const lines = md.split('\n');
+            let html = '';
+            let inList = false;
+            let inTable = false;
+            let tableHeaderParsed = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+
+                // 1. 空行处理：闭合可能悬挂的列表或表格
+                if (line === '') {
+                    if (inList) { html += '</ul>'; inList = false; }
+                    if (inTable) { html += '</tbody></table></div>'; inTable = false; tableHeaderParsed = false; }
+                    continue;
+                }
+
+                // 2. 水平分割线
+                if (line === '---') {
+                    html += '<hr>';
+                    continue;
+                }
+
+                // 3. 标题解析 (#、##、###)
+                if (line.startsWith('# ')) {
+                    html += `<h1>${parseInline(line.slice(2))}</h1>`;
+                    continue;
+                }
+                if (line.startsWith('## ')) {
+                    html += `<h2>${parseInline(line.slice(3))}</h2>`;
+                    continue;
+                }
+                if (line.startsWith('### ')) {
+                    html += `<h3>${parseInline(line.slice(4))}</h3>`;
+                    continue;
+                }
+
+                // 4. 无序列表解析 (- 或 *)
+                if (line.startsWith('- ') || line.startsWith('* ')) {
+                    if (!inList) {
+                        html += '<ul>';
+                        inList = true;
+                    }
+                    html += `<li>${parseInline(line.slice(2))}</li>`;
+                    continue;
+                }
+
+                // 5. 表格解析（完美处理原生 markdown table）
+                if (line.startsWith('|')) {
+                    if (!inTable) {
+                        html += '<div class="table-wrapper"><table>';
+                        inTable = true;
+                        tableHeaderParsed = false;
+                    }
+                    const cells = line.split('|').map(c => c.trim()).filter((c, idx, arr) => idx > 0 && idx < arr.length - 1);
+                    
+                    // 略过表格分隔线 row
+                    if (cells.every(c => c.startsWith(':') || c.startsWith('-') || c.endsWith('-'))) {
+                        continue;
+                    }
+
+                    if (!tableHeaderParsed) {
+                        html += '<thead><tr>' + cells.map(c => `<th>${parseInline(c)}</th>`).join('') + '</tr></thead><tbody>';
+                        tableHeaderParsed = true;
+                    } else {
+                        html += '<tr>' + cells.map(c => `<td>${parseInline(c)}</td>`).join('') + '</tr>';
+                    }
+                    continue;
+                }
+
+                // 6. 默认段落处理
+                if (inList) { html += '</ul>'; inList = false; }
+                if (inTable) { html += '</tbody></table></div>'; inTable = false; tableHeaderParsed = false; }
+                html += `<p>${parseInline(line)}</p>`;
+            }
+
+            // 补收可能未闭合的标签
+            if (inList) html += '</ul>';
+            if (inTable) html += '</tbody></table></div>';
+
+            return html;
+        }
+
+        // 内联强音标签翻译
+        function parseInline(text) {
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        }
+
+        // 执行渲染
+        document.getElementById('render-target').innerHTML = renderMarkdown(articleJSON.markdown);
+
+
+        // --- C. 精子穿行画布引擎 (Canvas) ---
+        const canvas = document.getElementById('sperm-swim-layer');
+        const ctx = canvas.getContext('2d');
+
+        let spermArray = [];
+        const numSperm = 15; // 限制数量，保持高贵感
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Sperm {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 1.5 + 0.8; // 穿过文字的速度较缓慢优雅
+                this.size = Math.random() * 2.5 + 2.5;  
+                this.wiggleSpeed = Math.random() * 0.12 + 0.12; 
+                this.time = Math.random() * 100;
+                this.history = [];
+                this.maxHistory = 15; 
+            }
+
+            update() {
+                this.time += this.wiggleSpeed;
+                
+                // 偶尔缓慢偏转游动方向
+                this.angle += (Math.random() - 0.5) * 0.12;
+                
+                const vx = Math.cos(this.angle) * this.speed;
+                const vy = Math.sin(this.angle) * this.speed;
+                this.x += vx;
+                this.y += vy;
+
+                // 越界重置（保持在阴道空间内无限流淌）
+                if (this.x < -50) this.x = canvas.width + 50;
+                if (this.x > canvas.width + 50) this.x = -50;
+                if (this.y < -50) this.y = canvas.height + 50;
+                if (this.y > canvas.height + 50) this.y = -50;
+
+                this.history.push({ x: this.x, y: this.y });
+                if (this.history.length > this.maxHistory) {
+                    this.history.shift();
+                }
+            }
+
+            draw() {
+                // 1. 绘制摇摆摆动的尾巴（鞭毛）
+                if (this.history.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.history[0].x, this.history[0].y);
+                    
+                    for (let i = 1; i < this.history.length; i++) {
+                        const segment = this.history[i];
+                        const progress = i / this.history.length;
+                        const wave = Math.sin(this.time - i * 0.45) * (1 - progress) * 3;
+                        const perpAngle = this.angle + Math.PI / 2;
+                        const wx = segment.x + Math.cos(perpAngle) * wave;
+                        const wy = segment.y + Math.sin(perpAngle) * wave;
+                        ctx.lineTo(wx, wy);
+                    }
+                    
+                    ctx.strokeStyle = 'rgba(247, 249, 252, 0.3)'; // 极佳的尾随透明度
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+
+                // 2. 绘制卵圆形的头部
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.4, this.size, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(247, 249, 252, 0.75)'; // 在混合模式下会完美点亮底色
+                ctx.shadowColor = '#f7f9fc';
+                ctx.shadowBlur = 5;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // 初始化
+        function initSperm() {
+            spermArray = [];
+            for (let i = 0; i < numSperm; i++) {
+                spermArray.push(new Sperm());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            spermArray.forEach(s => {
+                s.update();
+                s.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        initSperm();
+        animate();
+
+
+        // --- D. 鼠标滑落精液效果 ---
+        const gooeyLayer = document.getElementById('gooey-layer');
+        document.addEventListener('mousemove', function(e) {
+            if (Math.random() > 0.45) return; // 优化性能，不生硬卡顿
+            createSemenDrop(e.pageX, e.pageY);
+        });
+
+        function createSemenDrop(x, y) {
+            const drop = document.createElement('div');
+            drop.className = 'liquid-drop';
+            drop.style.left = x + 'px';
+            drop.style.top = y + 'px';
+            
+            const size = Math.random() * 15 + 6;
+            drop.style.width = size + 'px';
+            drop.style.height = size + 'px';
+
+            gooeyLayer.appendChild(drop);
+
+            setTimeout(() => {
+                drop.remove();
+            }, 1500);
+        }
+
+    </script>
+</body>
+</html>
