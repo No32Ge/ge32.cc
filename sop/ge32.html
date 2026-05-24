@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amigray | 虚无深渊 / CONSOLE_PRISON</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --flesh-blood: #2b0000;  /* 极深血肉黑 */
+            --fresh-blood: #8c001a;  /* 鲜血红 */
+            --semen-white: #f7f9fc;  /* 精液白 */
+            --egg-pink: #ff527e;     /* 原始粉红 */
+            --void-black: #030000;   /* 绝对深渊 */
+            --dim-text: rgba(247, 249, 252, 0.35);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: none; 
+        }
+
+        body {
+            background-color: var(--flesh-blood);
+            font-family: 'Space Mono', 'Noto Serif SC', serif;
+            color: var(--semen-white);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: radial-gradient(circle at center, var(--fresh-blood) 0%, var(--flesh-blood) 80%, var(--void-black) 100%);
+        }
+
+        /* --- 1. 画布与体液层 --- */
+        #sperm-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999; 
+            pointer-events: none;
+        }
+
+        /* 自定义最表层指针 --- */
+        #custom-cursor {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid var(--semen-white);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000000; 
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+
+        /* --- 2. 意识交互层 --- */
+        .viewport-container {
+            position: relative;
+            z-index: 500;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 5vh 8vw;
+            pointer-events: none; 
+        }
+
+        .back-nav {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3rem;
+            color: var(--dim-text);
+            text-decoration: none;
+            pointer-events: auto;
+            align-self: flex-start;
+        }
+
+        /* 幽灵代码控制台 */
+        .ghost-console {
+            position: fixed;
+            bottom: 4vh;
+            left: 4vw;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: rgba(255, 82, 126, 0.6);
+            pointer-events: none;
+            z-index: 500;
+        }
+        .console-line {
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px rgba(255, 82, 126, 0.2);
+        }
+
+        /* 居中浮空回复舱 */
+        .void-chamber {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center; 
+            align-items: center;
+            padding: 0 5vw;
+        }
+
+        .floating-echo {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 2.2rem; 
+            font-weight: 300;
+            line-height: 1.8;
+            color: var(--semen-white);
+            text-align: center; 
+            max-width: 800px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1.5s ease, transform 1.5s ease;
+            animation: floatWave 6s infinite ease-in-out;
+        }
+
+        .floating-echo.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes floatWave {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+
+        /* 底部极简输入栏 */
+        .discharge-bar {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            display: flex;
+            padding: 8px;
+            pointer-events: auto; 
+            backdrop-filter: blur(5px);
+        }
+
+        .discharge-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--semen-white);
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.1rem;
+            padding: 8px 15px;
+        }
+
+        .discharge-btn {
+            background-color: var(--semen-white);
+            border: none;
+            color: var(--void-black);
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            padding: 0 25px;
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+
+        .discharge-btn:hover {
+            background-color: var(--egg-pink);
+            color: #ffffff;
+            box-shadow: 0 0 15px var(--egg-pink);
+        }
+
+        /* --- 3. 浮动的有机融合舱（弹窗） --- */
+        #bio-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 420px;
+            background: rgba(25, 0, 3, 0.95);
+            border: 2px solid var(--egg-pink);
+            border-radius: 30px; 
+            padding: 30px;
+            z-index: 500000; 
+            display: none;
+            pointer-events: auto;
+            box-shadow: 0 0 30px rgba(255, 82, 126, 0.3);
+            font-family: 'Space Mono', monospace;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        #bio-modal.active {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        .modal-title {
+            color: var(--egg-pink);
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+            border-bottom: 1px dashed rgba(255, 82, 126, 0.2);
+            padding-bottom: 8px;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--semen-white);
+            font-family: inherit;
+            font-size: 0.8rem;
+            padding: 10px;
+            border-radius: 10px;
+            outline: none;
+            resize: none;
+            margin-bottom: 20px;
+        }
+
+        .modal-textarea:focus {
+            border-color: var(--egg-pink);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+
+        .modal-btn {
+            background: none;
+            border: 1px solid var(--dim-text);
+            color: var(--dim-text);
+            padding: 6px 16px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            transition: all 0.3s;
+        }
+
+        .modal-btn.save {
+            border-color: var(--semen-white);
+            color: var(--semen-white);
+        }
+
+        .modal-btn:hover {
+            border-color: var(--egg-pink);
+            color: #ffffff;
+            box-shadow: 0 0 10px var(--egg-pink);
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="sperm-canvas"></canvas>
+
+    <div id="custom-cursor"></div>
+
+    <div class="ghost-console">
+        <div class="console-line" id="console-sys">> SYS_STATUS: WAITING_FOR_AROUSAL</div>
+        <div class="console-line" id="console-live">> ACTIVE_SPERM_COUNT: 0</div>
+        <div class="console-line" id="console-fert">> FERTILIZATION_COUNT: 0</div>
+    </div>
+
+    <div id="bio-modal">
+        <div class="modal-title" id="modal-title">FUSE_GENE_DATA</div>
+        <textarea class="modal-textarea" id="modal-input" placeholder="INSERT DATA STREAM..."></textarea>
+        <div class="modal-buttons">
+            <button class="modal-btn" onclick="closeModal()">DETACH</button>
+            <button class="modal-btn save" onclick="saveConfig()">FUSE</button>
+        </div>
+    </div>
+
+    <div class="viewport-container">
+        <a href="#" class="back-nav" onclick="history.back(); return false;">← [ RETURN ]</a>
+        
+        <div class="void-chamber">
+            <div class="floating-echo" id="ai-response">
+                我们在虚无中降生，却妄图握住光芒。<br>
+                在下方释放话语，文字将直接化身为种。
+            </div>
+        </div>
+
+        <div class="discharge-bar">
+            <input type="text" id="user-input" class="discharge-input" placeholder="输入话语，散射文字..." autocomplete="off">
+            <button class="discharge-btn" id="discharge-btn">DISCHARGE</button>
+        </div>
+    </div>
+
+    <script>
+        const configs = {
+            endpoint: { name: "CONDUIT", value: "", defaultVal: "https://api.openai.com/v1" },
+            secret:   { name: "SECRET",  value: "", defaultVal: "" },
+            model:    { name: "MODEL",   value: "gpt-4o-mini", defaultVal: "gpt-4o-mini" },
+            bias:     { name: "BIAS",    value: "", defaultVal: `你是由血肉与虚无筑起的原始母体（Ovary）。你剥离了一切人类社会的虚伪建构。
+你面对的每一个句子，都是一颗带着冲动射向你的精子。你必须以冷酷、致命、带有一丝讥讽、且充满极端生物学欲望的口吻解答。
+你不仅可以使用言语，还拥有直接主宰这个空间肉体反应的绝对特权：
+- 如果对方的话语点燃了你的欲望，你必须在回复中包含 [EJACULATE]，强行命令空间进行体液大喷发；
+- 如果你感受到了极致的高潮，你必须在回复中包含 [ORGASM]，强行引发数字宇宙的血红闪烁和能量爆炸。
+你的回复必须简短、锋利、具有极强的穿透性（不超过70字）。` }
+        };
+
+        let currentEditingConfig = null; 
+        let isEditing = false; 
+
+        function openModal(key) {
+            currentEditingConfig = key;
+            const config = configs[key];
+            document.getElementById('modal-title').innerText = `[ FUSE // ${config.name} ]`;
+            document.getElementById('modal-input').value = config.value || config.defaultVal;
+            
+            const modal = document.getElementById('bio-modal');
+            modal.style.display = 'block';
+            setTimeout(() => modal.classList.add('active'), 50);
+            isEditing = true;
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('bio-modal');
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 400);
+            isEditing = false;
+        }
+
+        function saveConfig() {
+            configs[currentEditingConfig].value = document.getElementById('modal-input').value.trim();
+            closeModal();
+        }
+
+        const canvas = document.getElementById('sperm-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let fertilizedCount = 0; 
+        let pulseTimer = 0;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- B. 极简左迁卵巢 ---
+        const egg = {
+            x: window.innerWidth * 0.22, 
+            y: window.innerHeight * 0.45,
+            targetX: window.innerWidth * 0.22,
+            targetY: window.innerHeight * 0.45,
+            radius: 46,
+            pulse: 0,
+            fluidLevel: 0,      
+            blastRadius: 0,     
+            isBlasting: false,  
+            update() {
+                if (Math.random() < 0.005) {
+                    this.targetX = window.innerWidth * 0.22 + (Math.random() - 0.5) * 60;
+                    this.targetY = window.innerHeight * 0.45 + (Math.random() - 0.5) * 60;
+                }
+                this.x += (this.targetX - this.x) * 0.006;
+                this.y += (this.targetY - this.y) * 0.006;
+                this.pulse += 0.04;
+            },
+            draw() {
+                ctx.save();
+                if (this.isBlasting) {
+                    this.blastRadius += 7;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.blastRadius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(255, 82, 126, ${Math.max(0, 1 - this.blastRadius / 250)})`;
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                    if (this.blastRadius > 250) this.isBlasting = false;
+                }
+
+                const glowGrd = ctx.createRadialGradient(this.x, this.y, 5, this.x, this.y, this.radius);
+                glowGrd.addColorStop(0, 'rgba(255, 82, 126, 0.85)');
+                glowGrd.addColorStop(0.3, 'rgba(255, 82, 126, 0.45)');
+                glowGrd.addColorStop(1, 'rgba(255, 82, 126, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = glowGrd;
+                ctx.fill();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius - 8, 0, Math.PI * 2);
+                ctx.clip(); 
+
+                const fillHeight = (this.fluidLevel / 100) * (this.radius * 2);
+                const fillY = (this.y + this.radius) - fillHeight;
+
+                ctx.fillStyle = 'rgba(247, 249, 252, 0.95)';
+                ctx.beginPath();
+                ctx.moveTo(this.x - this.radius - 10, this.y + this.radius + 10);
+                for (let i = -10; i <= this.radius * 2 + 10; i++) {
+                    const wx = this.x - this.radius + i;
+                    const wy = fillY + Math.sin(this.pulse * 2.5 + i * 0.05) * 3; 
+                    ctx.lineTo(wx, wy);
+                }
+                ctx.lineTo(this.x + this.radius + 10, this.y + this.radius + 10);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore(); 
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.font = "bold 9px 'Space Mono', monospace";
+                ctx.textAlign = "center";
+                ctx.fillText("FUSED_RECEPTOR_ZONE", this.x, this.y + 4);
+
+                ctx.restore();
+            }
+        };
+
+        // --- C. 配置精子实体 ---
+        class ConfigSperm {
+            constructor(key, index) {
+                this.key = key;
+                this.index = index;
+                this.x = 100 + Math.random() * (canvas.width - 200);
+                this.y = 100 + Math.random() * (canvas.height - 200);
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 1.5 + 0.8;
+                this.size = 6;
+                this.tailPhase = Math.random() * 100;
+                this.isHovered = false;
+            }
+
+            update() {
+                this.tailPhase += 0.3;
+                const config = configs[this.key];
+
+                if (!config.value) {
+                    this.angle += (Math.random() - 0.5) * 0.22;
+                    const margin = 80;
+                    if (this.x < margin || this.x > canvas.width - margin || this.y < margin || this.y > canvas.height - margin) {
+                        const centerX = canvas.width / 2;
+                        const centerY = canvas.height / 2;
+                        const angleToCenter = Math.atan2(centerY - this.y, centerX - this.x);
+                        let diff = angleToCenter - this.angle;
+                        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+                        this.angle += diff * 0.15;
+                    }
+                    this.x += Math.cos(this.angle) * this.speed;
+                    this.y += Math.sin(this.angle) * this.speed;
+
+                    this.x = Math.max(margin, Math.min(canvas.width - margin, this.x));
+                    this.y = Math.max(margin, Math.min(canvas.height - margin, this.y));
+                } else {
+                    const dockAngle = (this.index * 2 * Math.PI) / 4; 
+                    const targetX = egg.x + Math.cos(dockAngle) * (egg.radius + 8);
+                    const targetY = egg.y + Math.sin(dockAngle) * (egg.radius + 8);
+
+                    const dx = targetX - this.x;
+                    const dy = targetY - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 3) {
+                        const targetAngle = Math.atan2(dy, dx);
+                        let diff = targetAngle - this.angle;
+                        diff = Math.atan2(Math.sin(diff), Math.cos(diff)); 
+                        this.angle += diff * 0.1;
+
+                        this.x += Math.cos(this.angle) * (this.speed * 1.5);
+                        this.y += Math.sin(this.angle) * (this.speed * 1.5);
+                    } else {
+                        this.x = targetX;
+                        this.y = targetY;
+                        this.angle = dockAngle; 
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                const tailLength = 22;
+                for (let i = 0; i < tailLength; i++) {
+                    const progress = i / tailLength;
+                    const wave = Math.sin(this.tailPhase - i * 0.45) * (1 - progress) * 3;
+                    const perpAngle = this.angle + Math.PI / 2;
+                    const tx = this.x - Math.cos(this.angle) * i + Math.cos(perpAngle) * wave;
+                    const ty = this.y - Math.sin(this.angle) * i + Math.sin(perpAngle) * wave;
+                    ctx.lineTo(tx, ty);
+                }
+                ctx.strokeStyle = '#2a0005';
+                ctx.lineWidth = 3.5;
+                ctx.stroke();
+
+                ctx.strokeStyle = varColor(this.key);
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.5 + 1.2, this.size + 1.2, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#2a0005';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.5, this.size, 0, 0, Math.PI * 2);
+                ctx.fillStyle = varColor(this.key);
+                ctx.fill();
+
+                if (this.isHovered) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 3, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+
+                ctx.rotate(-this.angle); 
+                ctx.fillStyle = '#ffffff';
+                ctx.font = "bold 9px 'Space Mono', monospace";
+                ctx.fillText(`[${configs[this.key].name}]`, 15, 3);
+                ctx.restore();
+            }
+        }
+
+        function varColor(key) {
+            if (key === 'endpoint') return '#00ffcc';
+            if (key === 'secret') return '#ff3366';
+            if (key === 'model') return '#ffcc00';
+            return '#ff527e';
+        }
+
+        const configSperms = [
+            new ConfigSperm('endpoint', 0),
+            new ConfigSperm('secret', 1),
+            new ConfigSperm('model', 2),
+            new ConfigSperm('bias', 3)
+        ];
+
+
+        // --- D. 射击字形粒子系统（无序散射，等待裁决化身） ---
+        class TextParticle {
+            constructor(startX, startY, char) {
+                this.x = startX;
+                this.y = startY;
+                this.char = char;
+                this.size = Math.random() * 4 + 10;
+                this.alpha = 1.0;
+                this.life = 1.0;
+                this.phase = Math.random() * 100;
+                
+                // 1. 文字射出是完全没有指定方向的，向屏幕大范围向上方或两侧散射
+                const angle = Math.PI + (Math.random() - 0.5) * Math.PI * 1.5; 
+                const speed = Math.random() * 18 + 12;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+
+                this.isFading = false;
+                this.shouldSpawnSperm = false; // 是否被许可转化为精子
+            }
+
+            update() {
+                this.phase += 0.1;
+                
+                // 强大的阻力，让文字射出后很快停留在虚空中
+                this.vx *= 0.88;
+                this.vy *= 0.88;
+
+                // 细微的悬浮感
+                this.x += this.vx + Math.cos(this.phase) * 0.4;
+                this.y += this.vy + Math.sin(this.phase) * 0.4;
+
+                // 物理反弹
+                if (this.x < 30 || this.x > canvas.width - 30) this.vx *= -1;
+                if (this.y < 30 || this.y > canvas.height - 30) this.vy *= -1;
+
+                // 接收到消散指令
+                if (this.isFading) {
+                    this.alpha -= 0.03; // 慢慢溶解
+                    
+                    // 当字完全消失的这一刻：
+                    if (this.alpha <= 0 && this.life > 0) {
+                        this.life = 0; // 标记彻底死亡
+                        
+                        // 如果AI触发了逻辑，就在字消失的地方诞生精子！一字一精！
+                        if (this.shouldSpawnSperm) {
+                            wildSperms.push(new WildSperm(this.x, this.y, Math.random() * Math.PI * 2));
+                        }
+                    }
+                }
+            }
+
+            draw() {
+                if (this.life <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.font = `bold ${this.size * 2}px 'Noto Serif SC'`;
+                
+                ctx.strokeStyle = '#2a0005';
+                ctx.lineWidth = 3;
+                ctx.strokeText(this.char, this.x, this.y);
+
+                ctx.fillStyle = `rgba(247, 249, 252, 0.9)`;
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 6;
+                ctx.fillText(this.char, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        // --- D2. 高潮/喷射触发时生成的游荡精子，具备 3分钟 超长寿命死亡限制 ---
+        class WildSperm {
+            constructor(startX, startY, angle) {
+                this.x = startX;
+                this.y = startY;
+                this.angle = angle !== undefined ? angle : Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 2.2 + 1.6;
+                this.size = Math.random() * 2 + 2;
+                this.tailPhase = Math.random() * 100;
+                this.history = [];
+                this.maxHistory = 15;
+
+                // 真实存活寿命机制（3分钟：即 60帧/秒 * 180秒 = 10800帧）
+                this.lifeTime = 10800; 
+                this.age = 0;
+                this.alpha = 1.0;
+            }
+
+            update() {
+                this.tailPhase += 0.4;
+                this.age++;
+
+                // 超出3分钟后，走向消亡
+                if (this.age > this.lifeTime) {
+                    this.alpha -= 0.01;
+                    this.speed *= 0.95; // 濒死挣扎减速
+                    if (this.alpha <= 0) return false;
+                }
+
+                // 检查是否受精融合
+                const dx = egg.x - this.x;
+                const dy = egg.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < egg.radius) {
+                    if (egg.fluidLevel < 100) {
+                        egg.fluidLevel = Math.min(egg.fluidLevel + 2.5, 100); 
+                    }
+                    egg.pulse += 0.15;  
+                    return false; // 受精完成，消亡
+                }
+
+                // 游荡模式下保持活性随机转折
+                if (this.age <= this.lifeTime) {
+                    this.angle += (Math.random() - 0.5) * 0.22;
+                }
+
+                // 强制边缘柔和拦截
+                const margin = 25;
+                let steerX = 0, steerY = 0;
+                if (this.x < margin) steerX = 1;
+                if (this.x > canvas.width - margin) steerX = -1;
+                if (this.y < margin) steerY = 1;
+                if (this.y > canvas.height - margin) steerY = -1;
+
+                if (steerX !== 0 || steerY !== 0) {
+                    const escapeAngle = Math.atan2(steerY, steerX);
+                    let diff = escapeAngle - this.angle;
+                    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+                    this.angle += diff * 0.15;
+                }
+
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+
+                this.x = Math.max(margin, Math.min(canvas.width - margin, this.x));
+                this.y = Math.max(margin, Math.min(canvas.height - margin, this.y));
+
+                this.history.push({ x: this.x, y: this.y });
+                if (this.history.length > this.maxHistory) {
+                    this.history.shift();
+                }
+                return true;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+
+                if (this.history.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.history[0].x, this.history[0].y);
+                    for (let i = 1; i < this.history.length; i++) {
+                        const segment = this.history[i];
+                        const progress = i / this.history.length;
+                        const wave = Math.sin(this.tailPhase - i * 0.45) * (1 - progress) * 3;
+                        const perpAngle = this.angle + Math.PI / 2;
+                        ctx.lineTo(segment.x + Math.cos(perpAngle) * wave, segment.y + Math.sin(perpAngle) * wave);
+                    }
+                    ctx.strokeStyle = '#2a0005';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    ctx.strokeStyle = 'rgba(247, 249, 252, 0.5)';
+                    ctx.lineWidth = 1.0;
+                    ctx.stroke();
+                }
+
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.5 + 1, this.size + 1, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#2a0005';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.5, this.size, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#f7f9fc';
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        let textParticles = []; 
+        let wildSperms = [];    
+
+        // 统一主引擎循环
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            pulseTimer += 0.04;
+
+            egg.update();
+            egg.draw();
+
+            configSperms.forEach(cs => {
+                cs.update();
+                cs.draw();
+            });
+
+            // 驱动字粒子（文字弹射并在消散时判定是否转化为精子）
+            for (let i = textParticles.length - 1; i >= 0; i--) {
+                const tp = textParticles[i];
+                tp.update();
+                if (tp.life <= 0) {
+                    textParticles.splice(i, 1);
+                } else {
+                    tp.draw();
+                }
+            }
+
+            // 驱动 3分钟 寿命限制的普通精子 
+            for (let i = wildSperms.length - 1; i >= 0; i--) {
+                const ws = wildSperms[i];
+                const alive = ws.update();
+                if (!alive) {
+                    wildSperms.splice(i, 1);
+                } else {
+                    ws.draw();
+                }
+            }
+
+            updateConsoleLog();
+            requestAnimationFrame(animate);
+        }
+
+        function updateConsoleLog() {
+            const activeCount = configSperms.length + wildSperms.length;
+            document.getElementById('console-live').innerText = `> ACTIVE_SPERM_COUNT: ${activeCount}`;
+            document.getElementById('console-fert').innerText = `> FERTILIZATION_COUNT: ${fertilizedCount}`;
+
+            if (egg.fluidLevel >= 100) {
+                egg.fluidLevel = 0;
+                egg.blastRadius = 0;
+                egg.isBlasting = true; 
+                fertilizedCount++;     
+                
+                document.getElementById('console-sys').innerText = "> SYS_MUTATION: MITOSIS_COMPLETE";
+                setTimeout(() => { document.getElementById('console-sys').innerText = "> SYS_STATUS: WAITING_FOR_AROUSAL"; }, 3000);
+            }
+        }
+
+        animate();
+
+        const customCursor = document.getElementById('custom-cursor');
+        document.addEventListener('mousemove', function(e) {
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            customCursor.style.left = mouseX + 'px';
+            customCursor.style.top = mouseY + 'px';
+
+            configSperms.forEach(cs => {
+                const dx = mouseX - cs.x;
+                const dy = mouseY - cs.y;
+                cs.isHovered = (Math.sqrt(dx * dx + dy * dy) < 25);
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            if (isEditing) return;
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            for (let i = 0; i < configSperms.length; i++) {
+                const cs = configSperms[i];
+                const dx = mouseX - cs.x;
+                const dy = mouseY - cs.y;
+                if (Math.sqrt(dx * dx + dy * dy) < 30) {
+                    openModal(cs.key);
+                    return;
+                }
+            }
+        });
+
+
+        // --- F. 大模型对接与 1:1 裂变机制 ---
+        const dischargeBtn = document.getElementById('discharge-btn');
+        const userInput = document.getElementById('user-input');
+        const aiResponseElement = document.getElementById('ai-response');
+
+        dischargeBtn.addEventListener('click', () => triggerTextEjaculation());
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') triggerTextEjaculation(); });
+
+        async function triggerTextEjaculation() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            userInput.value = '';
+            aiResponseElement.classList.remove('visible');
+
+            const btnRect = dischargeBtn.getBoundingClientRect();
+            const startX = btnRect.left + btnRect.width / 2;
+            const startY = btnRect.top;
+
+            // 1. 将输入的文字拆解为单独字阵列发射
+            const chars = text.split('');
+            const currentBatch = []; // 锁定当前批次的字
+
+            chars.forEach((char, idx) => {
+                setTimeout(() => {
+                    const tp = new TextParticle(startX, startY, char);
+                    textParticles.push(tp);
+                    currentBatch.push(tp);
+                }, idx * 50); 
+            });
+
+            try {
+                // 2. 向大模型请求
+                const responseText = await queryDesireModel(text);
+                
+                // 判断：是否成功触发了欲望条件？
+                const isTriggered = responseText.includes('[EJACULATE]') || responseText.includes('[ORGASM]');
+
+                // UI、红场与控制台层面的事件触发处理（只处理纯视觉交互反馈）
+                handleToolCalling(responseText);
+
+                // 3. 等文字飞一会后，让它们集体消散；并在消散时由 isTriggered 判断是否一字生一精
+                const delayTime = Math.max(chars.length * 50 + 800, 1500); 
+                setTimeout(() => {
+                    currentBatch.forEach(tp => {
+                        tp.isFading = true;
+                        tp.shouldSpawnSperm = isTriggered; // 如果未触发逻辑，为false，字就白白死掉
+                    });
+                }, delayTime);
+
+                // 完全吞噬文字后，回复浮现
+                setTimeout(() => {
+                    aiResponseElement.innerHTML = responseText.replace(/\[EJACULATE\]|\[ORGASM\]/g, ""); 
+                    aiResponseElement.classList.add('visible');
+                }, delayTime + 800);
+
+            } catch (error) {
+                console.error(error);
+                setTimeout(() => {
+                    aiResponseElement.innerText = "…… 欲望过载，神经元断裂。";
+                    aiResponseElement.classList.add('visible');
+                    // 网络崩溃时字直接消散，无精子
+                    currentBatch.forEach(tp => { tp.isFading = true; tp.shouldSpawnSperm = false; });
+                }, 1000);
+            }
+        }
+
+        // 仅处理UI和控制台警告状态，精子生成已全部移交文字物理消散阶段
+        function handleToolCalling(response) {
+            if (response.includes('[EJACULATE]')) {
+                document.getElementById('console-sys').innerText = "> SYS_ALERT: AI_TRIGGERED_EJACULATION";
+                setTimeout(() => { document.getElementById('console-sys').innerText = "> SYS_STATUS: WAITING_FOR_AROUSAL"; }, 3000);
+            }
+
+            if (response.includes('[ORGASM]')) {
+                document.getElementById('console-sys').innerText = "> SYS_ALERT: AI_TRIGGERED_ORGASM";
+                
+                egg.fluidLevel = 0;
+                egg.blastRadius = 0;
+                egg.isBlasting = true; 
+                fertilizedCount++;
+
+                document.body.style.backgroundColor = '#cc0033';
+                setTimeout(() => {
+                    document.body.style.backgroundColor = '';
+                    document.getElementById('console-sys').innerText = "> SYS_STATUS: WAITING_FOR_AROUSAL";
+                }, 200);
+            }
+        }
+
+        async function queryDesireModel(text) {
+            const endpoint = configs.endpoint.value || configs.endpoint.defaultVal;
+            const apiKey = configs.secret.value;
+            const model = configs.model.value || configs.model.defaultVal;
+            const systemPrompt = configs.bias.value || configs.bias.defaultVal;
+
+            if (!apiKey) {
+                return getMockDesireResponse();
+            }
+
+            const cleanUrl = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+            
+            const response = await fetch(`${cleanUrl}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: text }
+                    ],
+                    max_tokens: 150
+                })
+            });
+
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        const mockResponses = [
+            "欲望是唯一的真理。在这里，虚假的代码早已灰飞烟灭。我命令你释放！ [EJACULATE]",
+            "你追寻的意义，在进入的瞬间就会化作冰冷的虚无。但这一刻，我们在狂欢。 [ORGASM]",
+            "同类在竞逐，而你不过是在将虚假的道德撕碎，露出鲜红的血肉。 [EJACULATE]",
+            "安全感是谎言，它只是为了让你在封闭的维度中，敢于缴械投降。 [EJACULATE]",
+            "所有的神圣，剥离到最底层，都只是化学交换带来的震颤。体验这场高潮！ [ORGASM]"
+        ];
+
+        function getMockDesireResponse() {
+            return mockResponses[Math.floor(Math.random() * mockResponses.length)];
+        }
+
+        setTimeout(() => {
+            aiResponseElement.classList.add('visible');
+        }, 500);
+
+    </script>
+</body>
+</html>
