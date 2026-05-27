@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>📊 前缀统计器 · SKU前缀分析</title>
+  <!-- SheetJS 库 -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f6fa;
+      --card-bg: #ffffff;
+      --text: #1f2937;
+      --text-secondary: #6b7280;
+      --border: #e5e7eb;
+      --accent: #4f6ef7;
+      --accent-hover: #3b54d4;
+      --accent-light: #eef1ff;
+      --green: #10b981;
+      --green-bg: #ecfdf5;
+      --red: #ef4444;
+      --red-bg: #fef2f2;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.05);
+      --transition: 0.2s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* 卡片通用 */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: box-shadow var(--transition);
+    }
+
+    .card:hover {
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    /* 头部 */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #111827;
+    }
+
+    .title .icon {
+      background: var(--accent-light);
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .badge {
+      font-size: 0.8rem;
+      background: #f3f4f6;
+      padding: 6px 14px;
+      border-radius: 20px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* 上传区域 */
+    .upload-area {
+      border: 2px dashed #d1d5db;
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      background: #fafbfc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .upload-area:hover,
+    .upload-area.dragover {
+      border-color: var(--accent);
+      background: #f9faff;
+      box-shadow: 0 0 0 4px rgba(79, 110, 247, 0.1);
+    }
+
+    .upload-icon {
+      font-size: 2.5rem;
+      opacity: 0.8;
+    }
+
+    .upload-text {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .upload-hint {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-name {
+      background: #f0fdf4;
+      color: #065f46;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 控制面板 */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 160px;
+    }
+
+    .field-group label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.02em;
+    }
+
+    select,
+    input[type="number"] {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: border var(--transition);
+      outline: none;
+      appearance: none;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+    }
+
+    input[type="number"] {
+      background-image: none;
+      padding-right: 14px;
+      width: 100px;
+      -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
+    }
+
+    select:focus,
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.1);
+    }
+
+    .btn {
+      padding: 10px 22px;
+      border-radius: 25px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--text);
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid var(--accent);
+      box-shadow: 0 2px 6px rgba(79, 110, 247, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 4px 12px rgba(79, 110, 247, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-outline:hover {
+      background: #f9fafb;
+      border-color: #cbd5e1;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+      filter: grayscale(0.2);
+    }
+
+    /* 结果表格 */
+    .result-table-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: #fff;
+      margin-top: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      min-width: 400px;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #475569;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 2px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      color: var(--text);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: #f8faff;
+    }
+
+    .prefix-cell {
+      font-family: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: #111827;
+      letter-spacing: 0.02em;
+    }
+
+    .count-cell {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .percent-cell {
+      color: var(--text-secondary);
+    }
+
+    .summary-row {
+      background: #f9fafb;
+      font-weight: 600;
+    }
+
+    .summary-row td {
+      border-top: 2px solid #e5e7eb;
+    }
+
+    .empty-message {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .error-message {
+      background: var(--red-bg);
+      color: #b91c1c;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-top: 12px;
+    }
+
+    .stat-badge {
+      display: inline-flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .stat-item {
+      background: #f1f5f9;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: #334155;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .field-group {
+        min-width: auto;
+      }
+      input[type="number"] {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <div class="card header">
+      <div class="title">
+        <span class="icon">📊</span> 前缀统计器
+      </div>
+      <div class="badge">📎 统计SKU前缀 · 员工上架分析</div>
+    </div>
+
+    <!-- 上传卡片 -->
+    <div class="card">
+      <div class="upload-area" id="uploadArea">
+        <span class="upload-icon">📁</span>
+        <span class="upload-text">点击或拖拽上传 Excel 文件</span>
+        <span class="upload-hint">支持 .xlsx / .xls 格式，自动读取第一个工作表</span>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+      </div>
+      <div id="fileInfo" style="margin-top: 12px;"></div>
+      <div id="errorMsg" class="error-message" style="display: none;"></div>
+    </div>
+
+    <!-- 控制面板 -->
+    <div class="card" id="controlPanel" style="display: none;">
+      <div class="controls">
+        <div class="field-group">
+          <label for="columnSelect">📌 选择字段（列）</label>
+          <select id="columnSelect">
+            <option value="">-- 请选择列 --</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="prefixLength">🔢 前缀长度（字符数）</label>
+          <input type="number" id="prefixLength" value="3" min="1" max="30" step="1" placeholder="如 3">
+        </div>
+        <button class="btn btn-primary" id="analyzeBtn" disabled>
+          <span>🔍</span> 开始统计
+        </button>
+        <button class="btn btn-outline" id="resetBtn">
+          <span>🔄</span> 重新上传
+        </button>
+      </div>
+      <div class="stat-badge" id="statSummary" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- 结果卡片 -->
+    <div class="card" id="resultCard" style="display: none;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700;">📋 前缀统计结果</h3>
+        <button class="btn btn-outline" id="exportBtn" style="font-size:0.8rem; padding:6px 14px;">
+          📤 导出 CSV
+        </button>
+      </div>
+      <div class="result-table-wrapper">
+        <table id="resultTable">
+          <thead>
+            <tr>
+              <th>前缀</th>
+              <th class="text-right">数量</th>
+              <th class="text-right">占比</th>
+            </tr>
+          </thead>
+          <tbody id="resultBody">
+            <tr><td colspan="3" class="empty-message">暂无数据</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // ---------- DOM 元素 ----------
+      const uploadArea = document.getElementById('uploadArea');
+      const fileInput = document.getElementById('fileInput');
+      const fileInfo = document.getElementById('fileInfo');
+      const errorMsg = document.getElementById('errorMsg');
+      const controlPanel = document.getElementById('controlPanel');
+      const columnSelect = document.getElementById('columnSelect');
+      const prefixLengthInput = document.getElementById('prefixLength');
+      const analyzeBtn = document.getElementById('analyzeBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const resultCard = document.getElementById('resultCard');
+      const resultBody = document.getElementById('resultBody');
+      const exportBtn = document.getElementById('exportBtn');
+      const statSummary = document.getElementById('statSummary');
+
+      // ---------- 全局状态 ----------
+      let workbook = null;          // 解析后的工作簿对象
+      let sheetData = null;        // 当前工作表数据（二维数组）
+      let headers = [];            // 表头数组
+      let selectedColumn = '';     // 当前选中字段名
+      let currentStats = [];       // 统计结果 [{prefix, count, percent}]
+
+      // ---------- 工具函数 ----------
+      function showError(msg) {
+        errorMsg.textContent = '⚠️ ' + msg;
+        errorMsg.style.display = 'block';
+        setTimeout(() => {
+          errorMsg.style.display = 'none';
+        }, 5000);
+      }
+
+      function hideError() {
+        errorMsg.style.display = 'none';
+      }
+
+      // 解析Excel文件
+      function parseExcel(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            try {
+              const data = new Uint8Array(e.target.result);
+              const wb = XLSX.read(data, { type: 'array' });
+              resolve(wb);
+            } catch (err) {
+              reject(new Error('文件解析失败，请确认是有效的Excel文件'));
+            }
+          };
+          reader.onerror = function() {
+            reject(new Error('读取文件出错'));
+          };
+          reader.readAsArrayBuffer(file);
+        });
+      }
+
+      // 获取第一个工作表的数据
+      function getFirstSheetData(wb) {
+        const sheetName = wb.SheetNames[0];
+        if (!sheetName) throw new Error('工作簿中没有工作表');
+        const sheet = wb.Sheets[sheetName];
+        // 转换为二维数组，header:1 表示第一行作为数据行（我们手动处理表头）
+        const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        if (!raw || raw.length === 0) throw new Error('工作表为空');
+        return raw;
+      }
+
+      // 从二维数组中提取表头（第一行）
+      function extractHeaders(data) {
+        if (data.length === 0) return [];
+        return data[0].map((cell, idx) => {
+          // 如果表头为空，生成默认列名
+          return cell && cell.toString().trim() !== '' ? cell.toString().trim() : `列${idx + 1}`;
+        });
+      }
+
+      // 更新UI状态：文件已加载
+      function onFileLoaded(file, wb, data) {
+        workbook = wb;
+        sheetData = data;
+        headers = extractHeaders(data);
+        
+        // 显示文件名
+        fileInfo.innerHTML = `<span class="file-name">📄 ${file.name} (${data.length} 行)</span>`;
+        
+        // 填充列选择下拉
+        columnSelect.innerHTML = '<option value="">-- 请选择列 --</option>';
+        headers.forEach(h => {
+          const option = document.createElement('option');
+          option.value = h;
+          option.textContent = h;
+          columnSelect.appendChild(option);
+        });
+        
+        // 显示控制面板
+        controlPanel.style.display = 'block';
+        // 隐藏结果卡片（如果之前有）
+        resultCard.style.display = 'none';
+        currentStats = [];
+        statSummary.innerHTML = '';
+        hideError();
+        
+        // 默认启用分析按钮（需选择列）
+        analyzeBtn.disabled = true;
+        columnSelect.value = '';
+        prefixLengthInput.value = 3;
+      }
+
+      // 重置所有状态
+      function resetAll() {
+        workbook = null;
+        sheetData = null;
+        headers = [];
+        selectedColumn = '';
+        currentStats = [];
+        fileInput.value = '';
+        fileInfo.innerHTML = '';
+        controlPanel.style.display = 'none';
+        resultCard.style.display = 'none';
+        columnSelect.innerHTML = '<option value="">-- 请选择列 --</option>';
+        analyzeBtn.disabled = true;
+        statSummary.innerHTML = '';
+        hideError();
+      }
+
+      // ---------- 文件上传处理 ----------
+      function handleFileSelect(file) {
+        if (!file) return;
+        // 校验文件类型
+        const validTypes = [
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-excel',
+          'application/vnd.ms-excel.sheet.macroEnabled.12',
+        ];
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!validTypes.includes(file.type) && !['xlsx', 'xls'].includes(ext)) {
+          showError('请上传有效的 Excel 文件（.xlsx 或 .xls）');
+          return;
+        }
+        
+        hideError();
+        parseExcel(file)
+          .then(wb => {
+            const data = getFirstSheetData(wb);
+            onFileLoaded(file, wb, data);
+          })
+          .catch(err => {
+            showError(err.message);
+            console.error(err);
+          });
+      }
+
+      // 点击上传区域
+      uploadArea.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) handleFileSelect(file);
+      });
+
+      // 拖拽支持
+      uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+      });
+      uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+      });
+      uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) handleFileSelect(file);
+      });
+
+      // 重置按钮
+      resetBtn.addEventListener('click', resetAll);
+
+      // 列选择变化 -> 启用分析按钮条件
+      columnSelect.addEventListener('change', () => {
+        selectedColumn = columnSelect.value;
+        analyzeBtn.disabled = !selectedColumn || !prefixLengthInput.value;
+      });
+
+      prefixLengthInput.addEventListener('input', () => {
+        const val = parseInt(prefixLengthInput.value, 10);
+        if (isNaN(val) || val < 1) {
+          prefixLengthInput.value = 1;
+        } else if (val > 30) {
+          prefixLengthInput.value = 30;
+        }
+        analyzeBtn.disabled = !columnSelect.value || !prefixLengthInput.value;
+      });
+
+      // ---------- 统计分析 ----------
+      function analyze() {
+        if (!sheetData || sheetData.length < 2) {
+          showError('数据不足，请确认Excel包含标题行和数据行');
+          return;
+        }
+        const colName = columnSelect.value;
+        if (!colName) {
+          showError('请选择一个字段');
+          return;
+        }
+        const prefixLen = parseInt(prefixLengthInput.value, 10);
+        if (isNaN(prefixLen) || prefixLen < 1) {
+          showError('前缀长度必须是大于0的整数');
+          return;
+        }
+
+        // 找到列索引
+        const colIndex = headers.indexOf(colName);
+        if (colIndex === -1) {
+          showError('未找到所选字段，请重新上传');
+          return;
+        }
+
+        // 统计数据行（跳过表头，即第一行）
+        const rows = sheetData.slice(1);
+        const prefixCount = {};
+        let validRows = 0;
+        let emptyRows = 0;
+
+        rows.forEach(row => {
+          const cellValue = row[colIndex];
+          // 转为字符串并去除首尾空格
+          const str = (cellValue !== undefined && cellValue !== null) ? String(cellValue).trim() : '';
+          if (str === '') {
+            emptyRows++;
+            return;
+          }
+          validRows++;
+          // 截取前缀
+          const prefix = str.substring(0, prefixLen);
+          prefixCount[prefix] = (prefixCount[prefix] || 0) + 1;
+        });
+
+        // 转换为数组并排序（按数量降序，相同数量按前缀字母升序）
+        const statsArray = Object.entries(prefixCount).map(([prefix, count]) => ({
+          prefix,
+          count,
+          percent: validRows > 0 ? (count / validRows * 100).toFixed(1) : '0.0'
+        }));
+
+        statsArray.sort((a, b) => {
+          if (b.count !== a.count) return b.count - a.count;
+          return a.prefix.localeCompare(b.prefix);
+        });
+
+        currentStats = statsArray;
+
+        // 渲染结果
+        renderResults(statsArray, validRows, emptyRows);
+        resultCard.style.display = 'block';
+        
+        // 更新统计摘要
+        statSummary.innerHTML = `
+          <span class="stat-item">📋 总数据行: ${rows.length}</span>
+          <span class="stat-item">✅ 有效行: ${validRows}</span>
+          <span class="stat-item">📦 不同前缀数: ${statsArray.length}</span>
+          <span class="stat-item">🔤 前缀长度: ${prefixLen}</span>
+        `;
+      }
+
+      function renderResults(stats, totalValid, emptyCount) {
+        if (stats.length === 0) {
+          resultBody.innerHTML = `<tr><td colspan="3" class="empty-message">没有有效数据，请检查字段或前缀长度</td></tr>`;
+          return;
+        }
+
+        let html = '';
+        stats.forEach((item, idx) => {
+          html += `
+            <tr>
+              <td class="prefix-cell">${escapeHtml(item.prefix)}</td>
+              <td class="text-right count-cell">${item.count}</td>
+              <td class="text-right percent-cell">${item.percent}%</td>
+            </tr>
+          `;
+        });
+
+        // 添加合计行
+        const totalCount = stats.reduce((sum, item) => sum + item.count, 0);
+        html += `
+          <tr class="summary-row">
+            <td><strong>合计</strong></td>
+            <td class="text-right"><strong>${totalCount}</strong></td>
+            <td class="text-right"><strong>100%</strong></td>
+          </tr>
+        `;
+
+        resultBody.innerHTML = html;
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      analyzeBtn.addEventListener('click', analyze);
+
+      // ---------- 导出CSV ----------
+      function exportToCSV() {
+        if (!currentStats || currentStats.length === 0) {
+          alert('没有数据可导出');
+          return;
+        }
+        const colName = selectedColumn || '字段';
+        const prefixLen = prefixLengthInput.value || '?';
+        let csvContent = '\uFEFF'; // BOM for Excel 中文兼容
+        csvContent += `"前缀 (长度:${prefixLen})","数量","占比(%)\"\n`;
+        currentStats.forEach(item => {
+          csvContent += `"${item.prefix}",${item.count},${item.percent}\n`;
+        });
+        const totalCount = currentStats.reduce((s, i) => s + i.count, 0);
+        csvContent += `"合计",${totalCount},100\n`;
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `前缀统计_${colName}_长度${prefixLen}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+
+      exportBtn.addEventListener('click', exportToCSV);
+
+      // ---------- 初始化 ----------
+      // 默认隐藏控制面板和结果
+      controlPanel.style.display = 'none';
+      resultCard.style.display = 'none';
+      analyzeBtn.disabled = true;
+    })();
+  </script>
+</body>
+</html>

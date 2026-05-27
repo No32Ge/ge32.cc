@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>🎨 沃尔玛颜色去重 · Variant Group 颜色清洗</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-light: #eef2ff;
+            --green: #10b981;
+            --green-bg: #ecfdf5;
+            --red: #ef4444;
+            --red-bg: #fef2f2;
+            --orange: #f59e0b;
+            --orange-bg: #fffbeb;
+            --radius: 16px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.04);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 24px 16px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .header .icon {
+            width: 44px; height: 44px;
+            background: var(--accent-light);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+        }
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+        .badge {
+            background: #f1f5f9;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: var(--radius);
+            padding: 32px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafbfc;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent);
+            background: #f8faff;
+            box-shadow: 0 0 0 4px rgba(99,102,241,0.08);
+        }
+        .upload-zone input { display: none; }
+        .upload-icon { font-size: 2.5rem; opacity: 0.7; }
+        .upload-text { font-weight: 600; margin-top: 8px; }
+        .upload-hint { font-size: 0.8rem; color: var(--text-light); margin-top: 4px; }
+
+        .file-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #ecfdf5;
+            color: #065f46;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            margin-top: 12px;
+        }
+
+        .mapping-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .field-group label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            letter-spacing: 0.02em;
+        }
+        select {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            background: white;
+            outline: none;
+            transition: 0.15s;
+        }
+        select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+        }
+
+        .btn {
+            padding: 10px 22px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.5; pointer-events: none; }
+
+        .stats-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .stat {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 0.8rem;
+        }
+
+        .table-wrapper {
+            max-height: 500px;
+            overflow: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-top: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        th {
+            background: #f8fafc;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        td {
+            padding: 8px 14px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .modified-cell {
+            background: #fef9c3;
+            font-weight: 500;
+        }
+        .error-badge {
+            background: var(--red-bg);
+            color: #b91c1c;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-top: 12px;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 头部 -->
+    <div class="card header">
+        <span class="icon">🎨</span>
+        <h1>沃尔玛颜色去重</h1>
+        <span class="badge">同一 Variant Group 下颜色必须唯一</span>
+    </div>
+
+    <!-- 上传区域 -->
+    <div class="card">
+        <div class="upload-zone" id="uploadZone">
+            <span class="upload-icon">📁</span>
+            <div class="upload-text">点击或拖拽上传 Excel 文件</div>
+            <div class="upload-hint">支持 .xlsx / .xls，需包含“颜色类型”“Variant Group ID”“亚马逊美国站颜色”“SKU”四列</div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+        </div>
+        <div id="fileInfo"></div>
+        <div id="uploadError" class="error-badge hidden"></div>
+    </div>
+
+    <!-- 列映射面板（上传后显示） -->
+    <div class="card hidden" id="mappingPanel">
+        <h3 style="font-size:1rem; margin-bottom:12px;">📌 字段列映射（自动识别，可手动调整）</h3>
+        <div class="mapping-row">
+            <div class="field-group">
+                <label>🎯 颜色类型</label>
+                <select id="mapColorType"></select>
+            </div>
+            <div class="field-group">
+                <label>🔗 Variant Group ID</label>
+                <select id="mapVariantGroup"></select>
+            </div>
+            <div class="field-group">
+                <label>🌈 亚马逊美国站颜色</label>
+                <select id="mapAmazonColor"></select>
+            </div>
+            <div class="field-group">
+                <label>🆔 SKU (主键)</label>
+                <select id="mapSKU"></select>
+            </div>
+        </div>
+        <div style="margin-top: 20px; display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="btn btn-primary" id="processBtn">🚀 执行颜色去重</button>
+            <button class="btn" id="resetBtn">🔄 重新上传</button>
+        </div>
+        <div id="processStats" class="stats-row"></div>
+    </div>
+
+    <!-- 结果展示 -->
+    <div class="card hidden" id="resultPanel">
+        <div style="display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <h3 style="font-size:1rem;">📋 处理结果预览（修改单元格高亮）</h3>
+            <button class="btn btn-primary" id="downloadBtn">⬇️ 下载处理后的 Excel</button>
+        </div>
+        <div class="table-wrapper">
+            <table id="previewTable">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // DOM 元素
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadError = document.getElementById('uploadError');
+        const mappingPanel = document.getElementById('mappingPanel');
+        const mapColorType = document.getElementById('mapColorType');
+        const mapVariantGroup = document.getElementById('mapVariantGroup');
+        const mapAmazonColor = document.getElementById('mapAmazonColor');
+        const mapSKU = document.getElementById('mapSKU');
+        const processBtn = document.getElementById('processBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const processStats = document.getElementById('processStats');
+        const resultPanel = document.getElementById('resultPanel');
+        const previewTable = document.getElementById('previewTable');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // 状态
+        let workbook = null;
+        let headers = [];
+        let dataRows = [];        // 二维数组，不含表头
+        let selectedMapping = {
+            colorType: '',
+            variantGroup: '',
+            amazonColor: '',
+            sku: ''
+        };
+        let processedWorkbook = null;  // 处理后的 workbook
+        let modifiedFlags = [];        // 标记哪些单元格被修改 [rowIndex][colIndex] = true
+
+        // 工具：生成字母序列 A, B, C, ..., Z, AA, AB, ...
+        function columnLetter(index) {
+            let dividend = index + 1;  // 0->A
+            let result = '';
+            while (dividend > 0) {
+                let modulo = (dividend - 1) % 26;
+                result = String.fromCharCode(65 + modulo) + result;
+                dividend = Math.floor((dividend - 1) / 26);
+            }
+            return result;
+        }
+
+        // 显示错误
+        function showError(msg) {
+            uploadError.textContent = '⚠️ ' + msg;
+            uploadError.classList.remove('hidden');
+            setTimeout(() => uploadError.classList.add('hidden'), 6000);
+        }
+
+        // 重置全部
+        function fullReset() {
+            workbook = null;
+            headers = [];
+            dataRows = [];
+            selectedMapping = { colorType:'', variantGroup:'', amazonColor:'', sku:'' };
+            processedWorkbook = null;
+            modifiedFlags = [];
+            fileInput.value = '';
+            fileInfo.innerHTML = '';
+            mappingPanel.classList.add('hidden');
+            resultPanel.classList.add('hidden');
+            processStats.innerHTML = '';
+            uploadError.classList.add('hidden');
+            mapColorType.innerHTML = '';
+            mapVariantGroup.innerHTML = '';
+            mapAmazonColor.innerHTML = '';
+            mapSKU.innerHTML = '';
+        }
+
+        resetBtn.addEventListener('click', fullReset);
+
+        // 文件上传处理
+        function handleFile(file) {
+            if (!file) return;
+            fullReset();
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const wb = XLSX.read(data, { type: 'array' });
+                    const sheetName = wb.SheetNames[0];
+                    const sheet = wb.Sheets[sheetName];
+                    const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                    if (!raw || raw.length < 2) {
+                        showError('Excel 至少需要包含标题行和一行数据');
+                        return;
+                    }
+                    headers = raw[0].map((h, idx) => (h && h.toString().trim()) || `列${idx+1}`);
+                    dataRows = raw.slice(1);
+                    workbook = wb;
+                    fileInfo.innerHTML = `<span class="file-badge">📄 ${file.name} (${dataRows.length} 行数据)</span>`;
+
+                    // 自动匹配字段
+                    populateMappingSelectors();
+                    mappingPanel.classList.remove('hidden');
+                    resultPanel.classList.add('hidden');
+                } catch (err) {
+                    showError('文件解析失败：' + err.message);
+                }
+            };
+            reader.onerror = () => showError('读取文件出错');
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 填充映射下拉框
+        function populateMappingSelectors() {
+            const selects = [mapColorType, mapVariantGroup, mapAmazonColor, mapSKU];
+            selects.forEach(s => { s.innerHTML = '<option value="">-- 请选择 --</option>'; });
+            headers.forEach((h, idx) => {
+                const option = document.createElement('option');
+                option.value = h;
+                option.textContent = h;
+                selects.forEach(s => s.appendChild(option.cloneNode(true)));
+            });
+
+            // 自动匹配函数
+            function autoSelect(select, keywords) {
+                const lowerHeaders = headers.map(h => h.toLowerCase());
+                for (const kw of keywords) {
+                    const idx = lowerHeaders.findIndex(h => h.includes(kw));
+                    if (idx !== -1) {
+                        select.value = headers[idx];
+                        return;
+                    }
+                }
+            }
+
+            autoSelect(mapColorType, ['颜色类型', 'color type', '颜色分类']);
+            autoSelect(mapVariantGroup, ['variant group id', '变体组id', 'variant group', 'group id']);
+            autoSelect(mapAmazonColor, ['亚马逊美国站颜色', 'amazon us color', '美国站颜色', '颜色']);
+            autoSelect(mapSKU, ['sku']);
+        }
+
+        // 上传事件绑定
+        uploadZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+
+        // 处理按钮
+        processBtn.addEventListener('click', () => {
+            // 获取映射
+            selectedMapping.colorType = mapColorType.value;
+            selectedMapping.variantGroup = mapVariantGroup.value;
+            selectedMapping.amazonColor = mapAmazonColor.value;
+            selectedMapping.sku = mapSKU.value;
+
+            if (!selectedMapping.colorType || !selectedMapping.variantGroup || !selectedMapping.amazonColor || !selectedMapping.sku) {
+                alert('请为所有四个字段选择对应的列');
+                return;
+            }
+
+            // 获取列索引
+            const idxColorType = headers.indexOf(selectedMapping.colorType);
+            const idxGroup = headers.indexOf(selectedMapping.variantGroup);
+            const idxColor = headers.indexOf(selectedMapping.amazonColor);
+            const idxSKU = headers.indexOf(selectedMapping.sku);
+
+            if (idxColorType === -1 || idxGroup === -1 || idxColor === -1 || idxSKU === -1) {
+                alert('列映射异常，请刷新重试');
+                return;
+            }
+
+            // 开始处理
+            const resultRows = dataRows.map(row => [...row]); // 深拷贝
+            modifiedFlags = resultRows.map(row => new Array(row.length).fill(false));
+
+            // 建立 Variant Group 分组
+            const groupMap = new Map(); // groupId -> 行索引数组
+            resultRows.forEach((row, i) => {
+                const groupId = (row[idxGroup] || '').toString().trim();
+                if (!groupMap.has(groupId)) groupMap.set(groupId, []);
+                groupMap.get(groupId).push(i);
+            });
+
+            let groupsModified = 0;
+            let totalRowsModified = 0;
+
+            // 遍历每个组
+            for (const [groupId, indices] of groupMap.entries()) {
+                if (indices.length === 0) continue;
+
+                // 检查当前组内颜色是否有重复
+                const colorValues = indices.map(i => (resultRows[i][idxColor] || '').toString().trim());
+                const uniqueColors = new Set(colorValues);
+                if (uniqueColors.size === indices.length) {
+                    // 没有重复，跳过
+                    continue;
+                }
+
+                // 有重复，需要清洗整个组
+                groupsModified++;
+
+                // 按颜色类型分组（保留原始颜色类型值，不区分大小写分组？直接按原值）
+                const typeMap = new Map(); // colorType -> 该类型下的行索引列表
+                indices.forEach(i => {
+                    const ct = (resultRows[i][idxColorType] || '').toString().trim();
+                    if (!typeMap.has(ct)) typeMap.set(ct, []);
+                    typeMap.get(ct).push(i);
+                });
+
+                // 对每个颜色类型内部，按SKU排序（保证稳定），分配字母
+                for (const [colorType, rowIndices] of typeMap.entries()) {
+                    // 按SKU排序
+                    rowIndices.sort((a, b) => {
+                        const skuA = (resultRows[a][idxSKU] || '').toString().trim();
+                        const skuB = (resultRows[b][idxSKU] || '').toString().trim();
+                        return skuA.localeCompare(skuB);
+                    });
+
+                    // 分配字母
+                    rowIndices.forEach((rowIdx, order) => {
+                        const letter = columnLetter(order);
+                        const newColor = colorType ? `${colorType} ${letter}` : letter;
+                        const oldColor = resultRows[rowIdx][idxColor];
+                        if (oldColor !== newColor) {
+                            resultRows[rowIdx][idxColor] = newColor;
+                            modifiedFlags[rowIdx][idxColor] = true;
+                            totalRowsModified++;
+                        }
+                    });
+                }
+            }
+
+            // 显示统计
+            processStats.innerHTML = `
+                <span class="stat">📊 总数据行: ${resultRows.length}</span>
+                <span class="stat">🔁 有重复的组: ${groupsModified}</span>
+                <span class="stat">✏️ 修改行数: ${totalRowsModified}</span>
+            `;
+
+            // 生成新的 workbook
+            const newData = [headers, ...resultRows];
+            const newSheet = XLSX.utils.aoa_to_sheet(newData);
+            const newWb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWb, newSheet, '颜色去重结果');
+            processedWorkbook = newWb;
+
+            // 预览表格
+            renderPreview(headers, resultRows, modifiedFlags);
+            resultPanel.classList.remove('hidden');
+        });
+
+        // 渲染预览表格（最多显示前200行）
+        function renderPreview(headers, rows, flags) {
+            const maxPreview = Math.min(rows.length, 200);
+            const thead = previewTable.querySelector('thead');
+            const tbody = previewTable.querySelector('tbody');
+
+            // 表头
+            thead.innerHTML = '<tr>' + headers.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr>';
+
+            // 数据行
+            let html = '';
+            for (let i = 0; i < maxPreview; i++) {
+                const row = rows[i];
+                html += '<tr>';
+                row.forEach((cell, colIdx) => {
+                    const isModified = flags[i] && flags[i][colIdx];
+                    const cellClass = isModified ? 'modified-cell' : '';
+                    html += `<td class="${cellClass}">${escapeHtml(String(cell))}</td>`;
+                });
+                html += '</tr>';
+            }
+            if (rows.length > maxPreview) {
+                html += `<tr><td colspan="${headers.length}" style="text-align:center; color:#64748b;">... 还有 ${rows.length - maxPreview} 行未显示，下载后可查看全部</td></tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // 下载处理后的Excel
+        downloadBtn.addEventListener('click', () => {
+            if (!processedWorkbook) {
+                alert('没有可下载的文件，请先执行处理');
+                return;
+            }
+            XLSX.writeFile(processedWorkbook, '颜色去重结果.xlsx');
+        });
+
+        // 初始状态
+        fullReset();
+    })();
+</script>
+</body>
+</html>

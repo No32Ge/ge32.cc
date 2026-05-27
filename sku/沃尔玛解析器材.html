@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>沃尔玛属性解析系统 v3.11</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        /* 90年代复古风格调色板 */
+        :root {
+            --win-bg: #008080;       /* 经典的 Win95 纯色桌面蓝绿 */
+            --panel-bg: #c0c0c0;     /* 经典系统灰 */
+            --border-light: #ffffff;
+            --border-dark: #808080;
+            --border-darker: #000000;
+            --title-blue: #000080;
+            --title-blue-light: #1084d0;
+            --text-main: #000000;
+            --text-disabled: #808080;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--win-bg);
+            font-family: 'MS Sans Serif', 'Segoe UI', Tahoma, Arial, sans-serif;
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            line-height: 1.5;
+        }
+
+        /* 主视窗容器 */
+        .window-container {
+            background-color: var(--panel-bg);
+            border-top: 2px solid var(--border-light);
+            border-left: 2px solid var(--border-light);
+            border-right: 2px solid var(--border-darker);
+            border-bottom: 2px solid var(--border-darker);
+            padding: 2px;
+            width: 100%;
+            max-width: 1600px;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+        }
+
+        /* 标题栏 */
+        .window-title {
+            background: linear-gradient(to right, var(--title-blue), var(--title-blue-light));
+            color: white;
+            font-weight: bold;
+            padding: 4px 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        .window-controls {
+            display: flex; gap: 2px;
+        }
+
+        .win-btn {
+            background: var(--panel-bg);
+            border-top: 1px solid var(--border-light);
+            border-left: 1px solid var(--border-light);
+            border-right: 1px solid var(--border-darker);
+            border-bottom: 1px solid var(--border-darker);
+            width: 16px; height: 14px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 10px; color: black; font-weight: bold; cursor: default;
+        }
+
+        /* 内部网格布局 (保留现代的 flex 确保响应式) */
+        .window-body {
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .main-col { flex: 1.5; min-width: 320px; display: flex; flex-direction: column; gap: 10px; }
+        .side-col { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 10px; max-height: 85vh; overflow-y: auto; }
+
+        /* 经典的 Fieldset 组合框 */
+        fieldset {
+            border-top: 2px solid var(--border-dark);
+            border-left: 2px solid var(--border-dark);
+            border-right: 2px solid var(--border-light);
+            border-bottom: 2px solid var(--border-light);
+            padding: 12px;
+            margin-bottom: 5px;
+        }
+        legend {
+            padding: 0 4px;
+            color: var(--text-main);
+            font-size: 0.85rem;
+        }
+
+        /* 3D 输入框 */
+        textarea, input[type="text"], input[type="password"], input[type="number"], select {
+            background: #ffffff;
+            border-top: 2px solid var(--border-darker);
+            border-left: 2px solid var(--border-darker);
+            border-right: 2px solid var(--border-light);
+            border-bottom: 2px solid var(--border-light);
+            padding: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            width: 100%;
+            outline: none;
+        }
+        
+        /* 经典 3D 按钮 */
+        button {
+            background-color: var(--panel-bg);
+            border-top: 2px solid var(--border-light);
+            border-left: 2px solid var(--border-light);
+            border-right: 2px solid var(--border-darker);
+            border-bottom: 2px solid var(--border-darker);
+            padding: 6px 15px;
+            font-family: 'MS Sans Serif', Tahoma, sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-main);
+            cursor: pointer;
+            box-shadow: inset 1px 1px 0px #fff, inset -1px -1px 0px #808080;
+        }
+        button:active:not(:disabled) {
+            border-top: 2px solid var(--border-darker);
+            border-left: 2px solid var(--border-darker);
+            border-right: 2px solid var(--border-light);
+            border-bottom: 2px solid var(--border-light);
+            box-shadow: none;
+            padding: 7px 14px 5px 16px; /* 模拟按下的位移 */
+        }
+        button:disabled {
+            color: var(--text-disabled);
+            text-shadow: 1px 1px 0px #fff;
+            cursor: not-allowed;
+        }
+
+        /* 状态条 */
+        .status-bar {
+            background: var(--panel-bg);
+            border-top: 2px solid var(--border-dark);
+            border-left: 2px solid var(--border-dark);
+            border-right: 2px solid var(--border-light);
+            border-bottom: 2px solid var(--border-light);
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .status-pane {
+            border-top: 1px solid var(--border-dark);
+            border-left: 1px solid var(--border-dark);
+            border-right: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border-light);
+            padding: 2px 8px;
+            background: #e0e0e0;
+        }
+
+        /* 数据表格 (经典电子表格风) */
+        .table-container {
+            background: #ffffff;
+            border-top: 2px solid var(--border-darker);
+            border-left: 2px solid var(--border-darker);
+            border-right: 2px solid var(--border-light);
+            border-bottom: 2px solid var(--border-light);
+            height: 400px;
+            overflow: auto;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            min-width: 800px;
+        }
+        th {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-light);
+            border-bottom-color: var(--border-darker);
+            border-right-color: var(--border-darker);
+            padding: 4px 8px;
+            position: sticky;
+            top: 0;
+            font-weight: normal;
+        }
+        td {
+            border: 1px solid #c0c0c0;
+            padding: 4px 8px;
+            vertical-align: middle;
+        }
+        
+        /* 状态高亮 (回归易用性) */
+        .row-blocked { background-color: #ffcccc; color: #800000; }
+        .row-ai { background-color: #ccffff; color: #000080; }
+        
+        .badge { font-size: 0.75rem; border: 1px solid #000; padding: 1px 4px; background: #fff; }
+        .badge-err { background: #ff0000; color: #fff; }
+        .badge-ai { background: #0000ff; color: #fff; }
+
+        /* DOS 风控制台日志 */
+        .dos-log {
+            background: #000000;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            height: 150px;
+            overflow-y: auto;
+            padding: 8px;
+            border-top: 2px solid var(--border-darker);
+            border-left: 2px solid var(--border-darker);
+            border-right: 2px solid var(--border-light);
+            border-bottom: 2px solid var(--border-light);
+            margin-top: 10px;
+        }
+        .log-entry { margin-bottom: 2px; }
+        .log-err { color: #ff3333; }
+        .log-warn { color: #ffff00; }
+
+        /* 策略列表项 */
+        .strategy-item {
+            display: flex; gap: 5px; margin-bottom: 5px; align-items: center;
+        }
+        .strategy-item input { flex: 1; }
+        
+        /* 进度条 */
+        .progress-bar {
+            width: 100%; height: 16px;
+            border-top: 2px solid var(--border-darker);
+            border-left: 2px solid var(--border-darker);
+            border-right: 2px solid var(--border-light);
+            border-bottom: 2px solid var(--border-light);
+            background: #fff;
+            margin-top: 5px;
+        }
+        .progress-fill {
+            height: 100%; width: 0%; background: #000080; transition: width 0.2s;
+        }
+
+        .flex-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <div class="window-container">
+        <!-- 蓝条标题 -->
+        <div class="window-title">
+            <span>沃尔玛属性解析系统 v3.11</span>
+            <div class="window-controls">
+                <div class="win-btn">_</div>
+                <div class="win-btn">□</div>
+                <div class="win-btn">X</div>
+            </div>
+        </div>
+
+        <!-- 窗口内容区 -->
+        <div class="window-body">
+            
+            <!-- 左侧核心操作区 -->
+            <div class="main-col">
+                <fieldset>
+                    <legend>数据输入端 (Data Input)</legend>
+                    <textarea id="dataInput" rows="8" placeholder="每行输入一条商品描述...&#10;1*蓝色蝴蝶波浪条纹毛巾75*35CM&#10;1X弹力袜(一双)"></textarea>
+                    
+                    <div class="flex-row" style="margin-top: 10px;">
+                        <button id="stage1Btn"><u>E</u>xecute: 正则解析</button>
+                        <button id="exportExcelBtn" disabled><u>S</u>ave As Excel</button>
+                        <span style="flex:1;"></span>
+                        <button id="loadExampleBtn">Load 示例</button>
+                        <button id="clearDataBtn">Clear 清空</button>
+                    </div>
+                </fieldset>
+
+                <!-- 经典状态条 -->
+                <div class="status-bar" id="statsBar">
+                    <div class="status-pane">记录总数: 0</div>
+                    <div class="status-pane">已匹配: 0</div>
+                    <div class="status-pane">已拦截/未匹配: 0</div>
+                    <div class="status-pane">AI 处理: 0</div>
+                </div>
+
+                <!-- 数据表格 -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="40">ID</th>
+                                <th>原始数据 (Original Text)</th>
+                                <th width="60">状态</th>
+                                <th>匹配策略</th>
+                                <th>件数 (Pcs)</th>
+                                <th>每包 (Pkg)</th>
+                                <th>总数 (Tot)</th>
+                                <th>明细报表</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultBody">
+                            <tr><td colspan="8" style="text-align:center; padding:20px; color:#808080;">Waiting for data input...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 右侧配置区 -->
+            <div class="side-col">
+                
+                <!-- 规则与策略 -->
+                <fieldset>
+                    <legend>解析配置 (Configuration)</legend>
+                    <div style="font-size:0.75rem; margin-bottom:8px;">* 含分号 / "个"+数字 / 汉字+数字 / 尺寸(cm) -> 将被系统拦截转入 AI 队列。</div>
+                    
+                    <div id="strategyListContainer"></div>
+                    
+                    <div class="flex-row">
+                        <button id="addStrategyBtn">Add 规则</button>
+                        <button id="resetStrategiesBtn">Default 默认</button>
+                    </div>
+                </fieldset>
+
+                <!-- AI 大模型引擎 -->
+                <fieldset>
+                    <legend>AI 协处理引擎 (AI Engine)</legend>
+                    <div class="flex-row">
+                        <span style="font-size:0.75rem; width:50px;">API Key:</span>
+                        <input type="password" id="apiKey" placeholder="sk-..." style="flex:1;">
+                    </div>
+                    <div class="flex-row">
+                        <span style="font-size:0.75rem; width:50px;">Model:</span>
+                        <select id="modelSelect" style="flex:1;">
+                            <option value="deepseek-chat">deepseek-chat</option>
+                            <option value="deepseek-coder">deepseek-coder</option>
+                        </select>
+                    </div>
+                    <div class="flex-row">
+                        <span style="font-size:0.75rem; width:50px;">Host:</span>
+                        <input type="text" id="apiUrl" value="https://api.deepseek.com/v1/chat/completions" style="flex:1;">
+                    </div>
+                    <div class="flex-row">
+                        <span style="font-size:0.75rem;">Batch:</span>
+                        <input type="number" id="batchSize" value="6" min="1" style="width:50px;">
+                        <span style="font-size:0.75rem; margin-left:10px;">Threads:</span>
+                        <input type="number" id="concurrency" value="3" min="1" max="10" style="width:50px;">
+                    </div>
+
+                    <div style="font-size:0.75rem; margin-top:5px;">System Prompt:</div>
+                    <textarea id="aiPromptEditor" rows="6">你是一个沃尔玛商品属性提取专家。请分析每一行商品文本，提取三个核心指标。
+
+【输出格式】纯JSON数组，每个元素包含：
+- "row": 整数，必须与输入行号一致
+- "pieceCount": 整数或null
+- "countPerPack": 整数或null
+- "totalCount": 整数或null
+- "detail": 字符串，如"50 → 药丸"</textarea>
+                    
+                    <div class="flex-row" style="margin-top:10px;">
+                        <button id="stage2Btn" style="width:100%; font-weight:bold;" disabled>Run AI 批处理</button>
+                    </div>
+                    <div class="progress-bar"><div id="aiProgressFill" class="progress-fill"></div></div>
+                </fieldset>
+
+                <!-- 系统日志 -->
+                <div class="dos-log" id="logArea">
+                    <div class="log-entry">C:\WALMART_PARSER> System initialized.</div>
+                    <div class="log-entry">Waiting for user command...</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 底层绝对严肃且未作修改的 JavaScript ================= -->
+    <script>
+        (function() {
+            // DOM 元素绑定
+            const dataTextarea = document.getElementById('dataInput');
+            const stage1Btn = document.getElementById('stage1Btn');
+            const stage2Btn = document.getElementById('stage2Btn');
+            const exportExcelBtn = document.getElementById('exportExcelBtn');
+            const resultBody = document.getElementById('resultBody');
+            const statsBar = document.getElementById('statsBar');
+            const apiKeyInput = document.getElementById('apiKey');
+            const modelSelect = document.getElementById('modelSelect');
+            const apiUrlInput = document.getElementById('apiUrl');
+            const batchSizeInput = document.getElementById('batchSize');
+            const concurrencyInput = document.getElementById('concurrency');
+            const aiProgressFill = document.getElementById('aiProgressFill');
+            const logArea = document.getElementById('logArea');
+            const strategyListContainer = document.getElementById('strategyListContainer');
+            const aiPromptEditor = document.getElementById('aiPromptEditor');
+
+            // 核心数据
+            let resultsArray = [];
+            let totalLineCount = 0;
+            let strategies = [];
+            let aiRunning = false;
+
+            // 默认底层正则
+            const defaultStrategies = [
+                { id: 's0', name: '中文x数字', regex: '^\\s*([^\\d*x*×X+，,;；\\s]+)\\s*[x*×]\\s*(\\d+)\\s*$', type: 'simple', groupItem: 1, groupQty: 2 },
+                { id: 's1', name: '数字x中文', regex: '^\\s*(?:(\\d+)\\s*[x*×X]\\s*|\\s*[x*×X]\\s*(\\d+))\\s*([^\\d*x*×X+，,;；\\s]+?)\\s*$', type: 'simple', groupItem: 3, groupQty: [1,2] },
+                { id: 's2', name: '多物品拆分', regex: null, type: 'composite' }
+            ];
+
+            const STORAGE_STRATEGIES = 'walmart_strategies_v95';
+            const STORAGE_AI = 'walmart_ai_config_v95';
+            const STORAGE_PROMPT = 'walmart_ai_prompt_v95';
+
+            // CMD 风格控制台日志
+            function log(msg, type='info') {
+                const div = document.createElement('div');
+                div.className = 'log-entry';
+                if(type === 'error') div.classList.add('log-err');
+                if(type === 'warning') div.classList.add('log-warn');
+                
+                const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+                div.innerHTML = `[${time}] ${escapeHtml(msg)}`;
+                logArea.appendChild(div);
+                logArea.scrollTop = logArea.scrollHeight;
+                if(logArea.children.length > 100) logArea.removeChild(logArea.firstChild);
+            }
+
+            function escapeHtml(s) { return String(s).replace(/[&<>]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+
+            function loadStrategies() {
+                const saved = localStorage.getItem(STORAGE_STRATEGIES);
+                if(saved){ try{ const arr=JSON.parse(saved); if(Array.isArray(arr)&&arr.length){ strategies=arr; return; } }catch(e){} }
+                strategies = JSON.parse(JSON.stringify(defaultStrategies));
+            }
+            function saveStrategies() { localStorage.setItem(STORAGE_STRATEGIES, JSON.stringify(strategies)); }
+
+            function renderStrategyCards() {
+                strategyListContainer.innerHTML = strategies.map(s => {
+                    const isComposite = s.type==='composite';
+                    return `<div class="strategy-item">
+                        <input type="text" value="${escapeHtml(s.name)}" data-id="${s.id}" data-field="name" class="s-name" style="width:80px;" ${isComposite?'disabled':''}>
+                        ${isComposite ? '<input type="text" value="[内置复合逻辑]" disabled>' : `<input type="text" value="${escapeHtml(s.regex||'')}" data-id="${s.id}" data-field="regex" class="s-regex">`}
+                        <button class="del-s" data-id="${s.id}">Del</button>
+                    </div>`;
+                }).join('');
+                
+                document.querySelectorAll('.s-name,.s-regex').forEach(el=>el.addEventListener('change',e=>{
+                    const s=strategies.find(s=>s.id===e.target.dataset.id);
+                    if(s){ s[e.target.dataset.field]=e.target.value; saveStrategies(); }
+                }));
+                document.querySelectorAll('.del-s').forEach(b=>b.addEventListener('click',e=>{
+                    strategies=strategies.filter(s=>s.id!==e.target.dataset.id);
+                    saveStrategies(); renderStrategyCards();
+                }));
+            }
+
+            function addStrategy() {
+                strategies.push({ id:'c_'+Date.now(), name:'新规则', regex:'^\\s*(\\d+)\\s*x\\s*(.+?)$', type:'simple', groupItem:2, groupQty:1 });
+                saveStrategies(); renderStrategyCards();
+            }
+            function resetStrategies() {
+                strategies=JSON.parse(JSON.stringify(defaultStrategies));
+                saveStrategies(); renderStrategyCards();
+                log('Rules restored to default.','info');
+            }
+
+            // 正则匹配引擎
+            function matchStrategy(line, strat) {
+                if(strat.type==='composite') {
+                    const parts = line.split(/[ ,，]+/).filter(p=>p.trim());
+                    const items = [];
+                    const r1=/^(\d+)\s*[x*×X]\s*([^\d*x*×X+，,;；]+)$/;
+                    const r2=/^[x*×X]\s*(\d+)\s*([^\d*x*×X+，,;；]+)$/;
+                    for(let p of parts){
+                        let m=p.match(r1)||p.match(r2);
+                        if(m&&m[1]&&m[2]&&!/[\d*x*×X]/.test(m[2])) items.push({quantity:m[1],name:m[2].trim()});
+                    }
+                    return items.length?{matched:true,strategy:strat.name,items}:null;
+                }
+                try {
+                    const re=new RegExp(strat.regex);
+                    const m=line.match(re);
+                    if(!m)return null;
+                    let qty=Array.isArray(strat.groupQty)?(m[strat.groupQty[0]]||m[strat.groupQty[1]]):m[strat.groupQty];
+                    let name=m[strat.groupItem];
+                    if(!qty||!name||/[\d*x*×X]/.test(name))return null;
+                    return {matched:true,strategy:strat.name,items:[{quantity:qty,name:name.trim()}]};
+                } catch(e){ return null; }
+            }
+
+            // 拦截器引擎
+            function shouldBlock(line) {
+                if(!line.trim()) return {blocked:true,reason:'Empty'};
+                if(/[;；]/.test(line)) return {blocked:true,reason:'Semicolon'};
+                if(/个/.test(line)&&/\d/.test(line)) return {blocked:true,reason:'Num+Ge'};
+                if(/[一二三四五六七八九十百千万]/.test(line)&&/\d/.test(line)) return {blocked:true,reason:'CN_Num'};
+                if(/[寸尺]|cm/i.test(line)) return {blocked:true,reason:'Size'};
+                return {blocked:false};
+            }
+
+            // 计算引擎
+            function compute(items) {
+                let pc=0; items.forEach(i=>{let n=parseInt(i.quantity);pc+=isNaN(n)?0:n;});
+                const uniq=new Set(items.map(i=>i.name.trim()));
+                if(uniq.size===1){ const q=parseInt(items[0].quantity)||pc; return {pieceCount:q,countPerPack:q,totalCount:q}; }
+                return {pieceCount:pc,countPerPack:1,totalCount:1};
+            }
+
+            // 执行阶段 1
+            function runStage1() {
+                if(!dataTextarea.value.trim()){ log('Input data is empty.','error'); return; }
+                log('Executing Regex Engine...');
+                
+                const lines=dataTextarea.value.split(/\r?\n/);
+                totalLineCount=lines.length;
+                resultsArray=[];
+                let matched=0,blocked=0,unmatched=0;
+
+                lines.forEach((line,idx)=>{
+                    const rowNum=idx+1;
+                    const fb=shouldBlock(line);
+                    if(fb.blocked){
+                        blocked++;
+                        resultsArray.push({rowNum,originalLine:line,status:'blocked',reason:fb.reason,pieceCount:'X',countPerPack:'X',totalCount:'X',detail:'Blocked (Wait AI)'});
+                        return;
+                    }
+                    let mr=null;
+                    for(let s of strategies){ mr=matchStrategy(line,s); if(mr)break; }
+                    
+                    if(mr){
+                        matched++;
+                        const c=compute(mr.items);
+                        resultsArray.push({rowNum,originalLine:line,status:'matched',reason:mr.strategy,pieceCount:c.pieceCount,countPerPack:c.countPerPack,totalCount:c.totalCount,detail:mr.items.map(i=>`${i.quantity}→${i.name}`).join(' ; ')});
+                    } else {
+                        unmatched++;
+                        resultsArray.push({rowNum,originalLine:line,status:'unmatched',reason:'No Match',pieceCount:'X',countPerPack:'X',totalCount:'X',detail:'Wait AI'});
+                    }
+                });
+
+                renderTable(matched,blocked,unmatched,0);
+                exportExcelBtn.disabled=false;
+                
+                const needAi = resultsArray.filter(r=>r.status==='blocked'||r.status==='unmatched').length;
+                stage2Btn.disabled = !(needAi>0 && apiKeyInput.value.trim());
+                
+                log(`Process complete. Matched: ${matched} | Need AI: ${needAi}`);
+            }
+
+            // 渲染明亮清晰的表格
+            function renderTable(matched,blocked,unmatched,ai){
+                const needAi = resultsArray.filter(r=>r.status==='blocked'||r.status==='unmatched').length;
+                
+                statsBar.innerHTML = `
+                    <div class="status-pane">Total: ${totalLineCount}</div>
+                    <div class="status-pane">Matched: ${matched}</div>
+                    <div class="status-pane" style="color:#800000; font-weight:bold;">Wait AI: ${needAi}</div>
+                    <div class="status-pane" style="color:#000080;">AI Processed: ${ai}</div>
+                `;
+
+                resultBody.innerHTML = resultsArray.map(r=>{
+                    let sb='', sh='', rc='';
+                    if(r.status==='matched'){ 
+                        sb='OK'; 
+                        sh=r.reason; 
+                    }
+                    else if(r.status==='blocked' || r.status==='unmatched'){ 
+                        sb='<span class="badge badge-err">ERR</span>'; 
+                        sh=r.reason; 
+                        rc='row-blocked'; 
+                    }
+                    else if(r.status==='ai'){ 
+                        sb='<span class="badge badge-ai">AI</span>'; 
+                        sh='DeepSeek'; 
+                        rc='row-ai'; 
+                    }
+
+                    return `
+                    <tr class="${rc}">
+                        <td>${r.rowNum}</td>
+                        <td>${escapeHtml(r.originalLine)}</td>
+                        <td align="center">${sb}</td>
+                        <td>${sh}</td>
+                        <td>${r.pieceCount}</td>
+                        <td>${r.countPerPack}</td>
+                        <td>${r.totalCount}</td>
+                        <td>${escapeHtml(r.detail)}</td>
+                    </tr>`;
+                }).join('');
+            }
+
+            // AI 阶段 2
+            async function runStage2(){
+                if(aiRunning){ log('AI is currently running.','warning'); return; }
+                const apiKey=apiKeyInput.value.trim();
+                if(!apiKey){ log('API Key missing.','error'); return; }
+                
+                const needAi = resultsArray.filter(r=>r.status==='blocked'||r.status==='unmatched');
+                if(!needAi.length){ log('No rows require AI processing.'); return; }
+
+                stage2Btn.disabled=true; aiRunning=true;
+                stage2Btn.innerText = 'Processing...';
+                aiProgressFill.style.width='0%';
+                log(`Sending ${needAi.length} rows to AI server...`);
+
+                const systemPrompt = aiPromptEditor.value.trim() || '请解析商品文本并输出JSON';
+                const batchSize=parseInt(batchSizeInput.value)||6;
+                const concurrency=parseInt(concurrencyInput.value)||3;
+                const groups=[];
+                for(let i=0;i<needAi.length;i+=batchSize) groups.push(needAi.slice(i,i+batchSize));
+
+                let completed=0, totalSuccess=0, totalFail=0;
+
+                const runGroup=async(group,idx)=>{
+                    const msg=group.map(r=>`行号 ${r.rowNum} : ${r.originalLine}`).join('\n');
+                    try{
+                        const resp=await fetch(apiUrlInput.value,{
+                            method:'POST',
+                            headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+                            body:JSON.stringify({model:modelSelect.value,messages:[{role:'system',content:systemPrompt},{role:'user',content:msg}],temperature:0})
+                        });
+                        if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const data=await resp.json();
+                        let jsonStr=data.choices[0].message.content.trim();
+                        if(jsonStr.startsWith('```json')) jsonStr=jsonStr.slice(7,-3);
+                        if(jsonStr.startsWith('```')) jsonStr=jsonStr.slice(3,-3);
+                        
+                        const arr=JSON.parse(jsonStr);
+                        let applied=0;
+                        arr.forEach(aiRow=>{
+                            const target=resultsArray.find(r=>r.rowNum===aiRow.row&&(r.status==='blocked'||r.status==='unmatched'));
+                            if(target){
+                                target.status='ai';
+                                target.reason='AI Extracted';
+                                target.pieceCount=aiRow.pieceCount??'X';
+                                target.countPerPack=aiRow.countPerPack??'X';
+                                target.totalCount=aiRow.totalCount??'X';
+                                target.detail=aiRow.detail||'AI_OK';
+                                applied++;
+                            }
+                        });
+                        totalSuccess+=applied;
+                        return {success:true};
+                    }catch(e){
+                        log(`Batch ${idx+1} failed: ${e.message}`,'error');
+                        totalFail+=group.length;
+                        return {success:false};
+                    }finally{
+                        completed++;
+                        aiProgressFill.style.width=`${Math.round((completed/groups.length)*100)}%`;
+                    }
+                };
+
+                const queue=[...Array(groups.length).keys()];
+                const workers=[];
+                for(let i=0;i<Math.min(concurrency,groups.length);i++){
+                    workers.push((async()=>{ while(queue.length){ const idx=queue.shift(); await runGroup(groups[idx],idx); } })());
+                }
+                await Promise.all(workers);
+
+                let matched=resultsArray.filter(r=>r.status==='matched').length;
+                let blocked=resultsArray.filter(r=>r.status==='blocked').length;
+                let ai=resultsArray.filter(r=>r.status==='ai').length;
+                
+                renderTable(matched,blocked,0,ai);
+                setTimeout(()=>aiProgressFill.style.width='0%',2000);
+
+                log(`AI Done. Success: ${totalSuccess} | Failed: ${totalFail}`);
+                stage2Btn.innerText = 'Run AI 批处理';
+                stage2Btn.disabled=resultsArray.filter(r=>r.status==='blocked'||r.status==='unmatched').length===0;
+                aiRunning=false;
+            }
+
+            // 导出功能
+            function exportExcel(){
+                if(!resultsArray.length) return;
+                log('Saving to Excel...');
+                const data=[['行号','原始行','状态','策略','Piece Count','Count Per Pack','Total Count','明细']];
+                resultsArray.forEach(r=>data.push([r.rowNum, r.originalLine, r.status, r.reason, r.pieceCount, r.countPerPack, r.totalCount, r.detail]));
+                
+                const wb=XLSX.utils.book_new();
+                const ws=XLSX.utils.aoa_to_sheet(data);
+                XLSX.utils.book_append_sheet(wb,ws,'Result');
+                XLSX.writeFile(wb,`Walmart_Parser_${new Date().toISOString().slice(0,10)}.xlsx`);
+                log('Save complete.');
+            }
+
+            // 本地存储
+            const savedPrompt=localStorage.getItem(STORAGE_PROMPT);
+            if(savedPrompt) aiPromptEditor.value=savedPrompt;
+            aiPromptEditor.addEventListener('change',()=>{ localStorage.setItem(STORAGE_PROMPT,aiPromptEditor.value); });
+
+            const savedAi=localStorage.getItem(STORAGE_AI);
+            if(savedAi){ try{ const c=JSON.parse(savedAi); apiKeyInput.value=c.apiKey||''; modelSelect.value=c.model||'deepseek-chat'; apiUrlInput.value=c.apiUrl||'https://api.deepseek.com/v1/chat/completions'; }catch(e){} }
+            [apiKeyInput,modelSelect,apiUrlInput].forEach(el=>el.addEventListener('change',()=>{
+                localStorage.setItem(STORAGE_AI,JSON.stringify({apiKey:apiKeyInput.value,model:modelSelect.value,apiUrl:apiUrlInput.value}));
+                const needAi=resultsArray.filter(r=>r.status==='blocked'||r.status==='unmatched').length;
+                stage2Btn.disabled=!(needAi>0&&apiKeyInput.value.trim());
+            }));
+
+            // 绑定事件
+            loadStrategies();
+            renderStrategyCards();
+            document.getElementById('addStrategyBtn').addEventListener('click',addStrategy);
+            document.getElementById('resetStrategiesBtn').addEventListener('click',resetStrategies);
+            stage1Btn.addEventListener('click',runStage1);
+            stage2Btn.addEventListener('click',runStage2);
+            exportExcelBtn.addEventListener('click',exportExcel);
+            
+            document.getElementById('loadExampleBtn').addEventListener('click',()=>{
+                dataTextarea.value = [
+                    '1*蓝色蝴蝶波浪条纹毛巾75*35CM','1X弹力袜(一双)',
+                    '5x布套；1x手柄','180cm橙片藤条装饰x1','红柄园艺锄（13cm）*1',
+                    '20*一次性餐具','药丸x50','12x双螺旋 1x纸扇花 1x三角旗'
+                ].join('\n');
+                log('Example data loaded.');
+            });
+            
+            document.getElementById('clearDataBtn').addEventListener('click',()=>{
+                dataTextarea.value='';
+                resultBody.innerHTML='<tr><td colspan="8" style="text-align:center; padding:20px; color:#808080;">Waiting for data input...</td></tr>';
+                statsBar.innerHTML='<div class="status-pane">记录总数: 0</div><div class="status-pane">已匹配: 0</div><div class="status-pane">已拦截/未匹配: 0</div><div class="status-pane">AI 处理: 0</div>';
+                resultsArray=[]; exportExcelBtn.disabled=true; stage2Btn.disabled=true;
+                log('Data cleared.');
+            });
+
+        })();
+    </script>
+</body>
+</html>

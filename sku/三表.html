@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Excel · 三表同出 (重组/Lag-Time/绑定)</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #f5f7fc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            max-width: 1100px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05), 0 6px 12px rgba(0,0,0,0.08);
+            padding: 28px 30px 32px;
+            border: 1px solid #eef0f5;
+        }
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .sub {
+            color: #64748b;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+            border-left: 4px solid #3b82f6;
+            padding-left: 16px;
+        }
+        .upload-area {
+            background: #fafbff;
+            border: 2px dashed #cbd5e1;
+            border-radius: 20px;
+            padding: 26px 20px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f8fafe;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .file-input-wrapper input {
+            position: absolute;
+            opacity: 0;
+            width: 0.1px;
+            height: 0.1px;
+        }
+        .file-label {
+            background: white;
+            border: 1px solid #d0d9e8;
+            border-radius: 60px;
+            padding: 12px 28px;
+            font-weight: 500;
+            color: #1e293b;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        .file-label:hover {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+            box-shadow: 0 8px 14px rgba(59,130,246,0.2);
+        }
+        .file-name {
+            margin-top: 14px;
+            color: #334155;
+            font-size: 0.9rem;
+            background: #eef2ff;
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 30px;
+        }
+        .fields-preview {
+            background: #f8fafc;
+            border-radius: 18px;
+            padding: 18px 20px;
+            margin: 20px 0 22px;
+            border: 1px solid #e2e8f0;
+        }
+        .badge-title {
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .target-fields-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 4px 2px;
+        }
+        .field-tag {
+            background: white;
+            border-radius: 30px;
+            padding: 4px 14px;
+            font-size: 0.8rem;
+            border: 1px solid #d9e2ef;
+            color: #1e293b;
+        }
+        .field-tag.repeat-badge {
+            background: #fef9c3;
+            border-color: #eab308;
+        }
+        .action-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 16px;
+            margin: 8px 0 6px;
+        }
+        .btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            color: #1e293b;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: #1e293b;
+            border-color: #1e293b;
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #0f172a;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .log-box {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 16px 20px;
+            border-radius: 18px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin-top: 24px;
+            line-height: 1.5;
+            border: 1px solid #334155;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+        .small-note {
+            margin-top: 10px;
+            color: #64748b;
+            font-size: 0.8rem;
+            text-align: right;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="flex-between">
+        <h1>
+            <span>📦 三表同出 · 重组 / Lag-Time / 绑定</span>
+        </h1>
+        <span style="background:#e6edf9; padding:4px 14px; border-radius:40px; font-size:0.8rem;">一键生成三份Excel</span>
+    </div>
+    <div class="sub">
+        上传Excel → 按原始顺序过滤重组 → 同时导出 Lag-Time 表(固定4天) 和 绑定表(子SKU→SKU)
+    </div>
+
+    <div class="upload-area">
+        <div class="file-input-wrapper">
+            <input type="file" id="fileInput" accept=".xlsx, .xls, .csv, .xlsm" />
+            <label for="fileInput" class="file-label">
+                <span>📂</span> 选择 Excel 文件
+            </label>
+        </div>
+        <div id="fileNameDisplay" class="file-name">尚未选择文件</div>
+        <div style="margin-top: 8px; font-size:0.8rem; color:#64748b;">支持 .xlsx .xls .csv (默认第一个工作表)</div>
+    </div>
+
+    <div class="fields-preview">
+        <div class="badge-title">
+            <span>🎯 目标字段顺序 (共 <span id="totalFieldCount"></span> 项，黄色=重复字段)</span>
+            <span style="margin-left:auto; font-size:0.75rem; background:#e9eef4; padding:2px 10px; border-radius:20px;">重组表将按此顺序导出</span>
+        </div>
+        <div id="targetFieldsContainer" class="target-fields-list"></div>
+    </div>
+
+    <div class="action-bar">
+        <button class="btn btn-primary" id="processBtn" disabled>
+            <span>⚡</span> 处理并导出三份表格
+        </button>
+        <button class="btn" id="clearBtn">
+            <span>🗑️</span> 清除
+        </button>
+        <span id="statusBadge" style="margin-left:auto; font-size:0.85rem; background:#eef2ff; padding:6px 16px; border-radius:40px;">等待文件</span>
+    </div>
+
+    <div class="log-box" id="logContainer">
+        > 就绪，请上传Excel文件。<br>
+        > 将导出：重组表(updata_原表名)、Lag-Time表、绑定表。
+    </div>
+    <div class="small-note">
+        * Lag-Time表需含SKU列，固定填4；绑定表需含“子SKU”列。
+    </div>
+</div>
+
+<script>
+    (function(){
+        "use strict";
+
+        // ---------- 原始字段列表（保留重复）--------
+        const RAW_FIELDS = [
+            "SKU", "EAN", "T", "price", "netContentStatement", "D", "1", "2", "3", "4", "5",
+            "小平台专用链接 2", "Count Per Pack", "assembledProductLength", "assembledProductHeight",
+            "netContentStatement", "assembledProductWidth", "亚马逊美国站颜色", "颜色类型", "英文材质",
+            "小平台专用链接 2", "小平台专用链接 3", "小平台专用链接 1", "小平台专用链接 4",
+            "小平台专用链接 5", "小平台专用链接 6", "小平台专用链接 7", "小平台专用链接 8",
+            "小平台专用链接 9", "O", "Total Count", "Variant Group ID", "Is Primary Variant", "小平台专用链接 2"
+        ];
+
+        const fieldCountMap = new Map();
+        RAW_FIELDS.forEach(f => fieldCountMap.set(f.trim(), (fieldCountMap.get(f.trim())||0)+1));
+
+        // DOM
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const processBtn = document.getElementById('processBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const logContainer = document.getElementById('logContainer');
+        const targetFieldsContainer = document.getElementById('targetFieldsContainer');
+        const totalFieldCountSpan = document.getElementById('totalFieldCount');
+
+        let selectedFile = null;
+        let workbookCache = null;       
+        let currentHeaders = null;      
+        let originalSheetData = null;   
+        let sheetName = '';
+        let originalFileName = '';
+
+        // 渲染目标字段
+        function renderTargetFields() {
+            totalFieldCountSpan.textContent = RAW_FIELDS.length;
+            let html = '';
+            RAW_FIELDS.forEach((field, index) => {
+                const trimmed = field.trim();
+                const isRepeated = fieldCountMap.get(trimmed) > 1;
+                const repeatClass = isRepeated ? 'repeat-badge' : '';
+                html += `<span class="field-tag ${repeatClass}">${escapeHtml(trimmed)}</span>`;
+            });
+            targetFieldsContainer.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function appendLog(message, type = 'info') {
+            const line = document.createElement('div');
+            line.innerHTML = `> ${message}`;
+            if (type === 'success') line.style.color = '#a3e635';
+            else if (type === 'warn') line.style.color = '#fbbf24';
+            else if (type === 'error') line.style.color = '#f87171';
+            else if (type === 'shared') line.style.color = '#a5b4fc';
+            logContainer.appendChild(line);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function resetLog(initialMsg) {
+            logContainer.innerHTML = '';
+            appendLog(initialMsg || '日志已清空。');
+        }
+
+        function setStatus(text, isReady = false) {
+            statusBadge.textContent = text;
+            statusBadge.style.background = isReady ? '#dcfce7' : '#eef2ff';
+            statusBadge.style.color = isReady ? '#166534' : '#1e293b';
+        }
+
+        function toggleProcessButton(enabled) {
+            processBtn.disabled = !enabled;
+        }
+
+        function resetState() {
+            selectedFile = null;
+            workbookCache = null;
+            currentHeaders = null;
+            originalSheetData = null;
+            sheetName = '';
+            originalFileName = '';
+            fileNameDisplay.textContent = '尚未选择文件';
+            fileInput.value = '';
+            toggleProcessButton(false);
+            setStatus('等待文件');
+            resetLog('> 已重置。请上传Excel文件。');
+            window.__lastMatchedIndices = null;
+        }
+
+        // 智能匹配索引 (重复字段优先新列，否则共享)
+        function buildColumnIndexMap(headers) {
+            const indices = [];
+            const usedIndices = new Set();
+            const firstMatchIndex = new Map();
+            const nameToPositions = new Map();
+            headers.forEach((h, idx) => {
+                if (!nameToPositions.has(h)) nameToPositions.set(h, []);
+                nameToPositions.get(h).push(idx);
+            });
+
+            RAW_FIELDS.forEach(field => {
+                const targetName = field.trim();
+                const positions = nameToPositions.get(targetName) || [];
+                let assignedIdx = -1;
+                for (let pos of positions) {
+                    if (!usedIndices.has(pos)) { assignedIdx = pos; break; }
+                }
+                if (assignedIdx === -1 && firstMatchIndex.has(targetName)) {
+                    assignedIdx = firstMatchIndex.get(targetName);
+                }
+                if (assignedIdx === -1) indices.push(-1);
+                else {
+                    indices.push(assignedIdx);
+                    if (!firstMatchIndex.has(targetName)) {
+                        firstMatchIndex.set(targetName, assignedIdx);
+                        usedIndices.add(assignedIdx);
+                    }
+                }
+            });
+            return { indices, firstMatchIndex };
+        }
+
+        // 解析文件
+        function handleFileUpload(file) {
+            if (!file) { resetState(); return; }
+            selectedFile = file;
+            originalFileName = file.name.replace(/\.[^/.]+$/, ""); // 去掉扩展名
+            fileNameDisplay.textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+            setStatus('解析中...', false);
+            appendLog(`正在读取: ${file.name}`);
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    if (!workbook.SheetNames.length) throw new Error('工作簿中没有工作表');
+                    
+                    const firstSheet = workbook.SheetNames[0];
+                    sheetName = firstSheet;
+                    const sheet = workbook.Sheets[firstSheet];
+                    const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    if (!sheetData || sheetData.length === 0) throw new Error('工作表为空');
+
+                    const rawHeaders = sheetData[0] || [];
+                    const headers = rawHeaders.map(cell => (cell !== undefined && cell !== null ? String(cell).trim() : ''));
+                    
+                    workbookCache = workbook;
+                    originalSheetData = sheetData;
+                    currentHeaders = headers;
+
+                    const rowCount = sheetData.length - 1;
+                    appendLog(`✅ 解析成功！工作表: "${firstSheet}"，共 ${headers.length} 列，数据行 ${rowCount} 行。`, 'success');
+                    
+                    const { indices } = buildColumnIndexMap(headers);
+                    
+                    let matchedCount = indices.filter(idx => idx !== -1).length;
+                    const missing = RAW_FIELDS.filter((_, i) => indices[i] === -1).map((f, i) => `${f}(第${i+1}个)`);
+                    
+                    appendLog(`📌 重组字段匹配: ${matchedCount}/${RAW_FIELDS.length} 个。`);
+                    if (missing.length) appendLog(`⚠️ 未匹配字段: ${missing.slice(0,5).join('、')}${missing.length>5?'…':''}`, 'warn');
+
+                    // 检查额外需要的列：SKU (用于Lag-Time) 和 子SKU (用于绑定)
+                    const skuIndex = headers.findIndex(h => h === 'SKU');
+                    const childSkuIndex = headers.findIndex(h => h === '子SKU');
+                    
+                    if (skuIndex !== -1) appendLog(`✅ 找到 SKU 列 (用于Lag-Time表)`, 'success');
+                    else appendLog(`⚠️ 未找到 SKU 列，Lag-Time表将为空`, 'warn');
+                    
+                    if (childSkuIndex !== -1) appendLog(`✅ 找到 子SKU 列 (用于绑定表)`, 'success');
+                    else appendLog(`⚠️ 未找到 子SKU 列，绑定表第一列将留空`, 'warn');
+
+                    const hasAny = matchedCount > 0;
+                    toggleProcessButton(hasAny);
+                    setStatus(hasAny ? `✅ 可导出` : `⚠️ 无匹配字段`, hasAny);
+                    
+                    window.__lastMatchedIndices = indices;
+                    window.__skuIndex = skuIndex;
+                    window.__childSkuIndex = childSkuIndex;
+
+                } catch (err) {
+                    console.error(err);
+                    appendLog(`❌ 解析失败: ${err.message}`, 'error');
+                    setStatus('解析错误', false);
+                    toggleProcessButton(false);
+                }
+            };
+            reader.onerror = () => { appendLog(`❌ 文件读取错误`, 'error'); setStatus('读取失败', false); };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 导出三个表
+        function processAndExport() {
+            const indices = window.__lastMatchedIndices;
+            const skuIdx = window.__skuIndex;
+            const childSkuIdx = window.__childSkuIndex;
+            
+            if (!workbookCache || !originalSheetData || !indices) {
+                appendLog(`⚠️ 没有可用的数据，请重新上传。`, 'warn');
+                return;
+            }
+
+            const sheetData = originalSheetData;
+            const baseName = originalFileName || 'export';
+            
+            // ----- 1. 重组表 (updata_原表名) -----
+            try {
+                const exportHeaders = [...RAW_FIELDS];
+                const newRows = [exportHeaders];
+                for (let i = 1; i < sheetData.length; i++) {
+                    const row = sheetData[i] || [];
+                    const newRow = indices.map(idx => (idx !== -1 && idx < row.length) ? (row[idx] ?? '') : '');
+                    newRows.push(newRow);
+                }
+                const ws1 = XLSX.utils.aoa_to_sheet(newRows);
+                const wb1 = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb1, ws1, '重组数据');
+                XLSX.writeFile(wb1, `updata_${baseName}.xlsx`);
+                appendLog(`✅ 重组表已导出: updata_${baseName}.xlsx`, 'success');
+            } catch(e) {
+                appendLog(`❌ 重组表导出失败: ${e.message}`, 'error');
+            }
+
+            // ----- 2. Lag-Time 表 -----
+            try {
+                const lagRows = [
+                    ['SKU*', 'Fulfilment Lag Time*'],
+                    ['What is the SKU of the item(s) you are updating lagtime for for? (e.g. 12345)', 'The number of days between when the item is ordered and when it is shipped (e.g. 2)']
+                ];
+                if (skuIdx !== -1) {
+                    for (let i = 1; i < sheetData.length; i++) {
+                        const row = sheetData[i] || [];
+                        const skuVal = (skuIdx < row.length && row[skuIdx] != null) ? row[skuIdx] : '';
+                        lagRows.push([skuVal, 4]);
+                    }
+                } else {
+                    appendLog(`⚠️ Lag-Time表无SKU列，仅生成表头`, 'warn');
+                }
+                const ws2 = XLSX.utils.aoa_to_sheet(lagRows);
+                const wb2 = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb2, ws2, 'LagTime');
+                XLSX.writeFile(wb2, `Lag-Time-${baseName}.xlsx`);
+                appendLog(`✅ Lag-Time表已导出: Lag-Time-${baseName}.xlsx`, 'success');
+            } catch(e) {
+                appendLog(`❌ Lag-Time表导出失败: ${e.message}`, 'error');
+            }
+
+            // ----- 3. 绑定表 -----
+            try {
+                const bindRows = [['SKU', '平台SKU']];
+                // 第一列 = 子SKU，第二列 = SKU
+                const skuColIdx = skuIdx;           // 第二列来源
+                const childColIdx = childSkuIdx;     // 第一列来源
+                
+                for (let i = 1; i < sheetData.length; i++) {
+                    const row = sheetData[i] || [];
+                    const childVal = (childColIdx !== -1 && childColIdx < row.length && row[childColIdx] != null) ? row[childColIdx] : '';
+                    const skuVal = (skuColIdx !== -1 && skuColIdx < row.length && row[skuColIdx] != null) ? row[skuColIdx] : '';
+                    bindRows.push([childVal, skuVal]);
+                }
+                if (childColIdx === -1) appendLog(`⚠️ 绑定表: 子SKU列缺失，第一列为空`, 'warn');
+                if (skuColIdx === -1) appendLog(`⚠️ 绑定表: SKU列缺失，第二列为空`, 'warn');
+                
+                const ws3 = XLSX.utils.aoa_to_sheet(bindRows);
+                const wb3 = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb3, ws3, '绑定');
+                XLSX.writeFile(wb3, `绑定表-${baseName}.xlsx`);
+                appendLog(`✅ 绑定表已导出: 绑定表-${baseName}.xlsx`, 'success');
+            } catch(e) {
+                appendLog(`❌ 绑定表导出失败: ${e.message}`, 'error');
+            }
+
+            setStatus(`导出完成 · 三份表格`, true);
+        }
+
+        // 事件绑定
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) { resetState(); return; }
+            handleFileUpload(file);
+        });
+
+        processBtn.addEventListener('click', processAndExport);
+        clearBtn.addEventListener('click', () => {
+            resetState();
+            fileInput.value = '';
+        });
+
+        renderTargetFields();
+        resetLog('> 就绪。上传后点击按钮将同时生成三份表格。');
+        setStatus('等待文件', false);
+        toggleProcessButton(false);
+    })();
+</script>
+</body>
+</html>

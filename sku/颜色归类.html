@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>颜色标准化转换器 · 银河梵星 · 全屏编辑</title>
+  <!-- Tailwind + 图标库 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- CodeMirror 核心样式与主题 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      background: radial-gradient(circle at 30% 20%, #0f172a, #05070a);
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .stars-container {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden;
+      background: radial-gradient(circle at 30% 20%, #0f172a 0%, #080c14 40%, #05070a 70%, #020408 100%);
+    }
+    .star {
+      position: absolute;
+      background: currentColor;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: twinkle var(--duration) infinite ease-in-out;
+      animation-delay: var(--delay);
+      box-shadow: 0 0 6px currentColor;
+    }
+    @keyframes twinkle {
+      0%,100%{ opacity:0.3; transform: scale(0.8); }
+      30%{ opacity:1; transform: scale(1.6); }
+      60%{ opacity:0.5; transform: scale(1); }
+    }
+    .nebula {
+      position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.06; pointer-events: none;
+      animation: nebulaDrift 30s infinite ease-in-out;
+    }
+    .nebula-1 { width: 600px; height: 600px; background: #3b82f6; top: -15%; left: -10%; }
+    .nebula-2 { width: 500px; height: 500px; background: #8b5cf6; bottom: -20%; right: -8%; animation-delay: -12s; }
+    .nebula-3 { width: 400px; height: 400px; background: #10b981; top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: -22s; }
+    @keyframes nebulaDrift {
+      0%,100% { transform: translate(0,0) scale(1); }
+      25% { transform: translate(40px,-20px) scale(1.15); }
+      50% { transform: translate(-20px,30px) scale(0.9); }
+      75% { transform: translate(-30px,-15px) scale(1.1); }
+    }
+    .glass-card {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 1.5rem; transition: all 0.3s;
+    }
+    .glass-card:hover { border-color: rgba(59,130,246,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .input-glass {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 0.9rem; padding: 0.5rem 0.8rem; color: white; font-size: 0.8rem; outline: none;
+    }
+    .input-glass:focus { border-color: #3b82f6; }
+    .btn-glass {
+      padding: 0.45rem 1rem; border-radius: 2rem; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.3px;
+      display: inline-flex; align-items: center; gap:0.4rem; transition: all 0.3s; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color:#cbd5e1;
+    }
+    .btn-glass:hover { background: rgba(255,255,255,0.1); border-color: rgba(59,130,246,0.6); color: white; }
+    .btn-primary { background: #1e2f3f; border-color: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2d4a6b; }
+    .CodeMirror {
+      height: 200px !important;
+      border-radius:0.6rem; border:1px solid rgba(255,255,255,0.1); font-size:0.8rem;
+    }
+    textarea { font-family: ui-monospace, monospace; }
+    .unmapped-item {
+      background: rgba(245,158,11,0.15); color: #fbbf24; display: inline-block; margin: 4px 8px 4px 0;
+      padding: 4px 10px; border-radius: 4px; font-size: 13px; border: 1px solid rgba(245,158,11,0.3);
+    }
+    .toggle-header { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 0.5rem; }
+    .collapsed-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .expanded-content {
+      max-height: 600px;
+      overflow: visible;
+      transition: max-height 0.3s ease;
+    }
+    #enumEditorContainer {
+      height: 200px;
+      overflow: hidden;
+    }
+    /* 全屏模式样式 */
+    .fullscreen-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999;
+      background: rgba(10, 15, 25, 0.95);
+      backdrop-filter: blur(12px);
+      display: flex; flex-direction: column; padding: 1.2rem;
+      box-sizing: border-box;
+    }
+    .fullscreen-overlay .fullscreen-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+      color: #e2e8f0;
+    }
+    .fullscreen-overlay .fullscreen-header h2 {
+      font-size: 1.3rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .fullscreen-editor-wrapper {
+      flex: 1; display: flex; border-radius: 0.8rem; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.2); background: #0b0f17;
+      min-height: 0;
+    }
+    .fullscreen-editor-wrapper .CodeMirror {
+      height: 100% !important;
+      width: 100%;
+      font-size: 0.9rem;
+    }
+    .btn-close-fullscreen {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      color: white; padding: 0.5rem 1.2rem; border-radius: 2rem; cursor: pointer;
+      font-weight: 500; display: flex; align-items: center; gap: 0.4rem;
+      transition: all 0.2s;
+    }
+    .btn-close-fullscreen:hover { background: rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body>
+<div class="stars-container" id="stars">
+  <div class="nebula nebula-1"></div>
+  <div class="nebula nebula-2"></div>
+  <div class="nebula nebula-3"></div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 py-8 relative z-10 space-y-6">
+  <div class="glass-card p-6 flex flex-wrap justify-between items-center">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+        <i class="fa-solid fa-palette text-purple-400"></i> 智能颜色标准化转换器
+      </h1>
+      <p class="text-gray-400 text-sm mt-1">枚举映射/反映射 · 全屏编辑配置 · 银河梵星</p>
+    </div>
+    <div class="flex gap-2 mt-3 md:mt-0">
+      <button id="resetConfigBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 重置配置</button>
+    </div>
+  </div>
+
+  <div class="glass-card p-6" id="enumCard">
+    <div class="flex justify-between items-center mb-3">
+      <div class="toggle-header flex-1" id="enumToggleHeader">
+        <i id="enumToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-list-ul text-cyan-400 mr-2"></i> 颜色枚举配置 (JSON)
+        </h2>
+        <span class="text-xs text-gray-500 ml-2">格式: {"类别":["别名1","别名2"]}</span>
+      </div>
+      <button id="openFullscreenBtn" class="btn-glass" title="全屏编辑枚举配置">
+        <i class="fa-solid fa-expand"></i> 全屏
+      </button>
+    </div>
+    <div id="enumCollapseWrapper" class="expanded-content">
+      <div id="enumEditorContainer"></div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="glass-card p-6 flex flex-col">
+      <div class="flex justify-between items-end mb-3">
+        <label class="font-medium text-gray-300"><i class="fa-solid fa-arrow-down-wide-short mr-1"></i> 原始颜色列表</label>
+        <span class="text-xs text-gray-500">每行一个颜色</span>
+      </div>
+      <textarea id="inputColors" class="input-glass w-full h-72 p-3 resize-y" placeholder="在此输入颜色..."></textarea>
+    </div>
+    <div class="glass-card p-6 flex flex-col">
+      <div class="flex justify-between items-end mb-3">
+        <label class="font-medium text-gray-300"><i class="fa-solid fa-check-double mr-1"></i> 转换结果</label>
+        <span class="text-xs text-gray-500">标准化颜色</span>
+      </div>
+      <textarea id="outputColors" readonly class="input-glass w-full h-72 p-3 resize-y bg-black/30 text-green-400"></textarea>
+    </div>
+  </div>
+
+  <div class="flex gap-3 flex-wrap">
+    <button id="convertBtn" class="btn-glass btn-primary"><i class="fa-solid fa-play"></i> 转换</button>
+    <button id="copyBtn" class="btn-glass"><i class="fa-solid fa-copy"></i> 复制结果</button>
+    <button id="clearBtn" class="btn-glass ml-auto"><i class="fa-solid fa-eraser"></i> 清空</button>
+  </div>
+
+  <div class="glass-card p-6">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="font-semibold"><i class="fa-solid fa-triangle-exclamation text-yellow-400 mr-2"></i>未映射颜色</h2>
+      <span id="unmappedCount" class="text-xs text-gray-400">0 项</span>
+    </div>
+    <div id="unmappedArea" class="bg-black/20 rounded-xl p-4 max-h-40 overflow-y-auto">
+      <span class="text-gray-500 text-sm">暂无未映射颜色</span>
+    </div>
+    <button id="copyUnmappedBtn" class="btn-glass mt-3"><i class="fa-solid fa-clipboard"></i> 复制未映射列表</button>
+  </div>
+</div>
+
+<div id="fullscreenModal" style="display: none;" class="fullscreen-overlay">
+  <div class="fullscreen-header">
+    <h2><i class="fa-solid fa-code text-cyan-400"></i> 编辑颜色枚举 (JSON)</h2>
+    <button id="closeFullscreenBtn" class="btn-close-fullscreen">
+      <i class="fa-solid fa-compress"></i> 退出全屏
+    </button>
+  </div>
+  <div class="fullscreen-editor-wrapper" id="fullscreenEditorWrapper"></div>
+  <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+    <span class="text-xs text-gray-400">更改将自动同步到主编辑器 · 按 Esc 可关闭</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script>
+(function() {
+  const $ = id => document.getElementById(id);
+  const inputColors = $('inputColors'), outputColors = $('outputColors');
+  const convertBtn = $('convertBtn'), copyBtn = $('copyBtn'), clearBtn = $('clearBtn');
+  const unmappedArea = $('unmappedArea'), unmappedCount = $('unmappedCount');
+  const copyUnmappedBtn = $('copyUnmappedBtn');
+  const enumToggleHeader = $('enumToggleHeader'), enumToggleIcon = $('enumToggleIcon');
+  const enumCollapseWrapper = $('enumCollapseWrapper');
+  const enumEditorContainer = $('enumEditorContainer');
+  const resetConfigBtn = $('resetConfigBtn');
+  const openFullscreenBtn = $('openFullscreenBtn');
+  const fullscreenModal = $('fullscreenModal');
+  const closeFullscreenBtn = $('closeFullscreenBtn');
+  const fullscreenEditorWrapper = $('fullscreenEditorWrapper');
+
+  const DEFAULT_ENUM = {
+    "Green": ["mint green", "army green", "light green", "dark green", "grean", "greem", "gteen", "green ", " green"],
+    "Gold": ["rose gold", "rosegold", "rose-gold"],
+    "Blue": ["sky blue", "light blue", "light bule", "light b lue", "dark blue", "navy", "navy blue", "bleu", "bule", "bluw"],
+    "Brown": ["coffee", "khaki", "brown", "browm", "broun", "brawn"],
+    "Red": ["watermelon red", "watermellon red", "redd", "red ", "wine", "Wine"],
+    "Silver": ["sliver", "silvery", "silver,clear", "silverclear", "siver", "silvre"],
+    "Gray": ["dark gray", "dark grey", "grey", "gray", "graay", "graey"],
+    "Clear": ["transparent", "transparant", "transperent", "transperant", "clear", "clearr", "clera"],
+    "Black": ["black", "blak", "blck", "balck"],
+    "White": ["white", "whit", "wite", "whtie", "while"],
+    "Yellow": ["yellow", "yello", "yelow"],
+    "Orange": ["orange", "orenge", "orng"],
+    "Pink": ["pink", "pinc", "peenk", "champagne", "Champagne"],
+    "Purple": ["purple", "purpel", "purpple", "violet"],
+    "Multicolor": ["color", "colorful", "mul", "as show", "as shown"]
+  };
+
+  function buildMaps(enumConfig) {
+    const exactMap = new Map();
+    const reverseMap = new Map();
+    for (const [category, aliases] of Object.entries(enumConfig)) {
+      reverseMap.set(category, aliases);
+      aliases.forEach(alias => {
+        const key = String(alias).trim().toLowerCase();
+        if (key) exactMap.set(key, category);
+      });
+    }
+    return { exactMap, reverseMap };
+  }
+
+  const fuzzyRules = [
+    { regex: /^[a-z]$/i, target: "Multicolor" },
+    { regex: /^multiple[a-z]*$/i, target: "Multicolor" },
+    { regex: /^multicolour[a-z]*$/i, target: "Multicolor" },
+    { regex: /^multicolor[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixed\s*colou?r[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixedcolou?r[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixed\s+colou?rs?[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixed[\s\-_]?colou?r[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixed\s+colors?[a-z]*$/i, target: "Multicolor" }
+  ];
+
+  function applyFuzzyMatch(trimmedLower) {
+    for (const rule of fuzzyRules) {
+      if (rule.regex.test(trimmedLower)) return rule.target;
+    }
+    return null;
+  }
+
+  function convertColors(rawText, enumConfig) {
+    const { exactMap } = buildMaps(enumConfig);
+    const lines = rawText.split(/\r?\n/);
+    const outputLines = [];
+    const unmapped = new Map();
+
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === "") {
+        outputLines.push("");
+        continue;
+      }
+      const norm = trimmed.toLowerCase();
+      let mapped = exactMap.get(norm) || applyFuzzyMatch(norm);
+      if (mapped) {
+        outputLines.push(mapped);
+      } else {
+        outputLines.push(trimmed);
+        const info = unmapped.get(norm);
+        if (info) info.count++;
+        else unmapped.set(norm, { display: trimmed, count: 1 });
+      }
+    }
+    return { outputLines, unmapped };
+  }
+
+  function updateUI() {
+    let enumConfig;
+    try {
+      enumConfig = JSON.parse(mainEditor.getValue());
+    } catch (e) {
+      outputColors.value = '配置JSON格式错误，请检查';
+      return;
+    }
+    const rawText = inputColors.value;
+    const { outputLines, unmapped } = convertColors(rawText, enumConfig);
+    outputColors.value = outputLines.join('\n');
+    
+    unmappedCount.textContent = `${unmapped.size} 项`;
+    if (unmapped.size === 0) {
+      unmappedArea.innerHTML = '<span class="text-green-400">✅ 所有颜色均已成功映射！</span>';
+    } else {
+      let items = '';
+      for (const [norm, info] of unmapped) {
+        const times = info.count > 1 ? ` (${info.count}次)` : '';
+        items += `<span class="unmapped-item">${escapeHtml(info.display)}${times}</span>`;
+      }
+      unmappedArea.innerHTML = items;
+    }
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+  async function copyText(text) {
+    if (!text.trim()) return alert('无内容');
+    await navigator.clipboard.writeText(text);
+  }
+
+  let mainEditor;
+  let fullscreenEditor = null;
+
+  function initMainEditor() {
+    mainEditor = CodeMirror(enumEditorContainer, {
+      value: JSON.stringify(DEFAULT_ENUM, null, 2),
+      mode: { name: 'javascript', json: true },
+      theme: 'material-darker',
+      lineNumbers: true,
+      matchBrackets: true,
+      tabSize: 2
+    });
+    mainEditor.setSize('100%', '200px');
+  }
+
+  function initEnumCollapse() {
+    const saved = localStorage.getItem('color_enum_collapsed');
+    const collapsed = saved === 'true';
+    if (collapsed) {
+      enumCollapseWrapper.className = 'collapsed-content';
+      enumToggleIcon.className = 'fa-solid fa-chevron-right text-gray-400';
+    }
+    enumToggleHeader.addEventListener('click', () => {
+      const isNowExpanded = enumCollapseWrapper.classList.contains('expanded-content');
+      if (isNowExpanded) {
+        enumCollapseWrapper.className = 'collapsed-content';
+        enumToggleIcon.className = 'fa-solid fa-chevron-right text-gray-400';
+        localStorage.setItem('color_enum_collapsed', 'true');
+      } else {
+        enumCollapseWrapper.className = 'expanded-content';
+        enumToggleIcon.className = 'fa-solid fa-chevron-down text-gray-400';
+        localStorage.setItem('color_enum_collapsed', 'false');
+      }
+      setTimeout(() => { if (mainEditor) mainEditor.refresh(); }, 350);
+    });
+  }
+
+  // 安全销毁全屏编辑器实例
+  function destroyFullscreenEditor() {
+    if (fullscreenEditor) {
+      const wrapperElement = fullscreenEditor.getWrapperElement();
+      if (wrapperElement && wrapperElement.parentNode) {
+        wrapperElement.parentNode.removeChild(wrapperElement);
+      }
+      fullscreenEditor = null;
+    }
+    // 确保容器清空 (防止残留)
+    fullscreenEditorWrapper.innerHTML = '';
+  }
+
+  function openFullscreen() {
+    if (!mainEditor) return;
+    const currentContent = mainEditor.getValue();
+    
+    fullscreenModal.style.display = 'flex';
+    
+    // 如果已存在全屏实例则先安全销毁
+    destroyFullscreenEditor();
+    
+    // 创建新的全屏编辑器
+    fullscreenEditor = CodeMirror(fullscreenEditorWrapper, {
+      value: currentContent,
+      mode: { name: 'javascript', json: true },
+      theme: 'material-darker',
+      lineNumbers: true,
+      matchBrackets: true,
+      tabSize: 2,
+      autofocus: true
+    });
+    
+    // 内容变化时实时同步回主编辑器
+    fullscreenEditor.on('change', () => {
+      if (mainEditor && fullscreenEditor) {
+        mainEditor.setValue(fullscreenEditor.getValue());
+        updateUI();
+      }
+    });
+    
+    setTimeout(() => {
+      if (fullscreenEditor) fullscreenEditor.refresh();
+    }, 50);
+  }
+
+  function closeFullscreen() {
+    // 最后同步一次内容
+    if (fullscreenEditor && mainEditor) {
+      mainEditor.setValue(fullscreenEditor.getValue());
+      updateUI();
+    }
+    // 销毁全屏编辑器
+    destroyFullscreenEditor();
+    fullscreenModal.style.display = 'none';
+    
+    if (mainEditor) {
+      mainEditor.refresh();
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && fullscreenModal.style.display === 'flex') {
+      e.preventDefault();
+      closeFullscreen();
+    }
+  });
+
+  openFullscreenBtn.addEventListener('click', openFullscreen);
+  closeFullscreenBtn.addEventListener('click', closeFullscreen);
+
+  function createStars() {
+    const container = $('stars');
+    if (!container) return;
+    const frag = document.createDocumentFragment();
+    const starColors = ['#60a5fa', '#f472b6', '#fbbf24', '#34d399', '#a78bfa', '#f87171', '#38bdf8', '#fb923c'];
+    for (let i = 0; i < 180; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const size = Math.random() * 3 + 1;
+      star.style.width = size + 'px';
+      star.style.height = size + 'px';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.setProperty('--duration', (Math.random() * 4 + 2) + 's');
+      star.style.setProperty('--delay', (Math.random() * 6) + 's');
+      star.style.color = starColors[Math.floor(Math.random() * starColors.length)];
+      frag.appendChild(star);
+    }
+    container.appendChild(frag);
+  }
+
+  convertBtn.addEventListener('click', updateUI);
+  copyBtn.addEventListener('click', () => copyText(outputColors.value));
+  clearBtn.addEventListener('click', () => {
+    inputColors.value = '';
+    outputColors.value = '';
+    unmappedArea.innerHTML = '<span class="text-gray-500 text-sm">暂无未映射颜色</span>';
+    unmappedCount.textContent = '0 项';
+  });
+  copyUnmappedBtn.addEventListener('click', async () => {
+    let enumConfig;
+    try { enumConfig = JSON.parse(mainEditor.getValue()); } catch { return alert('配置JSON无效'); }
+    const { unmapped } = convertColors(inputColors.value, enumConfig);
+    if (unmapped.size === 0) return alert('无未映射颜色');
+    const lines = Array.from(unmapped.values()).map(i => `${i.display}${i.count>1?` (${i.count}次)`:''}`);
+    await copyText(lines.join('\n'));
+    alert('已复制');
+  });
+  resetConfigBtn.addEventListener('click', () => {
+    const defaultJson = JSON.stringify(DEFAULT_ENUM, null, 2);
+    mainEditor.setValue(defaultJson);
+    if (fullscreenEditor) {
+      fullscreenEditor.setValue(defaultJson);
+    }
+    updateUI();
+  });
+
+  inputColors.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      updateUI();
+    }
+  });
+
+  createStars();
+  initMainEditor();
+  initEnumCollapse();
+
+  inputColors.value = "mint green\nrose gold\nchampagne\nWine\nbalck\nwhite\nA\nB\ncolor\nas show\nMixed colors\nunknownTest";
+  updateUI();
+
+  window.addEventListener('resize', () => {
+    if (mainEditor) mainEditor.refresh();
+    if (fullscreenEditor) fullscreenEditor.refresh();
+  });
+
+})();
+</script>
+</body>
+</html>

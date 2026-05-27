@@ -1,0 +1,1067 @@
+<!-- 星空背景 -->
+<div class="stars-container" id="stars">
+    <div class="nebula nebula-1"></div>
+    <div class="nebula nebula-2"></div>
+    <div class="nebula nebula-3"></div>
+</div>
+
+<!-- 固定式右侧步骤导航 -->
+<nav class="fixed-nav" id="fixed-step-nav" aria-label="步骤快速导航">
+    <!-- 动态填充 -->
+</nav>
+
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10 min-h-screen max-w-4xl">
+
+    <!-- 头部 -->
+    <header class="text-center mb-8 md:mb-12">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 border border-white/10 rounded-full bg-white/[0.02] mb-6 backdrop-blur-sm">
+            <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+            <span class="text-xs font-bold tracking-[0.25em] uppercase text-gray-400">Standard Operating Procedure</span>
+        </div>
+        <h1 id="sop-title" class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-4 neon-text italic uppercase leading-tight">SKU LISTING SOP</h1>
+        <p id="sop-subtitle" class="text-gray-400 text-base sm:text-lg md:text-xl font-light tracking-[0.15em] uppercase mb-6">Data Cleansing • Transformation • Optimization • Deployment</p>
+
+        <!-- 进度条 -->
+        <div class="max-w-md mx-auto" id="progress-area">
+            <div class="flex justify-between items-center mb-2 text-xs font-bold tracking-[0.2em] uppercase text-gray-500">
+                <span>完成进度</span>
+                <span id="progress-label">0 / 0 步骤已完成</span>
+            </div>
+            <div class="progress-bar-container h-2.5 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+                <div class="progress-bar-fill h-full rounded-xl" id="progress-bar-fill" style="width: 0%; background: linear-gradient(90deg, rgb(59, 130, 246), rgb(139, 92, 246), rgb(16, 185, 129));"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 工具栏 -->
+    <div class="toolbar" id="toolbar">
+        <label class="edit-toggle-switch" id="edit-mode-toggle" title="切换编辑模式">
+            <span class="toggle-dot"><i class="fa-solid fa-pen-to-square"></i></span>
+            <span id="edit-mode-label">编辑模式</span>
+        </label>
+        <button class="tool-btn success-btn" id="btn-add-step" title="添加新步骤" style="display:none;">
+            <i class="fa-solid fa-plus"></i> 添加步骤
+        </button>
+        <button class="tool-btn info-btn" id="btn-json-edit" title="编辑JSON配置">
+            <i class="fa-solid fa-code"></i> JSON编辑
+        </button>
+        <button class="tool-btn" id="btn-export-config" title="导出配置为JSON文件">
+            <i class="fa-solid fa-download"></i> 导出配置
+        </button>
+        <button class="tool-btn" id="btn-import-config" title="从JSON文件导入配置">
+            <i class="fa-solid fa-upload"></i> 导入配置
+        </button>
+        <button class="tool-btn danger-btn" id="btn-reset-config" title="恢复默认配置">
+            <i class="fa-solid fa-arrow-rotate-left"></i> 恢复默认
+        </button>
+    </div>
+
+    <!-- SOP 时间线 -->
+    <div class="relative" id="sop-timeline-wrapper">
+        <div class="timeline-line"></div>
+        <div class="space-y-10 md:space-y-14" id="sop-steps-container">
+            <!-- 动态填充 -->
+        </div>
+    </div>
+
+    <!-- 空状态 -->
+    <div id="empty-state" class="hidden text-center py-20">
+        <div class="text-6xl mb-6 text-gray-700"><i class="fa-solid fa-circle-exclamation"></i></div>
+        <p class="text-gray-500 text-lg font-light tracking-wider uppercase">暂无流程配置数据</p>
+        <button class="tool-btn success-btn mt-6" id="btn-add-step-empty" style="display:inline-flex;">
+            <i class="fa-solid fa-plus"></i> 添加第一个步骤
+        </button>
+    </div>
+
+    <footer class="mt-20 md:mt-32 pb-10 text-center text-gray-600 text-xs tracking-[0.25em] uppercase">
+        © 2026 Ge32 Aerospace & AI. SOP Pipeline · Progress Tracking Active.
+    </footer>
+</div>
+
+<!-- JSON编辑器模态框 -->
+<div class="modal-overlay hidden" id="json-editor-modal">
+    <div class="modal-panel large-modal" style="position:relative;">
+        <button class="modal-close" id="json-modal-close" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button>
+        <div class="modal-title"><i class="fa-solid fa-code" style="color:#60a5fa;"></i> JSON 配置编辑器</div>
+        <p class="text-xs text-gray-500 mb-3 tracking-wider uppercase">直接编辑完整配置JSON，修改后点击应用即可生效</p>
+        <textarea class="form-textarea json-editor-area" id="json-editor-textarea" spellcheck="false"></textarea>
+        <div id="json-error-msg" class="text-xs font-bold mt-2 hidden" style="color:#f87171;"></div>
+        <div class="btn-row">
+            <button class="modal-btn secondary" id="json-modal-cancel">取消</button>
+            <button class="modal-btn primary" id="json-modal-apply"><i class="fa-solid fa-check"></i> 应用配置</button>
+        </div>
+    </div>
+</div>
+
+<!-- 步骤编辑模态框 -->
+<div class="modal-overlay hidden" id="step-editor-modal">
+    <div class="modal-panel" style="position:relative;">
+        <button class="modal-close" id="step-modal-close" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button>
+        <div class="modal-title" id="step-modal-title"><i class="fa-solid fa-pen-to-square" style="color:#fbbf24;"></i> 编辑步骤</div>
+        <input type="hidden" id="step-editor-uid">
+        <div class="form-group">
+            <label class="form-label">步骤名称 *</label>
+            <input class="form-input" id="step-editor-name" placeholder="例如：第一遍数据清洗" maxlength="60">
+        </div>
+        <div class="form-group">
+            <label class="form-label">描述</label>
+            <textarea class="form-textarea" id="step-editor-desc" placeholder="步骤详细描述..." rows="3"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">工具URL（可选）</label>
+            <input class="form-input" id="step-editor-url" placeholder="https://... 或留空" maxlength="500">
+        </div>
+        <div class="form-group">
+            <label class="form-label">图标类名（Font Awesome）</label>
+            <input class="form-input" id="step-editor-icon" placeholder="fa-solid fa-shield-halved" maxlength="80">
+            <div class="text-xs text-gray-500 mt-1">常用：<span class="cursor-pointer hover:text-white icon-preset-chip" data-icon="fa-solid fa-shield-halved">🛡 盾牌</span> ·
+                <span class="cursor-pointer hover:text-white icon-preset-chip" data-icon="fa-solid fa-arrows-spin">🔄 转换</span> ·
+                <span class="cursor-pointer hover:text-white icon-preset-chip" data-icon="fa-solid fa-calculator">🔢 计算</span> ·
+                <span class="cursor-pointer hover:text-white icon-preset-chip" data-icon="fa-solid fa-swatchbook">🎨 色板</span> ·
+                <span class="cursor-pointer hover:text-white icon-preset-chip" data-icon="fa-solid fa-pen-fancy">✏️ 笔</span> ·
+                <span class="cursor-pointer hover:text-white icon-preset-chip" data-icon="fa-solid fa-rocket">🚀 火箭</span> ·
+                <span class="cursor-pointer hover:text-white icon-preset-chip" data-icon="fa-solid fa-gear">⚙️ 齿轮</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">标签名称</label>
+            <input class="form-input" id="step-editor-tag" placeholder="例如：数据清洗" maxlength="30">
+        </div>
+        <div class="form-group">
+            <label class="form-label">颜色方案</label>
+            <select class="form-select" id="step-editor-color-scheme">
+                <option value="red">🔴 红色 - 数据清洗 (#ef4444)</option>
+                <option value="blue">🔵 蓝色 - 数据转换 (#3b82f6)</option>
+                <option value="cyan">🩵 青色 - 数据提取 (#06b6d4)</option>
+                <option value="purple">🟣 紫色 - 数据标准化 (#8b5cf6)</option>
+                <option value="green">🟢 绿色 - 内容创作 (#10b981)</option>
+                <option value="orange">🟠 橙色 - 最终输出 (#f59e0b)</option>
+                <option value="custom">⚪ 自定义灰色 (#94a3b8)</option>
+            </select>
+        </div>
+        <div class="btn-row">
+            <button class="modal-btn secondary" id="step-modal-cancel">取消</button>
+            <button class="modal-btn primary" id="step-modal-save"><i class="fa-solid fa-save"></i> 保存步骤</button>
+        </div>
+    </div>
+</div>
+
+<!-- 隐藏的文件导入input -->
+<input type="file" id="import-file-input" accept=".json" class="hidden">
+
+<script>
+    (function() {
+        // ==================== 颜色方案预设 ====================
+        const COLOR_SCHEMES = {
+            red: { stepColor: '#ef4444', nodeClass: 'node-clean', tagClass: 'tag-clean', label: '红色 - 数据清洗' },
+            blue: { stepColor: '#3b82f6', nodeClass: 'node-transform', tagClass: 'tag-transform',
+            label: '蓝色 - 数据转换' },
+            cyan: { stepColor: '#06b6d4', nodeClass: 'node-extract', tagClass: 'tag-extract', label: '青色 - 数据提取' },
+            purple: { stepColor: '#8b5cf6', nodeClass: 'node-standardize', tagClass: 'tag-standardize',
+                label: '紫色 - 数据标准化' },
+            green: { stepColor: '#10b981', nodeClass: 'node-content', tagClass: 'tag-content', label: '绿色 - 内容创作' },
+            orange: { stepColor: '#f59e0b', nodeClass: 'node-output', tagClass: 'tag-output', label: '橙色 - 最终输出' },
+            custom: { stepColor: '#94a3b8', nodeClass: 'node-custom', tagClass: 'tag-custom', label: '自定义灰色' },
+        };
+
+        // ==================== 默认配置 ====================
+        const DEFAULT_CONFIG = {
+            pageTitle: 'SKU LISTING SOP',
+            pageSubtitle: 'Data Cleansing • Transformation • Optimization • Deployment',
+            steps: [
+                { id: 1, name: '第一遍数据清洗',
+                    desc: '对原始SKU数据进行初步筛查，识别并标记违规SKU。基于规则引擎自动检测不符合上架规范的条目，包括敏感词过滤、禁售品类排查、格式异常检测等。',
+                    url: 'https://www.ge32.cc/sop/tools/smart-sku-filter-pro.html', icon: 'fa-solid fa-shield-halved',
+                    tag: '数据清洗', colorScheme: 'red' },
+                { id: 2, name: '单位转化与SKU补齐',
+                    desc: '将公制单位批量转化为英制单位，同时基于父SKU与子SKU关系自动补全合并SKU信息，生成完整的变体组结构。',
+                    url: 'https://www.ge32.cc/sop/tools/variant-group-id-pro.html', icon: 'fa-solid fa-arrows-spin',
+                    tag: '数据转换', colorScheme: 'blue' },
+                { id: 3, name: '包含计数提取', desc: '从产品描述中智能提取包装数量、件数及总计数，将非结构化文字转化为结构化数字字段。',
+                    url: 'https://www.ge32.cc/tools/counter.html', icon: 'fa-solid fa-calculator', tag: '数据提取',
+                    colorScheme: 'cyan' },
+                { id: 4, name: '颜色类型标准化',
+                    desc: '通过拼写纠错与模糊匹配，将随意填写的颜色名称统一归化为标准颜色类型，消除颜色描述不一致。',
+                    url: 'https://www.ge32.cc/tools/colorConverter.html', icon: 'fa-solid fa-swatchbook', tag: '数据标准化',
+                    colorScheme: 'purple' },
+                { id: 5, name: '数据完善与文案撰写', desc: '撰写产品Listing标题、五点描述及关键词，利用AI批量生成高质量电商文案。',
+                    url: 'https://www.ge32.cc/tools/promptStar.html', icon: 'fa-solid fa-pen-fancy', tag: '内容创作',
+                    colorScheme: 'green' },
+                { id: 6, name: '第二次数据清洗', desc: '对完善后的SKU数据进行二次审查，确保未引入新合规问题，拦截遗漏违规项。',
+                    url: 'https://www.ge32.cc/sop/tools/smart-sku-filter-pro.html',
+                    icon: 'fa-solid fa-magnifying-glass-chart', tag: '数据清洗', colorScheme: 'red' },
+                { id: 7, name: '上架表格转化', desc: '将最终SKU数据转化为适配电商平台上架要求的表格格式，支持导出标准Excel模板。',
+                    url: 'https://www.ge32.cc/tools/JsonToExcel.html', icon: 'fa-solid fa-rocket', tag: '最终输出',
+                    colorScheme: 'orange' },
+            ],
+        };
+
+        // ==================== localStorage 键名 ====================
+        const CONFIG_STORAGE_KEY = 'sop_config_v2';
+        const PROGRESS_STORAGE_KEY = 'sop_sku_progress';
+
+        // ==================== 状态 ====================
+        let currentConfig = null;
+        let isEditMode = false;
+        let editingStepUid = null; // 正在编辑的步骤uid（null表示新增）
+        let nextStepId = 8; // 用于新步骤的ID分配
+
+        // ==================== localStorage 工具 ====================
+        function safeGetStorage(key, fallback) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    if (data !== null && data !== undefined) return data;
+                }
+            } catch (e) { /* ignore */ }
+            return fallback;
+        }
+
+        function safeSetStorage(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch (e) {
+                showToast('存储空间不足，请清理浏览器数据', 'error');
+                return false;
+            }
+        }
+
+        function safeRemoveStorage(key) {
+            try {
+                localStorage.removeItem(key);
+            } catch (e) { /* ignore */ }
+        }
+
+        // ==================== 配置管理 ====================
+        function loadConfig() {
+            const saved = safeGetStorage(CONFIG_STORAGE_KEY, null);
+            if (saved && saved.steps && Array.isArray(saved.steps) && saved.steps.length > 0) {
+                currentConfig = saved;
+            } else {
+                currentConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+            }
+            // 计算下一个可用ID
+            const maxId = currentConfig.steps.reduce((max, s) => Math.max(max, s.id || 0), 0);
+            nextStepId = maxId + 1;
+            // 确保每个步骤有colorScheme
+            currentConfig.steps.forEach(s => {
+                if (!s.colorScheme) s.colorScheme = 'custom';
+                if (!s.icon) s.icon = 'fa-solid fa-gear';
+                if (!s.tag) s.tag = '步骤';
+                if (!s.url) s.url = '';
+            });
+        }
+
+        function saveConfig() {
+            safeSetStorage(CONFIG_STORAGE_KEY, currentConfig);
+        }
+
+        function resetConfigToDefault() {
+            if (confirm('确定要恢复默认配置吗？这将清除所有自定义步骤和进度数据。')) {
+                currentConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+                nextStepId = currentConfig.steps.reduce((max, s) => Math.max(max, s.id || 0), 0) + 1;
+                saveConfig();
+                safeRemoveStorage(PROGRESS_STORAGE_KEY);
+                renderAll();
+                showToast('已恢复默认配置', 'info');
+            }
+        }
+
+        function exportConfig() {
+            const blob = new Blob([JSON.stringify(currentConfig, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const timestamp = new Date().toISOString().slice(0, 10);
+            a.download = `sop-config-${timestamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('配置已导出', 'success');
+        }
+
+        function importConfigFromFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data.steps || !Array.isArray(data.steps)) {
+                        throw new Error('配置格式无效：缺少steps数组');
+                    }
+                    if (data.steps.length === 0) {
+                        throw new Error('配置格式无效：steps数组为空');
+                    }
+                    // 验证每个步骤
+                    data.steps.forEach((s, i) => {
+                        if (!s.name || typeof s.name !== 'string') {
+                            throw new Error(`步骤${i+1}缺少有效的name字段`);
+                        }
+                        if (!s.id) s.id = Date.now() + i;
+                        if (!s.colorScheme) s.colorScheme = 'custom';
+                        if (!s.icon) s.icon = 'fa-solid fa-gear';
+                        if (!s.tag) s.tag = '步骤';
+                        if (!s.desc) s.desc = '';
+                        if (!s.url) s.url = '';
+                    });
+                    if (!data.pageTitle) data.pageTitle = 'SOP';
+                    if (!data.pageSubtitle) data.pageSubtitle = '';
+                    currentConfig = data;
+                    nextStepId = currentConfig.steps.reduce((max, s) => Math.max(max, s.id || 0), 0) + 1;
+                    saveConfig();
+                    safeRemoveStorage(PROGRESS_STORAGE_KEY);
+                    renderAll();
+                    showToast(`已导入配置（${currentConfig.steps.length}个步骤）`, 'success');
+                } catch (err) {
+                    showToast('导入失败：' + err.message, 'error');
+                }
+            };
+            reader.onerror = function() {
+                showToast('文件读取失败', 'error');
+            };
+            reader.readAsText(file);
+        }
+
+        // ==================== 进度管理 ====================
+        function loadProgress() {
+            return safeGetStorage(PROGRESS_STORAGE_KEY, {});
+        }
+
+        function saveProgress(progressMap) {
+            safeSetStorage(PROGRESS_STORAGE_KEY, progressMap);
+        }
+
+        function isStepCompleted(stepId) {
+            const progress = loadProgress();
+            return !!progress[String(stepId)];
+        }
+
+        function toggleStepComplete(stepId) {
+            const progress = loadProgress();
+            const key = String(stepId);
+            if (progress[key]) {
+                delete progress[key];
+            } else {
+                progress[key] = true;
+            }
+            saveProgress(progress);
+            renderAll();
+        }
+
+        function resetProgress() {
+            if (confirm('确定要重置所有步骤的完成状态吗？')) {
+                safeRemoveStorage(PROGRESS_STORAGE_KEY);
+                renderAll();
+                showToast('进度已重置', 'info');
+            }
+        }
+
+        function getCompletedCount() {
+            const progress = loadProgress();
+            const validIds = new Set(currentConfig.steps.map(s => String(s.id)));
+            let count = 0;
+            Object.keys(progress).forEach(k => {
+                if (progress[k] === true && validIds.has(k)) count++;
+            });
+            // 清理无效进度条目
+            const cleaned = {};
+            Object.keys(progress).forEach(k => {
+                if (validIds.has(k)) cleaned[k] = progress[k];
+            });
+            if (Object.keys(cleaned).length !== Object.keys(progress).length) {
+                saveProgress(cleaned);
+            }
+            return count;
+        }
+
+        // ==================== 颜色方案辅助 ====================
+        function getColorInfo(step) {
+            const scheme = COLOR_SCHEMES[step.colorScheme] || COLOR_SCHEMES['custom'];
+            return {
+                stepColor: step.stepColor || scheme.stepColor,
+                nodeClass: step.nodeClass || scheme.nodeClass,
+                tagClass: step.tagClass || scheme.tagClass,
+            };
+        }
+
+        // ==================== Toast ====================
+        function showToast(message, type = 'info') {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                if (toast.parentNode) toast.remove();
+            }, 3000);
+        }
+
+        // ==================== 转义HTML ====================
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return String(str);
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+
+        // ==================== 渲染函数 ====================
+        function renderHeader() {
+            document.getElementById('sop-title').textContent = currentConfig.pageTitle || 'SOP';
+            document.getElementById('sop-subtitle').textContent = currentConfig.pageSubtitle || '';
+        }
+
+        function renderProgressBar() {
+            const total = currentConfig.steps.length;
+            const completed = getCompletedCount();
+            const percent = total > 0 ? (completed / total) * 100 : 0;
+            document.getElementById('progress-bar-fill').style.width = percent + '%';
+            document.getElementById('progress-label').textContent = `${completed} / ${total} 步骤已完成`;
+        }
+
+        function renderFixedNav() {
+            const navContainer = document.getElementById('fixed-step-nav');
+            if (!navContainer) return;
+            const steps = currentConfig.steps;
+            navContainer.innerHTML = '';
+            steps.forEach((step, index) => {
+                const completed = isStepCompleted(step.id);
+                const btn = document.createElement('button');
+                btn.className = 'nav-step-btn' + (completed ? ' completed' : '');
+                btn.setAttribute('title', `${step.name}${completed ? ' (已完成)' : ''}`);
+                btn.setAttribute('aria-label', `跳转到步骤 ${index + 1}: ${step.name}`);
+                if (!completed) {
+                    btn.innerHTML = `<span>${index + 1}</span>`;
+                }
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const target = document.getElementById('step-card-' + step.id);
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+                navContainer.appendChild(btn);
+            });
+            // 重置按钮
+            const resetBtn = document.createElement('button');
+            resetBtn.className = 'reset-btn';
+            resetBtn.id = 'reset-progress-btn';
+            resetBtn.title = '重置所有进度';
+            resetBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-left"></i>';
+            resetBtn.addEventListener('click', resetProgress);
+            navContainer.appendChild(resetBtn);
+        }
+
+        function renderStepCards() {
+            const container = document.getElementById('sop-steps-container');
+            const emptyState = document.getElementById('empty-state');
+            const steps = currentConfig.steps;
+            if (!container) return;
+
+            if (!steps.length) {
+                container.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
+                return;
+            }
+            if (emptyState) emptyState.classList.add('hidden');
+
+            container.innerHTML = steps.map((step, index) => {
+                const completed = isStepCompleted(step.id);
+                const colorInfo = getColorInfo(step);
+                const hasUrl = step.url && step.url.trim() !== '' && step.url.trim() !== '#';
+                const displayNum = String(index + 1).padStart(2, '0');
+                const delay = index * 0.06;
+
+                return `
+            <div class="step-card glass-card p-6 sm:p-8 rounded-2xl ml-12 sm:ml-16 md:ml-20 relative ${isEditMode ? 'edit-mode-card' : ''}"
+                 id="step-card-${step.id}"
+                 data-step-id="${step.id}"
+                 data-step-index="${index}"
+                 style="animation-delay: ${delay}s;"
+                 draggable="${isEditMode ? 'true' : 'false'}"
+                 tabindex="0">
+              <div class="timeline-node ${colorInfo.nodeClass} ${completed ? 'completed' : ''}" style="top:32px; left:-44px;"></div>
+              <div class="absolute -right-6 -top-6 w-28 h-28 rounded-full blur-3xl opacity-[0.04]" style="background:${colorInfo.stepColor};"></div>
+
+              <!-- 拖拽手柄（编辑模式可见） -->
+              <div class="drag-handle ${isEditMode ? 'edit-mode-visible' : ''} absolute left-3 top-4" data-drag-handle="${step.id}" title="拖拽排序">
+                <i class="fa-solid fa-grip-vertical"></i>
+              </div>
+
+              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4 ${isEditMode ? 'pl-6' : ''}">
+                <div class="flex items-start gap-4 flex-1 min-w-0">
+                  <span class="text-5xl sm:text-6xl font-black italic opacity-15 select-none flex-shrink-0 leading-none" style="color:${colorInfo.stepColor};">${displayNum}</span>
+                  <div class="min-w-0">
+                    <h3 class="text-lg sm:text-xl font-bold tracking-tight text-white mb-1">${escapeHtml(step.name)}</h3>
+                    <span class="tag-badge ${colorInfo.tagClass} sm:hidden inline-flex mb-2"><i class="${escapeHtml(step.icon)} text-xs"></i> ${escapeHtml(step.tag)}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="tag-badge ${colorInfo.tagClass} hidden sm:inline-flex flex-shrink-0 mt-1"><i class="${escapeHtml(step.icon)} text-xs"></i> ${escapeHtml(step.tag)}</span>
+                  <!-- 编辑操作按钮 -->
+                  <div class="edit-actions ${isEditMode ? 'edit-mode-visible' : ''}">
+                    <button class="mini-icon-btn move-up-btn" data-move-up="${step.id}" title="上移" ${index === 0 ? 'disabled' : ''}>
+                      <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                    <button class="mini-icon-btn move-down-btn" data-move-down="${step.id}" title="下移" ${index === steps.length - 1 ? 'disabled' : ''}>
+                      <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <button class="mini-icon-btn edit-step-btn" data-edit-step="${step.id}" title="编辑">
+                      <i class="fa-solid fa-pencil"></i>
+                    </button>
+                    <button class="mini-icon-btn delete-step-btn" data-delete-step="${step.id}" title="删除">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p class="text-gray-400 text-sm leading-relaxed mb-5 ${isEditMode ? 'pl-6' : ''}">${escapeHtml(step.desc)}</p>
+              <div class="pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 ${isEditMode ? 'pl-6' : ''}">
+                <div class="flex items-center gap-3">
+                  <span class="text-xs text-gray-600 tracking-[0.15em] uppercase">步骤 ${index + 1}/${steps.length}</span>
+                  <button class="complete-btn ${completed ? 'mark-undone' : 'mark-done'}" data-step-id="${step.id}" aria-label="${completed ? '标记为未完成' : '标记为已完成'}">
+                    <i class="fa-solid ${completed ? 'fa-rotate-left' : 'fa-check'}"></i> ${completed ? '撤销完成' : '标记完成'}
+                  </button>
+                </div>
+                ${hasUrl ? `
+                  <a href="${escapeHtml(step.url)}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs font-bold tracking-[0.15em] uppercase px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/25 transition-all" style="color:${colorInfo.stepColor};">
+                    打开工具 <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                  </a>` : '<span class="text-xs text-gray-600 italic">无关联工具</span>'}
+              </div>
+            </div>`;
+            }).join('');
+
+            // 绑定事件
+            bindStepCardEvents();
+        }
+
+        function bindStepCardEvents() {
+            const container = document.getElementById('sop-steps-container');
+            if (!container) return;
+
+            // 完成按钮事件委托
+            container.querySelectorAll('.complete-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const stepId = parseInt(this.dataset.stepId, 10);
+                    if (!isNaN(stepId)) toggleStepComplete(stepId);
+                });
+            });
+
+            // 编辑按钮事件委托
+            container.querySelectorAll('.edit-step-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const stepId = parseInt(this.dataset.editStep, 10);
+                    if (!isNaN(stepId)) openStepEditor(stepId);
+                });
+            });
+
+            // 删除按钮事件委托
+            container.querySelectorAll('.delete-step-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const stepId = parseInt(this.dataset.deleteStep, 10);
+                    if (!isNaN(stepId)) deleteStep(stepId);
+                });
+            });
+
+            // 上移按钮
+            container.querySelectorAll('.move-up-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const stepId = parseInt(this.dataset.moveUp, 10);
+                    if (!isNaN(stepId)) moveStep(stepId, -1);
+                });
+            });
+
+            // 下移按钮
+            container.querySelectorAll('.move-down-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const stepId = parseInt(this.dataset.moveDown, 10);
+                    if (!isNaN(stepId)) moveStep(stepId, 1);
+                });
+            });
+
+            // 拖拽事件（仅在编辑模式下绑定）
+            if (isEditMode) {
+                const cards = container.querySelectorAll('.step-card[draggable="true"]');
+                cards.forEach(card => {
+                    card.addEventListener('dragstart', handleDragStart);
+                    card.addEventListener('dragend', handleDragEnd);
+                    card.addEventListener('dragover', handleDragOver);
+                    card.addEventListener('dragenter', handleDragEnter);
+                    card.addEventListener('dragleave', handleDragLeave);
+                    card.addEventListener('drop', handleDrop);
+                });
+
+                // 拖拽手柄 - 确保从手柄拖拽时也能触发
+                container.querySelectorAll('.drag-handle').forEach(handle => {
+                    handle.addEventListener('mousedown', function(e) {
+                        const card = this.closest('.step-card');
+                        if (card && card.draggable) {
+                            // 让整个卡片成为拖拽目标
+                            card.setAttribute('data-drag-from-handle', 'true');
+                        }
+                    });
+                    handle.addEventListener('mouseup', function() {
+                        const card = this.closest('.step-card');
+                        if (card) card.removeAttribute('data-drag-from-handle');
+                    });
+                });
+            }
+        }
+
+        // ==================== 拖拽处理 ====================
+        let draggedStepId = null;
+
+        function handleDragStart(e) {
+            draggedStepId = parseInt(this.dataset.stepId, 10);
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(draggedStepId));
+            // 设置拖拽图像为透明（可选）
+            try {
+                const ghost = document.createElement('div');
+                ghost.style.opacity = '0';
+                document.body.appendChild(ghost);
+                e.dataTransfer.setDragImage(ghost, 0, 0);
+                setTimeout(() => ghost.remove(), 0);
+            } catch (ex) { /* ignore */ }
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            draggedStepId = null;
+            document.querySelectorAll('.step-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            const targetId = parseInt(this.dataset.stepId, 10);
+            if (targetId !== draggedStepId && draggedStepId !== null) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+            const targetId = parseInt(this.dataset.stepId, 10);
+            if (draggedStepId !== null && targetId !== draggedStepId) {
+                reorderSteps(draggedStepId, targetId);
+            }
+            draggedStepId = null;
+            document.querySelectorAll('.step-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+        }
+
+        function reorderSteps(draggedId, targetId) {
+            const steps = currentConfig.steps;
+            const draggedIndex = steps.findIndex(s => s.id === draggedId);
+            const targetIndex = steps.findIndex(s => s.id === targetId);
+            if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) return;
+            const [removed] = steps.splice(draggedIndex, 1);
+            steps.splice(targetIndex, 0, removed);
+            saveConfig();
+            renderAll();
+            showToast('步骤顺序已更新', 'info');
+        }
+
+        function moveStep(stepId, direction) {
+            const steps = currentConfig.steps;
+            const index = steps.findIndex(s => s.id === stepId);
+            if (index === -1) return;
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= steps.length) return;
+            const [removed] = steps.splice(index, 1);
+            steps.splice(newIndex, 0, removed);
+            saveConfig();
+            renderAll();
+        }
+
+        function deleteStep(stepId) {
+            const step = currentConfig.steps.find(s => s.id === stepId);
+            if (!step) return;
+            if (!confirm(`确定要删除步骤"${step.name}"吗？此操作不可恢复。`)) return;
+            currentConfig.steps = currentConfig.steps.filter(s => s.id !== stepId);
+            // 清理该步骤的进度
+            const progress = loadProgress();
+            delete progress[String(stepId)];
+            saveProgress(progress);
+            saveConfig();
+            renderAll();
+            showToast(`已删除步骤"${step.name}"`, 'info');
+        }
+
+        // ==================== 步骤编辑器 ====================
+        function openStepEditor(stepId) {
+            const step = currentConfig.steps.find(s => s.id === stepId);
+            if (!step) return;
+            editingStepUid = stepId;
+            document.getElementById('step-modal-title').innerHTML =
+                '<i class="fa-solid fa-pencil" style="color:#fbbf24;"></i> 编辑步骤';
+            document.getElementById('step-editor-uid').value = stepId;
+            document.getElementById('step-editor-name').value = step.name || '';
+            document.getElementById('step-editor-desc').value = step.desc || '';
+            document.getElementById('step-editor-url').value = step.url || '';
+            document.getElementById('step-editor-icon').value = step.icon || 'fa-solid fa-gear';
+            document.getElementById('step-editor-tag').value = step.tag || '';
+            document.getElementById('step-editor-color-scheme').value = step.colorScheme || 'custom';
+            document.getElementById('step-editor-modal').classList.remove('hidden');
+            document.getElementById('step-editor-name').focus();
+        }
+
+        function openAddStepEditor() {
+            editingStepUid = null;
+            document.getElementById('step-modal-title').innerHTML =
+                '<i class="fa-solid fa-plus" style="color:#34d399;"></i> 添加新步骤';
+            document.getElementById('step-editor-uid').value = '';
+            document.getElementById('step-editor-name').value = '';
+            document.getElementById('step-editor-desc').value = '';
+            document.getElementById('step-editor-url').value = '';
+            document.getElementById('step-editor-icon').value = 'fa-solid fa-gear';
+            document.getElementById('step-editor-tag').value = '';
+            document.getElementById('step-editor-color-scheme').value = 'blue';
+            document.getElementById('step-editor-modal').classList.remove('hidden');
+            document.getElementById('step-editor-name').focus();
+        }
+
+        function closeStepEditor() {
+            document.getElementById('step-editor-modal').classList.add('hidden');
+            editingStepUid = null;
+        }
+
+        function saveStepFromEditor() {
+            const name = document.getElementById('step-editor-name').value.trim();
+            if (!name) {
+                showToast('请输入步骤名称', 'error');
+                return;
+            }
+            const desc = document.getElementById('step-editor-desc').value.trim();
+            const url = document.getElementById('step-editor-url').value.trim();
+            const icon = document.getElementById('step-editor-icon').value.trim() || 'fa-solid fa-gear';
+            const tag = document.getElementById('step-editor-tag').value.trim() || '步骤';
+            const colorScheme = document.getElementById('step-editor-color-scheme').value;
+
+            if (editingStepUid !== null) {
+                // 编辑现有步骤
+                const step = currentConfig.steps.find(s => s.id === editingStepUid);
+                if (step) {
+                    step.name = name;
+                    step.desc = desc;
+                    step.url = url;
+                    step.icon = icon;
+                    step.tag = tag;
+                    step.colorScheme = colorScheme;
+                    // 清除自定义颜色字段以使用预设
+                    delete step.stepColor;
+                    delete step.nodeClass;
+                    delete step.tagClass;
+                }
+            } else {
+                // 添加新步骤
+                const newStep = {
+                    id: nextStepId++,
+                    name: name,
+                    desc: desc,
+                    url: url,
+                    icon: icon,
+                    tag: tag,
+                    colorScheme: colorScheme,
+                };
+                currentConfig.steps.push(newStep);
+            }
+            saveConfig();
+            closeStepEditor();
+            renderAll();
+            showToast(editingStepUid !== null ? '步骤已更新' : '新步骤已添加', 'success');
+        }
+
+        // ==================== JSON编辑器 ====================
+        function openJsonEditor() {
+            document.getElementById('json-editor-textarea').value = JSON.stringify(currentConfig, null, 2);
+            document.getElementById('json-error-msg').classList.add('hidden');
+            document.getElementById('json-editor-modal').classList.remove('hidden');
+            document.getElementById('json-editor-textarea').focus();
+        }
+
+        function closeJsonEditor() {
+            document.getElementById('json-editor-modal').classList.add('hidden');
+        }
+
+        function applyJsonConfig() {
+            const raw = document.getElementById('json-editor-textarea').value.trim();
+            const errorMsgEl = document.getElementById('json-error-msg');
+            errorMsgEl.classList.add('hidden');
+            try {
+                const data = JSON.parse(raw);
+                if (!data.steps || !Array.isArray(data.steps)) {
+                    throw new Error('配置必须包含steps数组');
+                }
+                if (data.steps.length === 0) {
+                    throw new Error('steps数组不能为空');
+                }
+                data.steps.forEach((s, i) => {
+                    if (!s.name || typeof s.name !== 'string') {
+                        throw new Error(`步骤${i+1}缺少有效的name字段`);
+                    }
+                    if (!s.id) s.id = Date.now() + i;
+                    if (!s.colorScheme) s.colorScheme = 'custom';
+                    if (!s.icon) s.icon = 'fa-solid fa-gear';
+                    if (!s.tag) s.tag = '步骤';
+                    if (!s.desc) s.desc = '';
+                    if (!s.url) s.url = '';
+                });
+                if (!data.pageTitle) data.pageTitle = 'SOP';
+                if (!data.pageSubtitle) data.pageSubtitle = '';
+                currentConfig = data;
+                nextStepId = currentConfig.steps.reduce((max, s) => Math.max(max, s.id || 0), 0) + 1;
+                saveConfig();
+                safeRemoveStorage(PROGRESS_STORAGE_KEY);
+                closeJsonEditor();
+                renderAll();
+                showToast('JSON配置已应用，进度已重置', 'success');
+            } catch (err) {
+                errorMsgEl.textContent = '❌ ' + err.message;
+                errorMsgEl.classList.remove('hidden');
+                showToast('JSON格式错误：' + err.message, 'error');
+            }
+        }
+
+        // ==================== 编辑模式切换 ====================
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const toggle = document.getElementById('edit-mode-toggle');
+            const label = document.getElementById('edit-mode-label');
+            const addBtn = document.getElementById('btn-add-step');
+            const toolbar = document.getElementById('toolbar');
+
+            if (isEditMode) {
+                toggle.classList.add('active');
+                label.textContent = '编辑中';
+                addBtn.style.display = 'inline-flex';
+                toolbar.classList.add('edit-active');
+            } else {
+                toggle.classList.remove('active');
+                label.textContent = '编辑模式';
+                addBtn.style.display = 'none';
+                toolbar.classList.remove('edit-active');
+            }
+            renderAll();
+        }
+
+        // ==================== 全部渲染 ====================
+        function renderAll() {
+            renderHeader();
+            renderProgressBar();
+            renderFixedNav();
+            renderStepCards();
+            // 更新编辑模式相关UI
+            const addBtn = document.getElementById('btn-add-step');
+            const toggle = document.getElementById('edit-mode-toggle');
+            const label = document.getElementById('edit-mode-label');
+            const toolbar = document.getElementById('toolbar');
+            if (isEditMode) {
+                addBtn.style.display = 'inline-flex';
+                toggle.classList.add('active');
+                label.textContent = '编辑中';
+                toolbar.classList.add('edit-active');
+            } else {
+                addBtn.style.display = 'none';
+                toggle.classList.remove('active');
+                label.textContent = '编辑模式';
+                toolbar.classList.remove('edit-active');
+            }
+        }
+
+        // ==================== 星空背景生成 ====================
+        function createStars() {
+            const container = document.getElementById('stars');
+            if (!container) return;
+            // 清除旧的星星和流星（保留星云）
+            const existingStars = container.querySelectorAll('.star,.shooting-star');
+            existingStars.forEach(el => el.remove());
+
+            const fragment = document.createDocumentFragment();
+            // 普通星星
+            for (let i = 0; i < 160; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2.2 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', (Math.random() * 4 + 2) + 's');
+                star.style.setProperty('--delay', (Math.random() * 5) + 's');
+                fragment.appendChild(star);
+            }
+            // 流星
+            const meteorCount = 5;
+            for (let i = 0; i < meteorCount; i++) {
+                const meteor = document.createElement('div');
+                meteor.className = 'shooting-star';
+                meteor.style.left = Math.random() * 70 + 15 + '%';
+                meteor.style.top = Math.random() * 35 + 5 + '%';
+                meteor.style.setProperty('--shoot-duration', (Math.random() * 2 + 3) + 's');
+                meteor.style.setProperty('--shoot-delay', (Math.random() * 10 + i * 3) + 's');
+                fragment.appendChild(meteor);
+            }
+            container.appendChild(fragment);
+        }
+
+        // ==================== 事件绑定 ====================
+        function bindGlobalEvents() {
+            // 编辑模式切换
+            document.getElementById('edit-mode-toggle').addEventListener('click', toggleEditMode);
+
+            // 添加步骤按钮
+            document.getElementById('btn-add-step').addEventListener('click', openAddStepEditor);
+            document.getElementById('btn-add-step-empty')?.addEventListener('click', openAddStepEditor);
+
+            // JSON编辑按钮
+            document.getElementById('btn-json-edit').addEventListener('click', openJsonEditor);
+
+            // 导出配置按钮
+            document.getElementById('btn-export-config').addEventListener('click', exportConfig);
+
+            // 导入配置按钮
+            document.getElementById('btn-import-config').addEventListener('click', function() {
+                document.getElementById('import-file-input').click();
+            });
+            document.getElementById('import-file-input').addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    importConfigFromFile(this.files[0]);
+                    this.value = '';
+                }
+            });
+
+            // 恢复默认按钮
+            document.getElementById('btn-reset-config').addEventListener('click', resetConfigToDefault);
+
+            // JSON编辑器模态框
+            document.getElementById('json-modal-close').addEventListener('click', closeJsonEditor);
+            document.getElementById('json-modal-cancel').addEventListener('click', closeJsonEditor);
+            document.getElementById('json-modal-apply').addEventListener('click', applyJsonConfig);
+            document.getElementById('json-editor-modal').addEventListener('click', function(e) {
+                if (e.target === this) closeJsonEditor();
+            });
+
+            // 步骤编辑器模态框
+            document.getElementById('step-modal-close').addEventListener('click', closeStepEditor);
+            document.getElementById('step-modal-cancel').addEventListener('click', closeStepEditor);
+            document.getElementById('step-modal-save').addEventListener('click', saveStepFromEditor);
+            document.getElementById('step-editor-modal').addEventListener('click', function(e) {
+                if (e.target === this) closeStepEditor();
+            });
+
+            // 图标预设点击
+            document.querySelectorAll('.icon-preset-chip').forEach(chip => {
+                chip.addEventListener('click', function() {
+                    const icon = this.dataset.icon;
+                    document.getElementById('step-editor-icon').value = icon;
+                });
+            });
+
+            // 键盘快捷键
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+E 切换编辑模式
+                if (e.ctrlKey && e.key === 'e') {
+                    e.preventDefault();
+                    toggleEditMode();
+                }
+                // Escape 关闭模态框
+                if (e.key === 'Escape') {
+                    if (!document.getElementById('json-editor-modal').classList.contains('hidden')) {
+                        closeJsonEditor();
+                    }
+                    if (!document.getElementById('step-editor-modal').classList.contains('hidden')) {
+                        closeStepEditor();
+                    }
+                }
+            });
+
+            // 重置进度按钮（在导航中动态生成，使用事件委托）
+            document.getElementById('fixed-step-nav').addEventListener('click', function(e) {
+                const resetBtn = e.target.closest('#reset-progress-btn');
+                if (resetBtn) {
+                    resetProgress();
+                }
+            });
+
+            // JSON编辑器 - Ctrl+Enter 应用
+            document.getElementById('json-editor-textarea').addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    applyJsonConfig();
+                }
+            });
+
+            // 步骤编辑器 - Enter提交（非textarea中）
+            document.getElementById('step-editor-modal').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !==
+                    'SELECT') {
+                    e.preventDefault();
+                    saveStepFromEditor();
+                }
+            });
+        }
+
+        // ==================== 初始化 ====================
+        function init() {
+            createStars();
+            loadConfig();
+            // 确保默认有配置
+            if (!currentConfig || !currentConfig.steps || currentConfig.steps.length === 0) {
+                currentConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+                nextStepId = currentConfig.steps.reduce((max, s) => Math.max(max, s.id || 0), 0) + 1;
+                saveConfig();
+            }
+            bindGlobalEvents();
+            renderAll();
+            console.log('✨ 星空SOP进度追踪已激活 | 编辑模式：' + (isEditMode ? '开启' : '关闭'));
+            console.log('   💡 提示：点击"编辑模式"可拖拽排序、添加/编辑/删除步骤');
+            console.log('   💡 快捷键：Ctrl+E 切换编辑模式 | Ctrl+Enter 应用JSON');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        // ==================== 暴露API到全局 ====================
+        window.sopAPI = {
+            getConfig: () => currentConfig,
+            setConfig: (config) => { currentConfig = config;
+                saveConfig();
+                renderAll(); },
+            resetConfig: resetConfigToDefault,
+            exportConfig: exportConfig,
+            importConfig: importConfigFromFile,
+            toggleEditMode: toggleEditMode,
+            getEditMode: () => isEditMode,
+            renderAll: renderAll,
+            resetProgress: resetProgress,
+            getProgress: loadProgress,
+            addStep: (stepData) => {
+                const newStep = Object.assign({ id: nextStepId++, colorScheme: 'custom', icon: 'fa-solid fa-gear',
+                    tag: '步骤', desc: '', url: '' }, stepData);
+                currentConfig.steps.push(newStep);
+                saveConfig();
+                renderAll();
+            },
+        };
+    })();
+</script>

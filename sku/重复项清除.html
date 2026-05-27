@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>去重助手 - 文本行去重工具</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: linear-gradient(145deg, #e9f0fc 0%, #d9e3f0 100%);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        /* 主卡片容器 */
+        .card {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(0px);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        /* 头部区域 */
+        .header {
+            background: #1f2b3c;
+            color: white;
+            padding: 1.6rem 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-weight: 600;
+            font-size: 1.9rem;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .header h1::before {
+            content: "🧹";
+            font-size: 2rem;
+        }
+
+        .sub {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+
+        /* 双栏布局 */
+        .workspace {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0;
+        }
+
+        /* 公共面板样式 */
+        .panel {
+            flex: 1;
+            min-width: 280px;
+            padding: 1.8rem 1.5rem;
+            background: #ffffff;
+            border-right: 1px solid #eef2f8;
+            transition: all 0.2s;
+        }
+
+        .panel:last-child {
+            border-right: none;
+        }
+
+        .panel-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1.2rem;
+            color: #1e2a3a;
+            border-left: 5px solid #3b82f6;
+            padding-left: 0.85rem;
+        }
+
+        .panel-desc {
+            font-size: 0.8rem;
+            color: #5b6e8c;
+            margin-bottom: 1.25rem;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 0.6rem;
+        }
+
+        /* 文本域 */
+        .data-textarea {
+            width: 100%;
+            height: 380px;
+            padding: 1rem;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid #cfdfed;
+            border-radius: 1rem;
+            background: #fefefe;
+            resize: vertical;
+            outline: none;
+            transition: 0.2s;
+            color: #0a1c2f;
+        }
+
+        .data-textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        /* 辅助按钮组 */
+        .action-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin: 1.2rem 0 0.8rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+        }
+
+        button {
+            background: #f1f5f9;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-family: inherit;
+            color: #1f2b3c;
+            border: 1px solid #cbdde9;
+        }
+
+        button i {
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        button.primary {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 5px rgba(59,130,246,0.3);
+        }
+
+        button.primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        button:hover {
+            background: #e6edf4;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        /* 统计信息卡片 */
+        .stats {
+            background: #f8fafc;
+            border-radius: 1rem;
+            padding: 0.8rem 1rem;
+            margin-top: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            border: 1px solid #e2edf7;
+            color: #2c3f58;
+        }
+
+        .stat-badge {
+            background: white;
+            border-radius: 2rem;
+            padding: 0.2rem 0.75rem;
+            font-weight: 600;
+            color: #0f3b6f;
+        }
+
+        .footer-note {
+            font-size: 0.7rem;
+            text-align: center;
+            padding: 1rem 1.5rem 1.2rem;
+            background: #f9fbfd;
+            border-top: 1px solid #eef2f8;
+            color: #5f7f9e;
+        }
+
+        /* 右侧提示 */
+        .info-hint {
+            background: #eef6ff;
+            border-radius: 0.9rem;
+            padding: 0.7rem 1rem;
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #1e4b7a;
+            border-left: 3px solid #3b82f6;
+        }
+
+        @media (max-width: 760px) {
+            .panel {
+                padding: 1.2rem;
+            }
+            .data-textarea {
+                height: 280px;
+            }
+            button {
+                padding: 0.4rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header">
+        <h1>重复项清除器</h1>
+        <div class="sub">逐行比较 · 智能去重 · 保持原始顺序</div>
+    </div>
+    <div class="workspace">
+        <!-- 左侧：原始输入区域 -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>📋 原始数据</span>
+            </div>
+            <div class="panel-desc">
+                每行一条数据，支持从任意文本源粘贴。保留空白行？（默认忽略空行）
+            </div>
+            <textarea id="inputText" class="data-textarea" placeholder="例如：&#10;apple&#10;banana&#10;apple&#10;orange&#10;葡萄&#10;banana&#10;&#10;柠檬&#10;apple">apple
+banana
+apple
+orange
+葡萄
+banana
+
+柠檬
+apple</textarea>
+            <div class="action-bar">
+                <div class="btn-group">
+                    <button id="clearBtn" title="清空输入区">🗑️ 清空</button>
+                    <button id="sampleBtn" title="加载示例数据">📋 示例</button>
+                </div>
+                <div class="btn-group">
+                    <button id="deduplicateBtn" class="primary">✨ 一键去重</button>
+                </div>
+            </div>
+            <div class="stats" id="inputStats">
+                <span>📊 原始行数: <strong id="rawLineCount">0</strong></span>
+                <span>⚡ 非空行: <strong id="nonEmptyCount">0</strong></span>
+            </div>
+        </div>
+
+        <!-- 右侧：输出去重结果区域 -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>✅ 去重结果</span>
+            </div>
+            <div class="panel-desc">
+                基于“保留首次出现顺序”移除重复项，空行自动忽略（可勾选保留空行）
+            </div>
+            <textarea id="outputText" class="data-textarea" readonly placeholder="点击「一键去重」或右侧复制结果..." style="background:#fefcfa;"></textarea>
+            <div class="action-bar">
+                <div class="btn-group">
+                    <button id="copyBtn" title="复制结果到剪贴板">📎 复制结果</button>
+                    <button id="clearOutputBtn" title="清空结果区">🗑️ 清空结果</button>
+                </div>
+                <div class="btn-group">
+                    <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; background:#f1f5f9; padding: 0.3rem 0.9rem; border-radius: 2rem; cursor:pointer; border:1px solid #cbdde9;">
+                        <input type="checkbox" id="keepEmptyCheckbox" style="cursor:pointer;"> 📌 保留空行
+                    </label>
+                </div>
+            </div>
+            <div class="stats" id="outputStats">
+                <span>📦 去重后行数: <strong id="uniqueLineCount">0</strong></span>
+                <span>🗑️ 移除重复项: <strong id="duplicateRemovedCount">0</strong></span>
+            </div>
+            <div class="info-hint">
+                💡 去重逻辑：剔除完全重复的行，按照第一次出现的顺序输出。<br>
+                ⚙️ “保留空行”开启时空行会被视为有效项并保留一个；关闭时空行完全过滤。
+            </div>
+        </div>
+    </div>
+    <div class="footer-note">
+        🔁 粘贴数据 → 点击「一键去重」 → 复制干净结果。支持任意文本行，处理前后保留原始次序。
+    </div>
+</div>
+
+<script>
+    (function() {
+        // DOM 元素
+        const inputTextarea = document.getElementById('inputText');
+        const outputTextarea = document.getElementById('outputText');
+        const deduplicateBtn = document.getElementById('deduplicateBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const sampleBtn = document.getElementById('sampleBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const clearOutputBtn = document.getElementById('clearOutputBtn');
+        const keepEmptyCheckbox = document.getElementById('keepEmptyCheckbox');
+
+        // 统计显示元素
+        const rawLineCountSpan = document.getElementById('rawLineCount');
+        const nonEmptyCountSpan = document.getElementById('nonEmptyCount');
+        const uniqueLineCountSpan = document.getElementById('uniqueLineCount');
+        const duplicateRemovedCountSpan = document.getElementById('duplicateRemovedCount');
+
+        // 辅助函数：获取文本域所有行（分割行 -> 保留原始行末换行分割，但是为了精确统计和去重，使用标准 splitLines）
+        // 支持保留每一行的原始内容（包括空字符串）
+        function getLinesFromText(text) {
+            // 按照换行符分割，保证最后一行如果以\n结尾不会多出空元素？需要保留实际的空行。使用正则保留所有行。
+            // 规则: 按 /\r?\n/ 分割，如果末尾有换行符，最后一个元素会是空字符串（代表一个空行），符合行定义。
+            if (text === "") return [];
+            const lines = text.split(/\r?\n/);
+            return lines;
+        }
+
+        // 获取输入区域的所有行(原始分行，包括空串)
+        function getInputRawLines() {
+            const rawText = inputTextarea.value;
+            return getLinesFromText(rawText);
+        }
+
+        // 更新输入侧统计信息（原始行数 + 非空行数）
+        function updateInputStats() {
+            const lines = getInputRawLines();
+            const totalLines = lines.length;
+            // 非空行是指剔除空字符串行（trim后长度为0）
+            const nonEmpty = lines.filter(line => line.trim().length > 0).length;
+            rawLineCountSpan.innerText = totalLines;
+            nonEmptyCountSpan.innerText = nonEmpty;
+        }
+
+        // 核心去重函数: 根据keepEmpty标志，保留首次出现顺序移除重复项
+        // 算法: 顺序遍历原始行，利用Set记录已出现过的有效key；同时根据keepEmpty处理空行。
+        // keepEmpty为true时，空行(trim后为空) 会作为有效元素，但最多保留一个空行（保留第一个空行）
+        // 注意: 为了顺序保留且去重，需要判断是否已出现过。对于非空行而言，完全按照字符串原样比较（不去除首尾空格，但保留原始格式）。
+        // 但通常用户期望“内容相同”即视为重复。为了智能比较，统一用trim后的值做比较(但保留原行文本输出)。例如 '  abc' 和 'abc' 不同但一般需要去除首尾? 
+        // 为保证精准, 这里提供标准: 内容去重对比时基于去除了首尾空白后的字符串进行比较, 但输出时保留该行原始的文本内容(第一次出现的原始格式)。
+        // 这是最常见的需求: "hello " 与 "hello" 不同? 但多数去除重复场景用户期望忽略首尾差异，但也有保留精确比较，为更友好我们就采用trim后比较（更符合预期）。
+        // 同时在保留空行模式下，空行（trim后为空）视为一个特殊标识 —— 保留第一次出现的空行（保留原始空行内容，直接是空字符串）
+        function performDeduplication() {
+            const rawLines = getInputRawLines();
+            const keepEmpty = keepEmptyCheckbox.checked;
+            
+            // 存储已经出现过的标准化key (基于trim后的值用来比较是否重复)
+            const seenKeys = new Set();
+            const resultLines = [];
+            
+            // 用于记录空行是否已经被加入 (keepEmpty模式下 只会保留第一个空行)
+            let emptyLineAdded = false;
+            
+            for (let line of rawLines) {
+                // 注意 line 可能是空字符串
+                const trimmed = line.trim();
+                const isEmpty = trimmed === "";
+                
+                // 处理空行逻辑
+                if (isEmpty) {
+                    if (keepEmpty) {
+                        // 保留空行模式：如果还没有添加过空行，则添加（保留第一次出现的空行）
+                        if (!emptyLineAdded) {
+                            resultLines.push(line);   // 原始空行内容（通常为空字符串）
+                            emptyLineAdded = true;
+                            // 为了seenKeys也需要加入一个特殊的空行标记，确保后续如果有其他空行也不会再加入
+                            seenKeys.add("__EMPTY_LINE_PLACEHOLDER__");
+                        }
+                        // 否则忽略后续空行（重复空行）
+                    }
+                    // 如果不保留空行，直接忽略空行（不做任何处理）
+                    continue;
+                }
+                
+                // 非空行处理: 使用trim后的值作为key (忽略首尾空格差异进行去重)
+                // 但是注意，首尾空白差异对于用户可能影响，一般来说去重复时" abc " 和 "abc" 视为相同。因此使用trimmedLower? 保持大小写敏感但不改变原始内容。
+                // 为了避免大小写不同被合并，不对大小写转换，只trim首尾空白。
+                const compareKey = trimmed;
+                
+                if (!seenKeys.has(compareKey)) {
+                    seenKeys.add(compareKey);
+                    resultLines.push(line);   // 保留原始行内容（含首尾空格原始样式）
+                }
+                // 如果已存在，则跳过（重复项）
+            }
+            
+            // 构建输出文本 (每个结果行用换行分隔)
+            const outputText = resultLines.join('\n');
+            outputTextarea.value = outputText;
+            
+            // 更新右侧统计
+            const totalUnique = resultLines.length;
+            // 原始非空行数（不计空行的情况下去重前有效行数更具比较意义）
+            const originalNonEmptyLines = rawLines.filter(l => l.trim().length > 0).length;
+            // 去重后的非空行数量（结果中的非空行）
+            const uniqueNonEmptyCount = resultLines.filter(l => l.trim().length > 0).length;
+            // 移除的重复项数量 = 原始非空行总数 - 去重后非空行总数 （空行若保留也额外特殊处理，但空行最多保留一个，为了统计移除重复项语义）
+            // 但为了更清晰易懂: 移除重复项 = 原始总非空行 - 结果中非空行数量（在保留空行/不保留空行下，都只统计非空行重复移除个数比较清晰）
+            // 同时如果保留空行，空行重复移除逻辑展示在额外信息里? 统一用统计信息显示"移除重复项"包括空行重复移除（如果保留空行模式下去掉的额外空行也计数）
+            // 但是比较符合用户直觉: 原始数据如果有多个空行且保留空行模式，结果只有1个空行，那么多余空行算重复移除。
+            let removedTotal = 0;
+            if (keepEmpty) {
+                // 原始空行总数
+                const originalEmptyCount = rawLines.filter(l => l.trim() === "").length;
+                // 结果中空行个数: 最多1个或者是0个(逻辑中会保留一个)
+                const resultEmptyCount = resultLines.filter(l => l.trim() === "").length;
+                const removedEmpty = originalEmptyCount - resultEmptyCount;
+                // 非空重复移除数量 = 原始非空 - 结果非空
+                const originalNonEmpty = rawLines.filter(l => l.trim().length > 0).length;
+                const resultNonEmpty = resultLines.filter(l => l.trim().length > 0).length;
+                removedTotal = (originalNonEmpty - resultNonEmpty) + removedEmpty;
+            } else {
+                // 不保留空行模式，原始非空行总数-结果总行数（结果总行数全为非空）
+                const originalNonEmpty = rawLines.filter(l => l.trim().length > 0).length;
+                const resultTotal = resultLines.length;
+                removedTotal = originalNonEmpty - resultTotal;
+            }
+            
+            uniqueLineCountSpan.innerText = totalUnique;
+            duplicateRemovedCountSpan.innerText = removedTotal >= 0 ? removedTotal : 0;
+            
+            // 额外动画反馈——提示成功
+            return { success: true, uniqueCount: totalUnique, removed: removedTotal };
+        }
+        
+        // 手动调用刷新输入统计并执行去重（联动刷新界面）
+        function refreshAndDeduplicate() {
+            updateInputStats();           // 更新左侧统计（行数/非空）
+            const result = performDeduplication();   // 执行去重并更新右侧统计
+            // 可添加微交互，闪烁一下提示
+            if (result && result.uniqueCount >= 0) {
+                outputTextarea.style.transition = "0.1s";
+                outputTextarea.style.backgroundColor = "#f1f9f0";
+                setTimeout(() => { outputTextarea.style.backgroundColor = ""; }, 200);
+            }
+        }
+        
+        // 清空输入区（保留输出区可选？为避免误操作，仅清空输入，输出可保留或者联动清理根据意图；但更好的只清空输入，输出不清空，但允许用户单独点击清空结果）
+        function clearInput() {
+            inputTextarea.value = "";
+            updateInputStats();   // 更新统计显示清空的计数
+            // 可选保留输出区不清除，但输入空了用户一般会再次去重。但不自动清空结果，避免丢失之前的结果。体验合理。
+            // 同时为了方便，输出区不自动清空，用户可使用右侧清空按钮
+            // 同时如果输入为空，再次去重会把输出变为空
+            // 为了更好的反馈，简单提示
+        }
+        
+        // 清空输出区域
+        function clearOutput() {
+            outputTextarea.value = "";
+            uniqueLineCountSpan.innerText = "0";
+            duplicateRemovedCountSpan.innerText = "0";
+        }
+        
+        // 示例数据 (丰富有趣)
+        function loadSampleData() {
+            const sample = `🍎 红苹果
+🍌 香蕉
+🍎 红苹果
+🍊 橙子
+🍇 葡萄
+🍌 香蕉
+
+柠檬
+🍋 柠檬
+apple 
+apple
+   apple with space
+Apple
+🍎 红苹果
+   `;
+            inputTextarea.value = sample;
+            updateInputStats();
+            // 可选自动去重，让用户点击一键去重，也可以自动去重但为了符合直觉不自动触发，保持手动
+            // 但也可以在加载示例时同时显示去重效果，考虑到用户习惯可以有提示。不过为了更明显调用一次去重？ 可以调用一次，让结果立即呈现
+            refreshAndDeduplicate();
+        }
+        
+        // 复制结果到剪贴板
+        async function copyResultToClipboard() {
+            const resultText = outputTextarea.value;
+            if (!resultText && resultText !== "") {
+                // 所有空，提示无内容
+                showToast("没有可复制的内容", false);
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(resultText);
+                // 临时反馈
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = "✅ 已复制";
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                }, 1500);
+            } catch (err) {
+                // fallback
+                outputTextarea.select();
+                document.execCommand('copy');
+                showToast("已复制到剪贴板（传统方式）", true);
+            }
+        }
+        
+        // 简易toast提示（非必须但好用）
+        function showToast(msg, isSuccess = true) {
+            // 简单alert替换为轻提示，但现代风格使用临时div
+            const toast = document.createElement('div');
+            toast.innerText = msg;
+            toast.style.position = 'fixed';
+            toast.style.bottom = '30px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.backgroundColor = isSuccess ? '#1f2b3c' : '#b91c1c';
+            toast.style.color = 'white';
+            toast.style.padding = '0.6rem 1.4rem';
+            toast.style.borderRadius = '3rem';
+            toast.style.fontSize = '0.85rem';
+            toast.style.fontWeight = '500';
+            toast.style.zIndex = '9999';
+            toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+            toast.style.backdropFilter = 'blur(4px)';
+            toast.style.fontFamily = 'inherit';
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 1800);
+        }
+        
+        // 监听输入区域变化实时更新左侧统计（不自动去重，但刷新统计）
+        function bindEvents() {
+            inputTextarea.addEventListener('input', function() {
+                updateInputStats();
+                // 可额外实时显示？但不去重，用户按需点击按钮
+            });
+            
+            deduplicateBtn.addEventListener('click', function() {
+                refreshAndDeduplicate();
+                showToast("去重完成 ✓", true);
+            });
+            
+            clearBtn.addEventListener('click', function() {
+                clearInput();
+                // 给个提示
+                showToast("输入区已清空", true);
+            });
+            
+            sampleBtn.addEventListener('click', function() {
+                loadSampleData();
+                showToast("已加载示例数据并自动去重", true);
+            });
+            
+            copyBtn.addEventListener('click', function() {
+                copyResultToClipboard();
+            });
+            
+            clearOutputBtn.addEventListener('click', function() {
+                clearOutput();
+                showToast("结果区已清空", true);
+            });
+            
+            keepEmptyCheckbox.addEventListener('change', function() {
+                // 当保留空行勾选状态变更时，如果是当前有输入数据就立即刷新去重效果让用户直观看到变化
+                // 为了体验，自动重新执行去重（前提输入区有内容或结果变更）
+                if (inputTextarea.value.trim() !== "" || getInputRawLines().length > 0) {
+                    refreshAndDeduplicate();
+                    showToast(`已切换为${keepEmptyCheckbox.checked ? "保留空行" : "忽略空行"}模式，已重新去重`, true);
+                } else {
+                    // 没有数据可以忽略
+                }
+            });
+        }
+        
+        // 初始化: 更新输入统计+ 初始去重展示(让页面打开有示范效果)
+        function init() {
+            bindEvents();
+            // 初始更新原始数据统计
+            updateInputStats();
+            // 初始执行一次去重，使右侧区域显示预设示例数据的去重结果(默认textarea内容已经存在示例)
+            performDeduplication();
+            // 额外保证右侧统计正确刷新UI
+            const initialStats = performDeduplication(); // 二次确保
+        }
+        
+        init();
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>材质数据智能转换工具 - 商品分类筛选助手</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f0f4fa 0%, #e6ecf3 100%);
+            font-family: 'Segoe UI', 'Roboto', system-ui, -apple-system, 'BlinkMacSystemFont', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 主卡片容器 */
+        .converter-card {
+            max-width: 1400px;
+            width: 100%;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(0px);
+            background: #ffffff;
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        /* 头部 */
+        .header {
+            background: #1e2f3e;
+            padding: 1.5rem 2rem;
+            color: white;
+        }
+
+        .header h1 {
+            margin: 0 0 0.35rem 0;
+            font-weight: 600;
+            font-size: 1.8rem;
+            letter-spacing: -0.3px;
+        }
+
+        .header p {
+            margin: 0;
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #2c4c6b;
+            padding: 0.2rem 0.7rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            margin-top: 0.7rem;
+        }
+
+        /* 双栏布局 */
+        .dual-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.8rem;
+            padding: 2rem;
+        }
+
+        .panel {
+            flex: 1;
+            min-width: 280px;
+            background: #fefefe;
+            border-radius: 1.5rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e9edf2;
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            padding: 1rem 1.5rem 0.2rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1f3a48;
+            border-bottom: 2px solid #eef2f6;
+            margin-bottom: 0.5rem;
+        }
+
+        .panel-title i {
+            font-size: 1.3rem;
+        }
+
+        .toolbar {
+            padding: 0.5rem 1.5rem 0.8rem 1.5rem;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+        button {
+            background: #f0f4f9;
+            border: none;
+            padding: 0.45rem 1rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #1e4663;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+        }
+
+        button.primary {
+            background: #2c6e9e;
+            color: white;
+            box-shadow: 0 2px 5px rgba(44,110,158,0.2);
+        }
+
+        button.primary:hover {
+            background: #1f577f;
+            transform: translateY(-1px);
+        }
+
+        button:hover {
+            background: #e4eaf1;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 1.2rem;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            border: 1px solid #cfdde8;
+            border-radius: 1rem;
+            resize: vertical;
+            background: #fefefe;
+            transition: 0.15s;
+            color: #1a2c3c;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #2c6e9e;
+            box-shadow: 0 0 0 3px rgba(44,110,158,0.2);
+        }
+
+        .textarea-container {
+            padding: 0 1.5rem 1.5rem 1.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-note {
+            font-size: 0.7rem;
+            color: #6c7e8f;
+            padding: 0.6rem 1.5rem 1rem 1.5rem;
+            border-top: 1px solid #eef2f8;
+            background: #fbfdff;
+        }
+
+        .example-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .example-badge {
+            background: #eef2fa;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+
+        .example-badge:hover {
+            background: #dce5f0;
+        }
+
+        hr {
+            margin: 0;
+            border: none;
+            border-top: 1px solid #eef2f6;
+        }
+
+        .status-msg {
+            font-size: 0.75rem;
+            color: #33835c;
+            padding-left: 1.5rem;
+            padding-bottom: 0.5rem;
+        }
+
+        @media (max-width: 760px) {
+            body {
+                padding: 1rem;
+            }
+            .dual-panel {
+                padding: 1rem;
+                gap: 1rem;
+            }
+            .panel-title {
+                font-size: 1.1rem;
+            }
+        }
+
+        footer {
+            background: #f8fafd;
+            text-align: center;
+            font-size: 0.7rem;
+            padding: 0.9rem;
+            color: #6a7a8a;
+            border-top: 1px solid #eef2f8;
+        }
+    </style>
+</head>
+<body>
+<div class="converter-card">
+    <div class="header">
+        <h1>🧵 材质分类转化器</h1>
+        <p>智能提取「第一种材质」并去除百分比 · 为商品筛选而设计</p>
+        <div class="badge">✨ 规则: 优先取第一个材质 | 移除数字+百分号 | 保留纯文本材质名</div>
+    </div>
+
+    <div class="dual-panel">
+        <!-- 左侧：原始数据粘贴区 -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>📋 ① 粘贴原始材质</span>
+            </div>
+            <div class="toolbar">
+                <button id="clearInputBtn" title="清空输入框">🗑️ 清空输入</button>
+                <button id="loadExamplesBtn" class="primary">📋 加载示例数据</button>
+                <button id="convertBtn" style="background:#2c6e9e; color:white;">⚡ 一键转换 →</button>
+            </div>
+            <div class="textarea-container">
+                <textarea id="rawDataInput" rows="12" placeholder="请从 Excel 中复制材质列数据，每行一条。支持混合格式例如：
+
+100%polyester
+Nylon, Spandex
+95%Polyester + 5%Wood
+15%Wood
+Cotton 100%
+Polyester 65% / Cotton 35%
+Leather
+Spandex 12%, Nylon 88%
+60% Merino Wool, 40% Acrylic"></textarea>
+            </div>
+            <div class="info-note">
+                💡 提示：支持逗号、加号、斜杠、空格分隔等多种混合格式。自动识别首个有效材质成分，并过滤数字、百分号、前后修饰空白。
+            </div>
+        </div>
+
+        <!-- 右侧：转换结果输出区 -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>🏷️ ② 分类材质（仅首材质）</span>
+            </div>
+            <div class="toolbar">
+                <button id="copyOutputBtn" class="primary">📋 复制结果</button>
+                <button id="clearOutputBtn">🗑️ 清空结果</button>
+            </div>
+            <div class="textarea-container">
+                <textarea id="convertedOutput" rows="12" readonly placeholder="转换后的材质分类结果会显示在这里……&#10;例如: polyester, nylon, cotton, leather 等"></textarea>
+            </div>
+            <div class="info-note">
+                ✅ 转换规则：<br>
+                • 提取第一个材质（忽略其他混合成分）<br>
+                • 移除百分比数字及百分号（例如 "95%Polyester" → "Polyester"）<br>
+                • 清理特殊字符，保留字母、空格、连字符（材质名称如 "Merino Wool" 保留）<br>
+                • 若无法识别材质则保留原文本（并尽量剔除杂乱符号）
+            </div>
+        </div>
+    </div>
+    <footer>
+        🧩 适用于电商分类筛选 | 自动取混合材质的第一项 | 已优化处理 "Nylon,Spandex"、"95%Polyester + 5%Wood" 等复杂文本
+    </footer>
+</div>
+
+<script>
+    (function() {
+        // ---------- 核心转换函数：提取首材质并移除百分比 ----------
+        /**
+         * 从原始材质字符串中提取 "第一种材质" 并移除百分比/数字前缀
+         * @param {string} raw - 原始输入，例如 "95%Polyester + 5%Wood"
+         * @returns {string} 清理后的材质名称，例如 "Polyester"
+         */
+        function extractFirstMaterial(raw) {
+            if (!raw || typeof raw !== 'string') return '';
+            
+            let trimmed = raw.trim();
+            if (trimmed === '') return '';
+            
+            // 第0步：针对常见分隔符，将字符串拆分为潜在材质片段列表，取第一个非空片段
+            // 优先使用分隔符: 逗号(中文/英文) + 加号 + 斜杠 + 竖线 + 换行 +  & 等
+            // 注意：需要保留含空格的材质名如 "Merino Wool"
+            let splitBySeparators = (text) => {
+                // 用正则匹配常见材质分隔符: ， , + / & | and 以及中英文逗号空格组合
+                // 为了精确，先替换掉中文逗号为英文逗号，统一拆分
+                let normalized = text.replace(/，/g, ',').replace(/﹢/g, '+').replace(/＆/g, '&');
+                // 按照 , | \+ | / | & | \s+and\s+ 等分割（注意保留材质名内部空格）
+                let parts = normalized.split(/\s*[,+&/|]\s*|\s+and\s+|\s*\+\s*/);
+                // 过滤空字符串
+                let filtered = parts.filter(p => p.trim().length > 0);
+                if (filtered.length === 0) return [text];
+                return filtered;
+            };
+            
+            let segments = splitBySeparators(trimmed);
+            let firstSegment = segments[0] ? segments[0].trim() : trimmed;
+            
+            // 进一步处理：如果第一个材质片段中包含类似 “95%Polyester” 或 “Polyester 65%” 等数字+百分号混排
+            // 移除百分比和数字（百分号前后的数字，包含小数）
+            // 步骤1: 移除类似 "95%" "65.5%" 这样的模式（全局移除百分号及其紧邻数字）
+            let cleaned = firstSegment;
+            
+            // 匹配模式: 数字(含小数点) + 百分号(可能前后无空格)，例如 "95%", "65.5%", " 20%"
+            // 同时也要处理像 "Polyester 65%" -> 移除 "65%" ，保留 "Polyester"
+            cleaned = cleaned.replace(/\d+(?:\.\d+)?%/g, '');
+            // 此外可能有 "百分比" 数字在前并且紧贴字母: 例如 "100%polyester" 上面已经移除了 "100%"，剩下 "polyester" 好；但也会出现 "15%Wood" -> 移除"15%" -> "Wood"
+            // 也处理类似 "80%Cotton" 同理
+            
+            // 但可能存在 ' 20% ' 周围空格，清理后有多余空格需要trim，另外可能存在只剩余数字百分号被移除后变成空字符串？需要判断
+            // 另外存在纯百分比数字但没有字母的极端情况，比如用户输入 "50%"，逻辑上返回空字符串，但可以返回空串（归类不合理数据，但是保留空串）
+            
+            // 移除数字开头的后面无百分号但包含数字 + 空格情况? 例如 "65 Cotton" 我们应当移除前导数字和空格？
+            // 增强: 如果清理后开头有数字+空格，并且原始片段前半部分数字无意义，那么尝试提取单词。如 "85 Nylon" 去除数字部分
+            // 更稳妥：使用正则提取第一个连续的字母组(包含连字符，空格支持材质名中有空格)
+            // 为了避免丢失 "Merino Wool" 这种带空格的复合材质，我们匹配 [a-zA-Z\u00C0-\u024F\u0400-\u04FF]+(?:[\s-][a-zA-Z\u00C0-\u024F\u0400-\u04FF]+)*
+            // 支持拉丁扩展及常见西文材质字符
+            const materialWordRegex = /[A-Za-z\u00C0-\u024F\u0400-\u04FF]+(?:[\s-][A-Za-z\u00C0-\u024F\u0400-\u04FF]+)*/;
+            let match = cleaned.match(materialWordRegex);
+            if (match && match[0]) {
+                cleaned = match[0].trim();
+            } else {
+                // 如果没有匹配到任何字母材质，进一步清洗特殊符号，只保留字母可能为空
+                let onlyAlpha = cleaned.replace(/[^\p{L}\s-]/gu, '').trim();
+                if (onlyAlpha.length > 0) {
+                    cleaned = onlyAlpha;
+                } else {
+                    // 兜底：如果完全清洗后为空且原片段非空，尝试返回原片段去掉数字百分号及特殊字符的版本，至少保留可见字符
+                    let fallback = firstSegment.replace(/[\d%]/g, '').replace(/[^\w\s\u4e00-\u9fa5-]/g, '').trim();
+                    if (fallback === '') fallback = firstSegment.replace(/[^\p{L}]/gu, '').trim();
+                    cleaned = fallback || firstSegment;
+                }
+            }
+            
+            // 最终清理多余空格，并将首字母大写? 提供统一小写? 但分类一般可保留原始大小写风格，我们保持原样但为了搜索可以保留大小写但无需额外转化。但最好标准化首字母大写更美观? 可选项，不做强制，保留用户习惯但可进行小写转首字母大写? 不做硬性改变，直接输出清理后字符串
+            // 但类似 "polyester" 和 "Polyester" 保持一致? 保持原样不做大小写变动，因为搜索通常不区分大小写，但用户可能期望原始材质名格式。不过去除百分比可能导致 "nylon" 等，我们保留提取后的样子
+            // 特殊情况: 如果清理后为空且原始字符串不为空，返回一个清理后的符号去除但至少保留部分文字: 
+            if (cleaned === '' && firstSegment !== '') {
+                let extreme = firstSegment.replace(/[\d%+\s,;]/g, '').trim();
+                if (extreme === '') extreme = '未识别材质';
+                return extreme;
+            }
+            
+            return cleaned || '未识别';
+        }
+        
+        /**
+         * 批量转换: 支持多行文本，逐行转换，保留空行，并且修剪
+         * @param {string} inputText 多行原始材质数据
+         * @returns {string} 转换后的多行结果
+         */
+        function convertBulkMaterials(inputText) {
+            if (!inputText.trim()) return '';
+            const lines = inputText.split(/\r?\n/);
+            const resultLines = [];
+            for (let line of lines) {
+                let rawLine = line.trim();
+                if (rawLine === '') {
+                    resultLines.push('');   // 保留空行结构
+                    continue;
+                }
+                let converted = extractFirstMaterial(rawLine);
+                resultLines.push(converted);
+            }
+            return resultLines.join('\n');
+        }
+        
+        // ---------- DOM 元素 ----------
+        const inputTextarea = document.getElementById('rawDataInput');
+        const outputTextarea = document.getElementById('convertedOutput');
+        const convertBtn = document.getElementById('convertBtn');
+        const clearInputBtn = document.getElementById('clearInputBtn');
+        const clearOutputBtn = document.getElementById('clearOutputBtn');
+        const copyOutputBtn = document.getElementById('copyOutputBtn');
+        const loadExamplesBtn = document.getElementById('loadExamplesBtn');
+        
+        // 辅助：显示短暂的提示（可不用太复杂，直接console或者临时修改状态区，优雅一点添加一个临时小tooltip）
+        function showToastMessage(message, isError = false) {
+            // 简单创建临时浮动提示，但不影响主体，可简单用alert？改进为轻提示
+            const toast = document.createElement('div');
+            toast.innerText = message;
+            toast.style.position = 'fixed';
+            toast.style.bottom = '20px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.backgroundColor = isError ? '#c93a3a' : '#2c6e9e';
+            toast.style.color = 'white';
+            toast.style.padding = '8px 20px';
+            toast.style.borderRadius = '40px';
+            toast.style.fontSize = '0.85rem';
+            toast.style.zIndex = '9999';
+            toast.style.boxShadow = '0 6px 14px rgba(0,0,0,0.1)';
+            toast.style.fontWeight = '500';
+            toast.style.backdropFilter = 'blur(4px)';
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 400);
+            }, 1800);
+        }
+        
+        // 执行转换并更新输出区
+        function performConversion() {
+            const rawData = inputTextarea.value;
+            if (rawData.trim() === '') {
+                showToastMessage('⚠️ 请在左侧粘贴材质数据', false);
+                outputTextarea.value = '';
+                return;
+            }
+            const converted = convertBulkMaterials(rawData);
+            outputTextarea.value = converted;
+            // 显示转换完成反馈
+            const linesCount = converted.split(/\r?\n/).filter(l => l.trim().length > 0).length;
+            showToastMessage(`✅ 转换完成！共处理 ${linesCount} 条材质分类`, false);
+        }
+        
+        // 复制结果到剪贴板
+        async function copyOutput() {
+            const outputVal = outputTextarea.value;
+            if (!outputVal.trim()) {
+                showToastMessage('📭 没有可复制的结果，请先转换数据', false);
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(outputVal);
+                showToastMessage('📋 结果已复制到剪贴板', false);
+            } catch (err) {
+                // fallback
+                outputTextarea.select();
+                document.execCommand('copy');
+                showToastMessage('📋 已复制（传统方式）', false);
+            }
+        }
+        
+        // 加载示例材质数据 (展示丰富场景)
+        function loadExampleData() {
+            const exampleText = `100%polyester
+Nylon, Spandex
+95%Polyester + 5%Wood
+15%Wood
+Cotton 100%
+Polyester 65% / Cotton 35%
+Leather
+Spandex 12%, Nylon 88%
+60% Merino Wool, 40% Acrylic
+100% Linen
+65%Polyester 35%Viscose
+Wool 70%, Silk 30%
+Rayon
+50%Cupro / 50%Modal
+Nylon 6,6
+Polyurethane 100%
+Cashmere 5% , Merino 95%`;
+            inputTextarea.value = exampleText;
+            showToastMessage('✨ 已加载多种混合示例，点击「一键转换」', false);
+            // 可选自动执行转换，提高效率
+            // 但不自动，让用户主动点击更习惯，但为了方便也可以自动调用一次？但为了避免困惑，只加载数据
+        }
+        
+        // 清空输入
+        function clearInput() {
+            inputTextarea.value = '';
+            showToastMessage('🗑️ 输入区已清空', false);
+        }
+        
+        // 清空输出
+        function clearOutput() {
+            outputTextarea.value = '';
+            showToastMessage('🧹 输出区已清空', false);
+        }
+        
+        // 额外附加监听: 实现自动转换？出于易用，可增加一个“自动同步”开关？但为了符合直觉，用户点击转化按钮才转换
+        // 但为了展示专业，同时增加快捷键 ctrl+enter 转换
+        inputTextarea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                performConversion();
+            }
+        });
+        
+        // 为方便，也可以添加ctrl+shift+c 复制快捷键，但按钮已够
+        
+        // 绑定事件
+        convertBtn.addEventListener('click', performConversion);
+        clearInputBtn.addEventListener('click', clearInput);
+        clearOutputBtn.addEventListener('click', clearOutput);
+        copyOutputBtn.addEventListener('click', copyOutput);
+        loadExamplesBtn.addEventListener('click', loadExampleData);
+        
+        // 初始化让占位提示优雅
+        // 可选加载时演示一段友好的例子预填充？避免空白，但不需要，保留占位文本提示
+        // 但预置一个默认示例标注（通过placeholder已经展示足够）
+        // 如果用户希望第一次看到效果，点示例按钮即可。
+        
+        // 额外添加强化逻辑：如果用户在输出区双击可复制? 不重要，但顺便提供
+        outputTextarea.addEventListener('dblclick', () => {
+            copyOutput();
+        });
+        
+        // 针对一些复杂的边界测试额外确保大小写敏感场景保留材质单词内部空格连字符等
+        // 单元心理测试：提取"Merino Wool"应该保留
+        console.assert(extractFirstMaterial("60% Merino Wool, 40% Acrylic") === "Merino Wool", "Test Merino");
+        console.assert(extractFirstMaterial("95%Polyester + 5%Wood") === "Polyester", "Test Polyester");
+        console.assert(extractFirstMaterial("Nylon, Spandex") === "Nylon", "Test Nylon");
+        console.assert(extractFirstMaterial("15%Wood") === "Wood", "Test Wood");
+        console.assert(extractFirstMaterial("100%polyester") === "polyester", "Test lower polyester");
+        console.assert(extractFirstMaterial("Leather") === "Leather", "Test Leather");
+        console.assert(extractFirstMaterial("Cotton 100%") === "Cotton", "Test Cotton trailing");
+        console.assert(extractFirstMaterial("Spandex 12%, Nylon 88%") === "Spandex", "Test Spandex");
+        // 非常规带括号之类
+        console.assert(extractFirstMaterial("Polyester (65%) / Cotton") === "Polyester", "Parenthesis");
+        console.assert(extractFirstMaterial("Viscose 95% + 5% Elastane") === "Viscose", "Viscose plus");
+        
+        // 完美收官
+    })();
+</script>
+</body>
+</html>
