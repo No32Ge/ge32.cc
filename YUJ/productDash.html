@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>商品数据分析仪表盘 · 优化版</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-secondary: #5b6c84;
+      --border: #e2e8f0;
+      --primary: #3b6df0;
+      --primary-light: #eef3ff;
+      --green: #10b981;
+      --green-bg: #ecfdf5;
+      --orange: #f59e0b;
+      --purple: #8b5cf6;
+      --cyan: #06b6d4;
+      --pink: #ec4899;
+      --red: #ef4444;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow: 0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 8px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 20px rgba(0,0,0,0.07);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --radius-xs: 8px;
+      --transition: 0.2s ease;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.5; min-height: 100vh;
+    }
+    .header {
+      background: var(--card-bg); border-bottom: 1px solid var(--border);
+      padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px; box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo-icon { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #3b6df0, #5b8af7);
+      display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; }
+    .header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.3px; }
+    .header-subtitle { font-size: 0.8rem; color: var(--text-secondary); }
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px;
+      border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-size: 0.85rem;
+      font-weight: 500; transition: var(--transition); background: var(--card-bg); color: var(--text);
+      white-space: nowrap; font-family: inherit;
+    }
+    .btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
+    .btn-primary:hover { background: #2b5de0; border-color: #2b5de0; }
+    .btn-outline { border: 1.5px dashed var(--border); background: transparent; color: var(--primary); }
+    .btn-outline:hover { border-color: var(--primary); background: var(--primary-light); }
+    .btn-sm { padding: 5px 12px; font-size: 0.75rem; }
+    .file-input-hidden { display: none; }
+    .data-badge { display: inline-flex; align-items: center; gap: 5px; background: var(--green-bg);
+      color: #059669; padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 500;
+      border: 1px solid #a7f3d0; }
+    .data-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+    .main-container { display: flex; min-height: calc(100vh - 75px); }
+    .sidebar {
+      width: 300px; flex-shrink: 0; background: var(--card-bg); border-right: 1px solid var(--border);
+      padding: 16px 12px; overflow-y: auto; max-height: calc(100vh - 75px); position: sticky; top: 75px;
+      display: flex; flex-direction: column; gap: 8px; z-index: 50;
+    }
+    .sidebar-section { background: #fafbfc; border:1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+    .sidebar-section-header {
+      display: flex; align-items: center; justify-content: space-between; padding: 10px 14px;
+      cursor: pointer; font-weight: 600; font-size: 0.82rem; background: #fff; user-select: none;
+    }
+    .sidebar-section-header:hover { background: #f8fafc; }
+    .sidebar-section-body { display: none; padding: 10px 14px; max-height: 200px; overflow-y: auto; background: #fff; }
+    .sidebar-section.open .sidebar-section-body { display: block; }
+    .filter-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 0.8rem; }
+    .filter-row input[type="number"] { width: 70px; padding: 6px 8px; border:1px solid var(--border); border-radius:6px; font-size:0.8rem; }
+    .checkbox-group { display: flex; flex-direction: column; gap: 3px; max-height: 140px; overflow-y: auto; }
+    .checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; cursor: pointer; }
+    .sidebar .btn-apply-wrap { margin-top: auto; padding-top: 12px; }
+    .btn-apply {
+      background: var(--primary); color: #fff; border: none; width: 100%; padding: 12px; border-radius: 8px;
+      font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; letter-spacing: 0.3px;
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-apply.dirty { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,0.25); }
+    .btn-apply:hover { filter: brightness(0.95); }
+    .content-area { flex:1; padding: 18px 20px; overflow-y: auto; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px,1fr)); gap:12px; margin-bottom: 16px; }
+    .kpi-card { background: var(--card-bg); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); border-left: 4px solid transparent; }
+    .kpi-accent-blue { border-left-color: var(--primary); } .kpi-accent-green { border-left-color: var(--green); }
+    .kpi-accent-orange { border-left-color: var(--orange); } .kpi-accent-purple { border-left-color: var(--purple); }
+    .kpi-accent-cyan { border-left-color: var(--cyan); } .kpi-accent-pink { border-left-color: var(--pink); }
+    .kpi-accent-red { border-left-color: var(--red); }
+    .kpi-label { font-size: 0.72rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; }
+    .kpi-value { font-size: 1.7rem; font-weight: 700; margin-top: 2px; line-height: 1.2; }
+    .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px,1fr)); gap: 14px; margin-bottom: 16px; }
+    .chart-card { background: var(--card-bg); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); position: relative; }
+    .chart-card h3 { font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+    .chart-wrap { position: relative; width: 100%; height: 260px; }
+    .chart-full-width { grid-column: 1/-1; }
+    .chart-full-width .chart-wrap { height: 320px; }
+    .fullscreen-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px; border-radius: 4px; }
+    .fullscreen-btn:hover { background: #f1f5f9; }
+    .fullscreen-active {
+      position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important;
+      z-index: 9999 !important; background: white; padding: 30px; border-radius: 0 !important;
+      box-shadow: none; overflow: auto; display: flex; flex-direction: column;
+    }
+    .fullscreen-active .chart-wrap { flex:1; height: auto; min-height: 400px; }
+    .table-card { background: var(--card-bg); border-radius: var(--radius); padding: 14px 18px; box-shadow: var(--shadow); }
+    .table-wrap { overflow-x: auto; max-height: 450px; overflow-y: auto; border:1px solid var(--border); border-radius: 8px; }
+    table { width:100%; border-collapse: collapse; font-size: 0.75rem; min-width: 1400px; }
+    thead th { background: #f8fafc; padding: 8px 8px; font-weight: 600; border-bottom: 2px solid var(--border); cursor: pointer; white-space: nowrap; }
+    tbody td { padding: 7px 8px; border-bottom: 1px solid #f1f5f9; }
+    .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 10px; font-size: 0.8rem; }
+    .pagination button { padding: 4px 10px; border:1px solid var(--border); background: white; border-radius: 5px; cursor: pointer; }
+    .pagination span { margin: 0 6px; }
+    @media (max-width: 768px) {
+      .sidebar { position: fixed; left: -300px; top:0; height:100vh; z-index:150; width:280px; transition: left 0.3s; }
+      .sidebar.open { left:0; }
+      .kpi-grid { grid-template-columns: repeat(2,1fr); }
+      .chart-grid { grid-template-columns: 1fr; }
+    }
+    .toast { position:fixed; top:20px; right:20px; background:#1e293b; color:#fff; padding:10px 18px; border-radius:8px; z-index:9999; }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo-icon">📊</div>
+    <div><h1>商品数据分析仪表盘</h1><div class="header-subtitle">多维分析 · 灵活筛选</div></div>
+  </div>
+  <div class="header-actions">
+    <span id="dataStatusBadge" class="data-badge" style="display:none"><span class="dot"></span> <span id="dataCountText">0条</span></span>
+    <button class="btn btn-outline btn-sm" id="btnExport" style="display:none" onclick="handleExportCSV()">📥 导出CSV</button>
+    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📁 导入Excel</button>
+    <input type="file" id="fileInput" class="file-input-hidden" accept=".xlsx,.xls,.csv,.tsv" onchange="handleFileUpload(event)">
+  </div>
+</div>
+
+<div class="main-container">
+  <aside class="sidebar" id="sidebar">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+      <strong>🔍 筛选条件</strong>
+      <button class="btn btn-sm btn-outline" onclick="resetAllFilters()">重置</button>
+    </div>
+    <div class="sidebar-section open" id="filterSection_productType">
+      <div class="sidebar-section-header" onclick="toggleFilterSection('productType')"><span>📦 Product Type</span><span>▼</span></div>
+      <div class="sidebar-section-body"><div class="checkbox-group" id="checkboxGroup_productType"></div></div>
+    </div>
+    <div class="sidebar-section open" id="filterSection_listingQuality">
+      <div class="sidebar-section-header" onclick="toggleFilterSection('listingQuality')"><span>⭐ Listing Quality (%)</span></div>
+      <div class="sidebar-section-body"><div class="filter-row"><input type="number" id="filter_listingQuality_min" placeholder="0"> – <input type="number" id="filter_listingQuality_max" placeholder="100"></div></div>
+    </div>
+    <div class="sidebar-section open" id="filterSection_conversionRate">
+      <div class="sidebar-section-header" onclick="toggleFilterSection('conversionRate')"><span>💱 Conversion Rate (%)</span></div>
+      <div class="sidebar-section-body"><div class="filter-row"><input type="number" id="filter_conversionRate_min" placeholder="0"> – <input type="number" id="filter_conversionRate_max" placeholder="100"></div></div>
+    </div>
+    <div class="sidebar-section open" id="filterSection_pageViews">
+      <div class="sidebar-section-header" onclick="toggleFilterSection('pageViews')"><span>👁 Page Views</span></div>
+      <div class="sidebar-section-body"><div class="filter-row"><input type="number" id="filter_pageViews_min" placeholder="0"> – <input type="number" id="filter_pageViews_max"></div></div>
+    </div>
+    <div class="sidebar-section" id="filterSection_gmv"><div class="sidebar-section-header" onclick="toggleFilterSection('gmv')"><span>💰 GMV</span></div><div class="sidebar-section-body"><div class="filter-row"><input type="number" id="filter_gmv_min" placeholder="0"> – <input type="number" id="filter_gmv_max"></div></div></div>
+    <div class="sidebar-section open" id="filterSection_condition"><div class="sidebar-section-header" onclick="toggleFilterSection('condition')"><span>🏷 Condition</span></div><div class="sidebar-section-body"><div class="checkbox-group" id="checkboxGroup_condition"></div></div></div>
+    <div class="btn-apply-wrap"><button id="btnApplyFilters" class="btn-apply" onclick="applyFilters()">应用筛选</button></div>
+  </aside>
+
+  <div class="content-area" id="contentArea">
+    <div id="uploadPrompt" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh;">
+      <div style="font-size:3rem;">📂</div><h2>导入商品数据</h2><p>支持 .xlsx / .xls / .csv，拖拽文件到页面</p>
+      <div id="uploadZone" style="border:2px dashed #cbd5e1; padding:30px 50px; border-radius:12px; cursor:pointer;">点击或拖拽上传</div>
+    </div>
+    <div id="dashboard" style="display:none;">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="chart-grid">
+        <div class="chart-card"><h3>📊 Product Type 商品数 & 转化率</h3><div class="chart-wrap"><canvas id="chart_productType"></canvas></div></div>
+        <div class="chart-card"><h3>📈 Listing Quality 分布</h3><div class="chart-wrap"><canvas id="chart_listingQualityDist"></canvas></div></div>
+        <div class="chart-card"><h3>🔬 Conversion Rate 分布</h3><div class="chart-wrap"><canvas id="chart_conversionRateDist"></canvas></div></div>
+        <div class="chart-card" id="scatterCard">
+          <h3>💡 Page Views vs GMV <button class="fullscreen-btn" onclick="toggleFullscreenScatter()" title="全屏查看">⛶</button></h3>
+          <div class="chart-wrap"><canvas id="chart_scatter"></canvas></div>
+        </div>
+        <div class="chart-card"><h3>🥧 出单 / 未出单 占比</h3><div class="chart-wrap"><canvas id="chart_orderPie"></canvas></div></div>
+      </div>
+      <div class="table-card">
+        <h3>📋 详细数据列表 <span id="tableRowCount" style="font-weight:400; font-size:0.8rem;"></span></h3>
+        <div class="table-wrap"><table id="dataTable"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" style="display:none;"></div>
+
+<script>
+  (function() {
+    let allData = [], filteredData = [];
+    let chartInstances = {};
+    let sortColumn = null, sortDirection = 'asc';
+    let currentPage = 1, pageSize = 20;
+    let filtersDirty = false;
+
+    const $ = (s) => document.querySelector(s);
+    const showToast = (msg) => {
+      const t = $('#toast'); t.textContent = msg; t.style.display='block';
+      clearTimeout(t._t); t._t = setTimeout(()=> t.style.display='none', 2000);
+    };
+
+    function toggleFilterSection(id) { document.getElementById('filterSection_'+id).classList.toggle('open'); }
+    function markFiltersDirty() { filtersDirty = true; $('#btnApplyFilters').classList.add('dirty'); }
+    function clearFiltersDirty() { filtersDirty = false; $('#btnApplyFilters').classList.remove('dirty'); }
+
+    // File handling
+    function handleFileUpload(e) {
+      const file = e.target.files[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(sheet, {defval:'', raw:false});
+          if(!json.length) { showToast('文件无数据'); return; }
+          processData(json); showToast('✅ 导入 '+json.length+' 条');
+        } catch(err) { showToast('解析失败: '+err.message); }
+      };
+      reader.readAsArrayBuffer(file);
+      fileInput.value = '';
+    }
+    document.getElementById('uploadZone').addEventListener('click', ()=> document.getElementById('fileInput').click());
+    document.getElementById('uploadZone').addEventListener('dragover', e=>{ e.preventDefault(); e.currentTarget.style.background='#eef3ff'; });
+    document.getElementById('uploadZone').addEventListener('dragleave', e=>{ e.currentTarget.style.background=''; });
+    document.getElementById('uploadZone').addEventListener('drop', e=>{
+      e.preventDefault(); e.currentTarget.style.background='';
+      const file = e.dataTransfer.files[0]; if(file) handleFileUpload({target:{files:[file]}});
+    });
+
+    function parsePercent(v) { if(v==null||v==='') return NaN; let s=String(v).replace('%',''); return parseFloat(s); }
+    function parseDollar(v) { if(v==null||v==='') return NaN; let s=String(v).replace(/[$,]/g,''); if(s==='--'||s==='') return NaN; return parseFloat(s); }
+    function parseNum(v) { return parseDollar(v); }
+
+    function processData(raw) {
+      allData = raw.map((r,i)=>({
+        _idx:i, itemId:String(r['Item Id']||''), productName:String(r['Product Name']||''),
+        productType:String(r['Product Type']||''), listingQuality:parsePercent(r['Listing Quality']),
+        contentDiscoverability:parsePercent(r['Content & Discoverability']),
+        ratingsAndReviews:parsePercent(r['Ratings and Reviews']),
+        transactibilityScore:parsePercent(r['Transactibility Score']),
+        conversionRate:parsePercent(r['Conversion Rate']),
+        competitivePriceRaw:String(r['Competitive Price']||''), competitivePrice:parseDollar(r['Competitive Price']),
+        walmartPrice:parseDollar(r['Walmart Price']), gmvRaw:String(r['Gmv']||''), gmv:parseDollar(r['Gmv']),
+        ratingsRaw:String(r['Ratings']||''), priority:String(r['Priority']||''), oos:String(r['Oos']||''),
+        condition:String(r['Condition']||''), pageViews:parseNum(r['Page Views'])||0,
+        totalIssues:parseNum(r['Total Issues'])||0, customerFavourites:String(r['Customer Favourites']||''),
+        collectibleGrade:String(r['Collectible Grade']||''),
+        hasOrders: !isNaN(parseDollar(r['Gmv'])) && parseDollar(r['Gmv'])>0,
+        hasExposure: (parseNum(r['Page Views'])||0)>0
+      }));
+      initFilters(); applyFilters();
+      $('#uploadPrompt').style.display='none'; $('#dashboard').style.display='block';
+      $('#dataStatusBadge').style.display='inline-flex'; $('#btnExport').style.display='inline-flex';
+    }
+
+    function initFilters() {
+      const unique = (arr) => [...new Set(arr.filter(Boolean))].sort();
+      renderCheckboxGroup('productType', unique(allData.map(d=>d.productType)));
+      renderCheckboxGroup('condition', unique(allData.map(d=>d.condition)));
+      ['listingQuality','conversionRate','pageViews','gmv'].forEach(k=>{
+        const vals = allData.map(d=>d[k]).filter(v=>v!=null&&!isNaN(v));
+        if(vals.length){
+          const min=Math.floor(Math.min(...vals)), max=Math.ceil(Math.max(...vals));
+          if(document.getElementById('filter_'+k+'_min')) document.getElementById('filter_'+k+'_min').placeholder=min;
+          if(document.getElementById('filter_'+k+'_max')) document.getElementById('filter_'+k+'_max').placeholder=max;
+        }
+      });
+    }
+    function renderCheckboxGroup(id, vals) {
+      const c = document.getElementById('checkboxGroup_'+id); if(!c) return;
+      c.innerHTML = vals.map((v,i)=>`<label><input type="checkbox" value="${v}" checked> ${v}</label>`).join('');
+    }
+    function getCheckedValues(id) {
+      const c = document.getElementById('checkboxGroup_'+id);
+      return c ? [...c.querySelectorAll('input:checked')].map(i=>i.value) : [];
+    }
+    function getRangeFilter(minId, maxId) {
+      const min=document.getElementById(minId)?.value, max=document.getElementById(maxId)?.value;
+      return {min: min!==''?parseFloat(min):null, max: max!==''?parseFloat(max):null};
+    }
+
+    function applyFilters() {
+      const selPT = getCheckedValues('productType'), selCond = getCheckedValues('condition');
+      const lq = getRangeFilter('filter_listingQuality_min','filter_listingQuality_max');
+      const cr = getRangeFilter('filter_conversionRate_min','filter_conversionRate_max');
+      const pv = getRangeFilter('filter_pageViews_min','filter_pageViews_max');
+      const gv = getRangeFilter('filter_gmv_min','filter_gmv_max');
+      filteredData = allData.filter(d=>{
+        if(selPT.length && !selPT.includes(d.productType)) return false;
+        if(selCond.length && !selCond.includes(d.condition)) return false;
+        if(lq.min!=null && (d.listingQuality==null||d.listingQuality<lq.min)) return false;
+        if(lq.max!=null && (d.listingQuality==null||d.listingQuality>lq.max)) return false;
+        if(cr.min!=null && (d.conversionRate==null||d.conversionRate<cr.min)) return false;
+        if(cr.max!=null && (d.conversionRate==null||d.conversionRate>cr.max)) return false;
+        if(pv.min!=null && d.pageViews<pv.min) return false;
+        if(pv.max!=null && d.pageViews>pv.max) return false;
+        if(gv.min!=null && (d.gmv==null||isNaN(d.gmv)||d.gmv<gv.min)) return false;
+        if(gv.max!=null && (d.gmv==null||isNaN(d.gmv)||d.gmv>gv.max)) return false;
+        return true;
+      });
+      currentPage = 1; clearFiltersDirty();
+      renderAll();
+    }
+
+    function resetAllFilters() {
+      document.querySelectorAll('.sidebar input[type="number"]').forEach(e=>e.value='');
+      initFilters(); applyFilters(); showToast('🔄 已重置');
+    }
+
+    // Sidebar events to mark dirty
+    document.getElementById('sidebar').addEventListener('input', markFiltersDirty);
+    document.getElementById('sidebar').addEventListener('change', markFiltersDirty);
+
+    function renderAll() {
+      updateKPIs(); updateCharts(); updateTable();
+      $('#dataCountText').textContent = filteredData.length+'条 / '+allData.length+'条';
+      $('#tableRowCount').textContent = '共 '+filteredData.length+' 条';
+    }
+
+    function updateKPIs() {
+      const t=filteredData.length, pv=filteredData.reduce((s,d)=>s+(d.pageViews||0),0);
+      const ordered=filteredData.filter(d=>d.hasOrders).length;
+      const exposed=filteredData.filter(d=>d.hasExposure).length;
+      const avgConv=filteredData.filter(d=>d.conversionRate!=null).reduce((s,d)=>s+d.conversionRate,0)/(filteredData.filter(d=>d.conversionRate!=null).length||1);
+      const gmvTotal=filteredData.reduce((s,d)=>s+(d.gmv&&!isNaN(d.gmv)?d.gmv:0),0);
+      document.getElementById('kpiGrid').innerHTML = `
+        <div class="kpi-card kpi-accent-blue"><div class="kpi-label">总商品</div><div class="kpi-value">${t}</div></div>
+        <div class="kpi-card kpi-accent-purple"><div class="kpi-label">总曝光</div><div class="kpi-value">${pv}</div></div>
+        <div class="kpi-card kpi-accent-green"><div class="kpi-label">出单商品</div><div class="kpi-value">${ordered}</div><div>出单率 ${(t?ordered/t*100:0).toFixed(1)}%</div></div>
+        <div class="kpi-card kpi-accent-orange"><div class="kpi-label">平均转化率</div><div class="kpi-value">${avgConv.toFixed(2)}%</div></div>
+        <div class="kpi-card kpi-accent-cyan"><div class="kpi-label">曝光出单比</div><div class="kpi-value">${exposed?((ordered/exposed)*100).toFixed(1):0}%</div></div>
+        <div class="kpi-card kpi-accent-pink"><div class="kpi-label">总GMV</div><div class="kpi-value">$${gmvTotal.toFixed(2)}</div></div>
+      `;
+    }
+
+    function destroyChart(key) { if(chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; } }
+    function updateCharts() {
+      updateProductTypeChart(); updateListingQualityDist(); updateConversionRateDist(); updateScatter(); updateOrderPie();
+    }
+    function updateProductTypeChart() {
+      destroyChart('productType'); const ctx=document.getElementById('chart_productType'); if(!ctx||!filteredData.length) return;
+      const grp={}; filteredData.forEach(d=>{ const p=d.productType||'其他'; grp[p]=grp[p]||{cnt:0,conv:0,cc:0}; grp[p].cnt++; if(d.conversionRate!=null){grp[p].conv+=d.conversionRate;grp[p].cc++;} });
+      const sorted=Object.entries(grp).sort((a,b)=>b[1].cnt-a[1].cnt).slice(0,12);
+      chartInstances.productType=new Chart(ctx,{type:'bar',data:{labels:sorted.map(e=>e[0]),datasets:[
+        {label:'商品数',data:sorted.map(e=>e[1].cnt),backgroundColor:'rgba(59,109,240,0.7)',borderRadius:6},
+        {label:'平均转化率%',data:sorted.map(e=>e[1].cc?e[1].conv/e[1].cc:0),type:'line',borderColor:'#f59e0b',yAxisID:'y1',tension:0.3}
+      ]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true},y1:{position:'right',grid:{drawOnChartArea:false}}}}});
+    }
+    function updateListingQualityDist() {
+      destroyChart('listingQualityDist'); const ctx=document.getElementById('chart_listingQualityDist'); if(!ctx||!filteredData.length) return;
+      const vals=filteredData.map(d=>d.listingQuality).filter(v=>v!=null); if(!vals.length) return;
+      const bins=[0,20,40,60,80,101], labels=['0-20','20-40','40-60','60-80','80-100'], cnt=new Array(5).fill(0);
+      vals.forEach(v=>{ for(let i=0;i<5;i++) if(v>=bins[i]&&v<bins[i+1]){cnt[i]++;break;} });
+      chartInstances.listingQualityDist=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:cnt,backgroundColor:['#ef4444','#f59e0b','#3b6df0','#10b981','#8b5cf6']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    }
+    function updateConversionRateDist() {
+      destroyChart('conversionRateDist'); const ctx=document.getElementById('chart_conversionRateDist'); if(!ctx||!filteredData.length) return;
+      const vals=filteredData.map(d=>d.conversionRate).filter(v=>v!=null); if(!vals.length) return;
+      const max=Math.max(...vals), step=Math.max(max/8,0.5); const bins=[], labels=[];
+      for(let i=0;i<8;i++){ const lo=i*step, hi=(i+1)*step; bins.push({lo,hi}); labels.push(lo.toFixed(1)+'-'+hi.toFixed(1)); }
+      const cnt=new Array(8).fill(0); vals.forEach(v=>{ for(let i=0;i<8;i++) if(v>=bins[i].lo&&(i==7?v<=bins[i].hi:v<bins[i].hi)){cnt[i]++;break;} });
+      chartInstances.conversionRateDist=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:cnt,backgroundColor:'rgba(6,182,212,0.7)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    }
+    function updateScatter() {
+      destroyChart('scatter'); const ctx=document.getElementById('chart_scatter'); if(!ctx||!filteredData.length) return;
+      const pts=filteredData.filter(d=>d.pageViews>0&&d.gmv!=null&&d.gmv>0).map(d=>({x:d.pageViews,y:d.gmv}));
+      const noPts=filteredData.filter(d=>d.pageViews>0&&(d.gmv==null||d.gmv<=0)).map(d=>({x:d.pageViews,y:0.01}));
+      chartInstances.scatter=new Chart(ctx,{type:'scatter',data:{datasets:[
+        {label:'有出单',data:pts,backgroundColor:'rgba(16,185,129,0.7)',pointRadius:3.5,pointHoverRadius:7},
+        {label:'无出单',data:noPts,backgroundColor:'rgba(239,68,68,0.5)',pointRadius:3,pointHoverRadius:6}
+      ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{title:{display:true,text:'Page Views'}},y:{title:{display:true,text:'GMV'}}}}});
+    }
+    function updateOrderPie() {
+      destroyChart('orderPie'); const ctx=document.getElementById('chart_orderPie'); if(!ctx||!filteredData.length) return;
+      const ordered=filteredData.filter(d=>d.hasOrders).length, unorder=filteredData.length-ordered;
+      chartInstances.orderPie=new Chart(ctx,{type:'pie',data:{labels:['有出单','无出单'],datasets:[{data:[ordered,unorder],backgroundColor:['#10b981','#e2e8f0']}]},options:{responsive:true,maintainAspectRatio:false}});
+    }
+
+    // Table with pagination
+    function updateTable() {
+      const columns = [
+        {key:'itemId',label:'Item Id'},{key:'productName',label:'Product Name'},{key:'productType',label:'Product Type'},
+        {key:'listingQuality',label:'Listing Quality',fmt:v=>v!=null?v.toFixed(0)+'%':'-'},
+        {key:'conversionRate',label:'Conversion Rate',fmt:v=>v!=null?v.toFixed(2)+'%':'-'},
+        {key:'competitivePriceRaw',label:'Competitive Price'},{key:'walmartPrice',label:'Walmart Price',fmt:v=>v!=null?'$'+v.toFixed(2):'-'},
+        {key:'gmv',label:'GMV',fmt:(v,r)=>v!=null&&!isNaN(v)?(v>0?`<span class="gmv-positive">$${v.toFixed(2)}</span>`:'<span class="gmv-zero">$0.00</span>'):'<span class="gmv-zero">--</span>'},
+        {key:'ratingsRaw',label:'Ratings'},{key:'priority',label:'Priority'},{key:'oos',label:'Oos'},{key:'condition',label:'Condition'},
+        {key:'pageViews',label:'Page Views'},{key:'totalIssues',label:'Total Issues'}
+      ];
+      let sorted = [...filteredData];
+      if(sortColumn) sorted.sort((a,b)=>{
+        let va=a[sortColumn], vb=b[sortColumn]; if(va==null)va=''; if(vb==null)vb='';
+        if(typeof va==='number'&&typeof vb==='number') return sortDirection==='asc'?va-vb:vb-va;
+        return String(va).localeCompare(String(vb))*(sortDirection==='asc'?1:-1);
+      });
+      const totalPages = Math.ceil(sorted.length/pageSize)||1;
+      if(currentPage>totalPages) currentPage=totalPages;
+      const start=(currentPage-1)*pageSize, pageData=sorted.slice(start,start+pageSize);
+      document.getElementById('tableHead').innerHTML = '<tr>'+columns.map(c=>`<th data-key="${c.key}" onclick="handleSort('${c.key}')">${c.label} ${sortColumn===c.key?(sortDirection==='asc'?'▲':'▼'):''}</th>`).join('')+'</tr>';
+      document.getElementById('tableBody').innerHTML = pageData.map(r=>'<tr>'+columns.map(c=>{
+        let v=r[c.key]; if(c.fmt) return '<td>'+c.fmt(v,r)+'</td>';
+        return '<td>'+(v!=null?String(v):'-')+'</td>';
+      }).join('')+'</tr>').join('');
+      if(!pageData.length) document.getElementById('tableBody').innerHTML='<tr><td colspan="'+columns.length+'" style="text-align:center;padding:20px;">无数据</td></tr>';
+      renderPagination(totalPages);
+    }
+    function renderPagination(total) {
+      const pg = document.getElementById('pagination');
+      pg.innerHTML = `<button ${currentPage<=1?'disabled':''} onclick="goToPage(${currentPage-1})">‹</button>
+        <span>${currentPage} / ${total}</span>
+        <button ${currentPage>=total?'disabled':''} onclick="goToPage(${currentPage+1})">›</button>`;
+    }
+    window.goToPage = (p) => { if(p>=1 && p<=Math.ceil(filteredData.length/pageSize)){ currentPage=p; updateTable(); } };
+    window.handleSort = (key) => {
+      if(sortColumn===key) sortDirection = sortDirection==='asc'?'desc':'asc';
+      else { sortColumn=key; sortDirection='asc'; }
+      currentPage=1; updateTable();
+    };
+
+    window.toggleFullscreenScatter = function() {
+      const card = document.getElementById('scatterCard');
+      card.classList.toggle('fullscreen-active');
+      if(chartInstances.scatter) setTimeout(()=>chartInstances.scatter.resize(), 100);
+      if(card.classList.contains('fullscreen-active')) {
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent='关闭全屏'; closeBtn.style.position='absolute'; closeBtn.style.top='10px'; closeBtn.style.right='20px';
+        closeBtn.onclick = () => { card.classList.remove('fullscreen-active'); closeBtn.remove(); if(chartInstances.scatter) chartInstances.scatter.resize(); };
+        card.appendChild(closeBtn);
+      }
+    };
+
+    window.handleExportCSV = function() {
+      if(!filteredData.length) return showToast('无数据');
+      const cols=['Item Id','Product Name','Product Type','Listing Quality','Conversion Rate','Competitive Price','Walmart Price','GMV','Ratings','Priority','Oos','Condition','Page Views','Total Issues'];
+      const keys=['itemId','productName','productType','listingQuality','conversionRate','competitivePriceRaw','walmartPrice','gmvRaw','ratingsRaw','priority','oos','condition','pageViews','totalIssues'];
+      const csv=[cols.join(',')].concat(filteredData.map(r=>keys.map(k=>{ let v=r[k]; if(v==null) return ''; return '"'+String(v).replace(/"/g,'""')+'"'; }).join(','))).join('\n');
+      const blob=new Blob(['\uFEFF'+csv],{type:'text/csv'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='export.csv'; a.click();
+      showToast('导出成功');
+    };
+
+    window.applyFilters = applyFilters;
+    window.resetAllFilters = resetAllFilters;
+    window.toggleFilterSection = toggleFilterSection;
+    window.handleFileUpload = handleFileUpload;
+    window.fileInput = document.getElementById('fileInput');
+  })();
+</script>
+</body>
+</html>

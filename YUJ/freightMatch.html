@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=2.0">
+  <title>运费价格匹配系统 | 促销配置 · 持久化版</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+    body {
+      background: #f5f7fb;
+      padding: 1.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1400px;
+      width: 100%;
+      background: white;
+      border-radius: 1.5rem;
+      box-shadow: 0 20px 35px rgba(0,0,0,0.05);
+      padding: 1.8rem 2rem 2rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.3rem;
+    }
+    .step-indicator {
+      display: flex;
+      gap: 0.5rem;
+      margin: 0.8rem 0 1.5rem;
+      flex-wrap: wrap;
+    }
+    .step {
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      background: #e2e8f0;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #475569;
+      transition: 0.2s;
+    }
+    .step.active { background: #0f172a; color: white; }
+    .step.done { background: #059669; color: white; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      background: #f8fafc;
+      padding: 1rem 1.2rem;
+      border-radius: 1rem;
+      border: 1px solid #e2e8f0;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    button {
+      background: white;
+      border: 1px solid #cbd5e1;
+      padding: 0.5rem 1rem;
+      border-radius: 0.6rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #1e293b;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    button:hover { background: #f1f5f9; border-color: #94a3b8; }
+    button.primary { background: #0f172a; border-color: #0f172a; color: white; }
+    button.primary:hover { background: #1e293b; }
+    button.success { background: #059669; border-color: #059669; color: white; }
+    button.success:hover { background: #047857; }
+    button.warning { background: #d97706; border-color: #d97706; color: white; }
+    button.warning:hover { background: #b45309; }
+    .field-mapping {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.2rem;
+      margin-left: auto;
+    }
+    .mapping-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #334155;
+    }
+    select {
+      padding: 0.4rem 1.8rem 0.4rem 0.8rem;
+      border-radius: 0.5rem;
+      border: 1px solid #cbd5e1;
+      background: white;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #0f172a;
+      cursor: pointer;
+      appearance: none;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%23475569"><polyline points="6 9 12 15 18 9"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      background-size: 1rem;
+    }
+    .section {
+      background: #f8fafc;
+      border-radius: 1rem;
+      padding: 1.2rem 1.5rem;
+      margin: 1rem 0;
+      border: 1px solid #e2e8f0;
+    }
+    .section h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .freight-table, .promo-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 0.8rem;
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+    }
+    .freight-table th { background: #eef2ff; }
+    .promo-table th { background: #fef3c7; color: #92400e; }
+    th {
+      padding: 0.5rem;
+      text-align: left;
+      font-weight: 600;
+      color: #1e293b;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    td {
+      padding: 0.4rem 0.5rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .freight-table input, .promo-table input, .promo-table select {
+      width: 100px;
+      padding: 0.3rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.4rem;
+      font-size: 0.8rem;
+    }
+    .promo-table select { width: auto; min-width: 130px; }
+    .global-adjust {
+      background: white;
+      padding: 1rem;
+      border-radius: 0.8rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      border: 1px solid #e2e8f0;
+    }
+    .data-table-wrapper {
+      overflow-x: auto;
+      margin: 1rem 0;
+      border-radius: 0.8rem;
+      border: 1px solid #e2e8f0;
+      background: white;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; white-space: nowrap; }
+    th { background: #f8fafc; position: sticky; top: 0; z-index: 2; }
+    .badge { background: #dbeafe; color: #1e40af; padding: 0.2rem 0.5rem; border-radius: 1rem; font-size: 0.7rem; font-weight: 600; }
+    .badge-green { background: #d1fae5; color: #065f46; }
+    .badge-orange { background: #fef3c7; color: #92400e; }
+    .footer-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+    }
+    .status { font-size: 0.8rem; color: #475569; }
+    .pagination { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; }
+    .pagination button { padding: 0.3rem 0.7rem; font-size: 0.75rem; }
+    .warning-text { color: #b45309; font-weight: 500; background: #fffbeb; padding: 0.2rem 0.6rem; border-radius: 0.5rem; font-size: 0.75rem; }
+    .info-text { color: #1e40af; font-weight: 500; background: #dbeafe; padding: 0.2rem 0.6rem; border-radius: 0.5rem; font-size: 0.75rem; }
+    .config-actions { display: flex; gap: 0.5rem; margin-left: auto; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>📦 运费价格匹配系统 <small style="font-size:0.8rem; color:#64748b;">促销配置 · 总价不变</small></h1>
+
+  <div class="step-indicator" id="stepIndicator">
+    <span class="step active" data-step="1">① 导入数据 & 字段映射</span>
+    <span class="step" data-step="2">② 配置基础运费模版</span>
+    <span class="step" data-step="3">③ 配置促销区间规则</span>
+    <span class="step" data-step="4">④ 应用促销 & 导出</span>
+  </div>
+
+  <div class="toolbar">
+    <div class="btn-group">
+      <button id="importExcelBtn" class="primary">📥 导入 Excel</button>
+      <button id="exportExcelBtn" class="success">📤 导出 Excel</button>
+      <button id="exportJsonBtn">📄 导出 JSON</button>
+      <button id="importJsonBtn">📂 导入 JSON</button>
+      <input type="file" id="fileInput" accept=".xlsx, .xls, .json" style="display: none;">
+    </div>
+    <div class="field-mapping">
+      <div class="mapping-item">🔑 SKU <select id="skuSelect"></select></div>
+      <div class="mapping-item">💲 产品价格 <select id="priceSelect"></select></div>
+    </div>
+    <div class="config-actions">
+      <button id="saveConfigBtn" title="保存当前配置到浏览器">💾 保存配置</button>
+      <button id="loadConfigBtn" title="加载上次保存的配置">📂 加载配置</button>
+      <button id="resetConfigBtn" title="恢复默认配置">🔄 重置</button>
+    </div>
+  </div>
+
+  <div class="section" id="step2Section">
+    <h3>📋 步骤② 基础运费模版 (模版编号 → 运费价格)</h3>
+    <button id="addFreightRowBtn">➕ 添加模版</button>
+    <table class="freight-table" id="freightMappingTable">
+      <thead><tr><th>模版编号</th><th>运费价格 (¥)</th><th>操作</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="step3Section">
+    <h3>🎯 步骤③ 促销区间规则 (总价格区间 → 使用哪个运费模版)</h3>
+    <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+      <button id="addPromoRuleBtn">➕ 添加区间规则</button>
+      <span class="warning-text">总价格 = 产品价格 · 销售价 = 总价 - 促销运费</span>
+    </div>
+    <table class="promo-table" id="promoRuleTable">
+      <thead>
+        <tr>
+          <th>总价 ≥</th><th>总价 ≤</th><th>使用运费模版</th><th>示例(总价10)</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>⚙️ 整体调整总价</h3>
+    <div class="global-adjust">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <label>调整产品价格</label>
+        <input type="number" id="priceAdjustInput" placeholder="例如 -5 或 10" step="0.01" value="0"> %
+      </div>
+      <button id="applyAdjustBtn">应用调整</button>
+      <button id="applyPromoBtn" class="warning">🎯 应用促销配置</button>
+      <span style="font-size:0.75rem; color:#64748b;">(运费由模版固定，不可批量调整)</span>
+    </div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <span style="font-weight: 600;">📊 数据预览 (最多50条)</span>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <span class="status" id="rowCount">0 条记录</span>
+      <span id="promoStatus" class="warning-text" style="display:none;">🎯 促销已应用</span>
+    </div>
+  </div>
+  <div class="data-table-wrapper">
+    <table id="dataTable"><thead></thead><tbody></tbody></table>
+  </div>
+  <div class="footer-actions">
+    <div class="pagination" id="paginationControls"></div>
+    <span class="status" id="mappingStatus">⚡ 请导入数据并按步骤操作</span>
+    <button id="clearDataBtn" style="color:#b91c1c; border-color:#fecaca;">🗑️ 清空数据</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ---------- 全局状态 ----------
+  let rawData = [];
+  let columns = [];
+  let freightMapping = new Map();   // 模版编号 -> 运费价格
+  let promoRules = [];              // [{min, max, templateId}]
+  let promoApplied = false;
+  
+  const PAGE_SIZE = 50;
+  let currentPage = 1;
+  let totalPages = 1;
+  
+  let currentMapping = { sku: '', price: '' };
+
+  // DOM 元素
+  const skuSelect = document.getElementById('skuSelect');
+  const priceSelect = document.getElementById('priceSelect');
+  const dataTableHead = document.querySelector('#dataTable thead');
+  const dataTableBody = document.querySelector('#dataTable tbody');
+  const freightTableBody = document.querySelector('#freightMappingTable tbody');
+  const promoRuleBody = document.querySelector('#promoRuleTable tbody');
+  const rowCountSpan = document.getElementById('rowCount');
+  const promoStatus = document.getElementById('promoStatus');
+  const mappingStatus = document.getElementById('mappingStatus');
+  const paginationControls = document.getElementById('paginationControls');
+
+  function updateSelectOptions() {
+    const cols = columns.length ? columns : [];
+    [skuSelect, priceSelect].forEach(sel => {
+      const cv = sel.value;
+      sel.innerHTML = '<option value="">-- 选择 --</option>';
+      cols.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        sel.appendChild(o);
+      });
+      if (cols.includes(cv)) sel.value = cv;
+    });
+  }
+
+  function readMapping() {
+    currentMapping.sku = skuSelect.value;
+    currentMapping.price = priceSelect.value;
+  }
+
+  function escapeHtml(t) {
+    return String(t).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]);
+  }
+
+  function getTemplatePrice(templateId) {
+    return freightMapping.get(templateId) || 0;
+  }
+
+  // ---------- 渲染 ----------
+  function renderFreightTable() {
+    freightTableBody.innerHTML = '';
+    if (freightMapping.size === 0) {
+      freightTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">暂无模版，请添加</td></tr>';
+      return;
+    }
+    for (let [tid, price] of freightMapping) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" class="ft-tpl" value="${escapeHtml(tid)}"></td>
+        <td><input type="number" class="ft-price" value="${price}" step="0.01"></td>
+        <td><button class="ft-del" style="color:#b91c1c;">✕</button></td>
+      `;
+      const oldKey = tid;
+      const tplInput = tr.querySelector('.ft-tpl');
+      const priceInput = tr.querySelector('.ft-price');
+      
+      const updateFreight = () => {
+        const nk = tplInput.value.trim();
+        const np = parseFloat(priceInput.value) || 0;
+        if (nk && nk !== oldKey) {
+          freightMapping.delete(oldKey);
+          freightMapping.set(nk, np);
+        } else if (nk === oldKey) {
+          freightMapping.set(oldKey, np);
+        }
+        renderPromoRules();
+        recalc();
+      };
+      
+      tplInput.addEventListener('change', updateFreight);
+      priceInput.addEventListener('change', updateFreight);
+      tr.querySelector('.ft-del').addEventListener('click', () => {
+        freightMapping.delete(oldKey);
+        renderFreightTable();
+        renderPromoRules();
+        recalc();
+      });
+      freightTableBody.appendChild(tr);
+    }
+  }
+
+  function renderPromoRules() {
+    promoRuleBody.innerHTML = '';
+    if (promoRules.length === 0) {
+      promoRuleBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">暂无规则</td></tr>';
+      return;
+    }
+    promoRules.forEach((rule, idx) => {
+      const tr = document.createElement('tr');
+      const tplOptions = Array.from(freightMapping.entries())
+        .map(([id, price]) => `<option value="${escapeHtml(id)}" ${id===rule.templateId?'selected':''}>${escapeHtml(id)} (¥${price.toFixed(2)})</option>`)
+        .join('');
+      
+      tr.innerHTML = `
+        <td><input type="number" class="pr-min" value="${rule.min}" step="0.01"></td>
+        <td><input type="number" class="pr-max" value="${rule.max}" step="0.01"></td>
+        <td>
+          <select class="pr-tpl-select">
+            <option value="">-- 选择模版 --</option>
+            ${tplOptions}
+          </select>
+        </td>
+        <td class="pr-example">${rule.max > 0 ? (rule.max - getTemplatePrice(rule.templateId)).toFixed(2) : '—'}</td>
+        <td><button class="pr-del" style="color:#b91c1c;">✕</button></td>
+      `;
+      
+      const minInp = tr.querySelector('.pr-min');
+      const maxInp = tr.querySelector('.pr-max');
+      const tplSel = tr.querySelector('.pr-tpl-select');
+      
+      const updateRule = () => {
+        rule.min = parseFloat(minInp.value) || 0;
+        rule.max = parseFloat(maxInp.value) || 0;
+        rule.templateId = tplSel.value;
+        tr.querySelector('.pr-example').textContent = rule.max > 0 ? (rule.max - getTemplatePrice(rule.templateId)).toFixed(2) : '—';
+        recalc();
+      };
+      
+      minInp.addEventListener('change', updateRule);
+      maxInp.addEventListener('change', updateRule);
+      tplSel.addEventListener('change', updateRule);
+      tr.querySelector('.pr-del').addEventListener('click', () => {
+        promoRules.splice(idx, 1);
+        renderPromoRules();
+        recalc();
+      });
+      promoRuleBody.appendChild(tr);
+    });
+  }
+
+  // ---------- 核心计算 ----------
+  function recalc() {
+    if (!rawData.length) { renderPage(); return; }
+    readMapping();
+    const priceField = currentMapping.price;
+    
+    for (let row of rawData) {
+      const productPrice = parseFloat(row[priceField]) || 0;
+      row._totalPrice = productPrice;
+      
+      let matchedTemplateId = '';
+      if (promoApplied && promoRules.length > 0) {
+        let matched = false;
+        for (let rule of promoRules) {
+          if (productPrice >= rule.min && productPrice <= rule.max && rule.templateId) {
+            const freight = getTemplatePrice(rule.templateId);
+            row._salesPrice = Math.max(0, productPrice - freight);
+            row._promoFreight = freight;
+            row._promoApplied = true;
+            matchedTemplateId = rule.templateId;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          row._salesPrice = productPrice;
+          row._promoFreight = 0;
+          row._promoApplied = false;
+          matchedTemplateId = '';
+        }
+      } else {
+        row._salesPrice = productPrice;
+        row._promoFreight = 0;
+        row._promoApplied = false;
+        matchedTemplateId = '';
+      }
+      row._promoTemplateId = matchedTemplateId;
+    }
+    renderPage();
+  }
+
+  function renderPage() {
+    if (!rawData.length) {
+      dataTableHead.innerHTML = '';
+      dataTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;">暂无数据</td></tr>';
+      rowCountSpan.textContent = '0 条';
+      return;
+    }
+    totalPages = Math.ceil(rawData.length / PAGE_SIZE) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage-1)*PAGE_SIZE;
+    const end = Math.min(start+PAGE_SIZE, rawData.length);
+    const pageData = rawData.slice(start, end);
+    
+    const baseCols = [...columns];
+    const displayCols = [...baseCols, '总价格', '销售价', '促销运费', '促销模版', '状态'];
+    
+    dataTableHead.innerHTML = `<tr>${displayCols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr>`;
+    dataTableBody.innerHTML = pageData.map(row => {
+      return `<tr>${displayCols.map(col => {
+        if (col === '总价格') return `<td><span class="badge">¥ ${(row._totalPrice||0).toFixed(2)}</span></td>`;
+        if (col === '销售价') return `<td><span class="badge-green">¥ ${(row._salesPrice||0).toFixed(2)}</span></td>`;
+        if (col === '促销运费') return `<td>¥ ${(row._promoFreight||0).toFixed(2)}</td>`;
+        if (col === '促销模版') return `<td>${escapeHtml(row._promoTemplateId || '')}</td>`;
+        if (col === '状态') return `<td>${row._promoApplied ? '<span class="badge-orange">促销</span>' : '<span>—</span>'}</td>`;
+        return `<td>${escapeHtml(String(row[col]??''))}</td>`;
+      }).join('')}</tr>`;
+    }).join('');
+    
+    rowCountSpan.textContent = `共 ${rawData.length} 条`;
+    promoStatus.style.display = promoApplied ? 'inline-block' : 'none';
+    updatePagination();
+  }
+
+  function updatePagination() {
+    paginationControls.innerHTML = '';
+    if (rawData.length <= PAGE_SIZE) return;
+    const prev = document.createElement('button'); prev.textContent='上一页'; prev.disabled=currentPage===1;
+    prev.onclick = () => { if(currentPage>1) { currentPage--; renderPage(); } };
+    const next = document.createElement('button'); next.textContent='下一页'; next.disabled=currentPage===totalPages;
+    next.onclick = () => { if(currentPage<totalPages) { currentPage++; renderPage(); } };
+    const info = document.createElement('span'); info.textContent = `${currentPage}/${totalPages}`;
+    paginationControls.append(prev, info, next);
+  }
+
+  // ---------- 数据导入 ----------
+  function loadData(data, cols) {
+    rawData = data.map(r => ({...r}));
+    columns = [...cols];
+    currentPage = 1;
+    promoApplied = false;
+    if (!columns.includes(currentMapping.sku)) currentMapping.sku = '';
+    if (!columns.includes(currentMapping.price)) currentMapping.price = '';
+    updateSelectOptions();
+    if (currentMapping.sku) skuSelect.value = currentMapping.sku;
+    if (currentMapping.price) priceSelect.value = currentMapping.price;
+    recalc();
+    updateSteps(1);
+    mappingStatus.textContent = '✅ 数据已加载';
+  }
+
+  function updateSteps(active) {
+    document.querySelectorAll('.step').forEach((s, i) => {
+      s.classList.remove('active', 'done');
+      if (i+1 < active) s.classList.add('done');
+      if (i+1 === active) s.classList.add('active');
+    });
+  }
+
+  // ---------- 持久化 ----------
+  const STORAGE_KEY = 'freight_promo_config';
+  
+  function saveConfigToStorage() {
+    const config = {
+      mapping: currentMapping,
+      freight: Array.from(freightMapping.entries()),
+      rules: promoRules.map(r => ({min: r.min, max: r.max, templateId: r.templateId}))
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    mappingStatus.textContent = '💾 配置已保存到本地';
+  }
+
+  function loadConfigFromStorage() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return alert('没有找到已保存的配置');
+    try {
+      const config = JSON.parse(raw);
+      currentMapping = config.mapping || { sku: '', price: '' };
+      freightMapping = new Map(config.freight || []);
+      promoRules = (config.rules || []).map(r => ({...r}));
+      
+      if (columns.includes(currentMapping.sku)) skuSelect.value = currentMapping.sku;
+      if (columns.includes(currentMapping.price)) priceSelect.value = currentMapping.price;
+      renderFreightTable();
+      renderPromoRules();
+      recalc();
+      mappingStatus.textContent = '📂 配置已加载';
+    } catch (e) {
+      alert('配置解析失败');
+    }
+  }
+
+  function resetConfig() {
+    if (confirm('确定重置所有配置吗？这将清空模版和规则。')) {
+      freightMapping.clear();
+      promoRules = [];
+      promoApplied = false;
+      currentMapping = { sku: '', price: '' };
+      updateSelectOptions();
+      renderFreightTable();
+      renderPromoRules();
+      recalc();
+      localStorage.removeItem(STORAGE_KEY);
+      mappingStatus.textContent = '🔄 配置已重置';
+    }
+  }
+
+  // 自动加载配置
+  window.addEventListener('load', () => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const config = JSON.parse(saved);
+        currentMapping = config.mapping || { sku: '', price: '' };
+        freightMapping = new Map(config.freight || []);
+        promoRules = (config.rules || []).map(r => ({...r}));
+        renderFreightTable();
+        renderPromoRules();
+      } catch (e) {}
+    }
+  });
+
+  // ---------- 事件绑定 ----------
+  document.getElementById('importExcelBtn').onclick = () => { fileInput.accept='.xlsx,.xls'; fileInput.click(); };
+  document.getElementById('importJsonBtn').onclick = () => { fileInput.accept='.json'; fileInput.click(); };
+  
+  fileInput.onchange = (e) => {
+    const f = e.target.files[0]; if(!f) return;
+    if (f.name.endsWith('.json')) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const d = JSON.parse(ev.target.result);
+          if (Array.isArray(d) && d.length) loadData(d, Object.keys(d[0]));
+        } catch { alert('JSON格式错误'); }
+      };
+      reader.readAsText(f);
+    } else {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+          const sh = wb.Sheets[wb.SheetNames[0]];
+          const d = XLSX.utils.sheet_to_json(sh, {defval:''});
+          if (d.length) loadData(d, Object.keys(d[0]));
+        } catch { alert('Excel解析失败'); }
+      };
+      reader.readAsArrayBuffer(f);
+    }
+    fileInput.value = '';
+  };
+
+  // 导出 Excel (包含促销模版字段)
+  document.getElementById('exportExcelBtn').onclick = () => {
+    if (!rawData.length) return alert('无数据');
+    const ed = rawData.map(r => ({
+      ...r,
+      总价格: r._totalPrice,
+      销售价: r._salesPrice,
+      促销运费: r._promoFreight,
+      促销模版: r._promoTemplateId || '',
+      状态: r._promoApplied ? '促销' : '原始'
+    }));
+    const ws = XLSX.utils.json_to_sheet(ed);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '结果');
+    XLSX.writeFile(wb, '促销运费结果.xlsx');
+  };
+
+  // 导出 JSON (包含促销模版字段)
+  document.getElementById('exportJsonBtn').onclick = () => {
+    if (!rawData.length) return alert('无数据');
+    const ed = rawData.map(r => ({
+      ...r,
+      总价格: r._totalPrice,
+      销售价: r._salesPrice,
+      促销运费: r._promoFreight,
+      促销模版: r._promoTemplateId || ''
+    }));
+    const blob = new Blob([JSON.stringify(ed, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '促销数据.json';
+    a.click();
+  };
+
+  document.getElementById('addFreightRowBtn').onclick = () => {
+    const nk = `TPL_${Date.now()}`;
+    freightMapping.set(nk, 0);
+    renderFreightTable();
+    renderPromoRules();
+    recalc();
+    updateSteps(2);
+  };
+
+  document.getElementById('addPromoRuleBtn').onclick = () => {
+    promoRules.push({min: 0, max: 0, templateId: '', freightPrice: 0});
+    renderPromoRules();
+    updateSteps(3);
+  };
+
+  document.getElementById('applyPromoBtn').onclick = () => {
+    if (promoRules.length === 0) return alert('请先配置促销区间规则');
+    promoApplied = true;
+    recalc();
+    updateSteps(4);
+    mappingStatus.textContent = '🎯 促销已应用！总价不变，销售价=总价-运费';
+  };
+
+  document.getElementById('applyAdjustBtn').onclick = () => {
+    if (!rawData.length) return alert('无数据');
+    const pp = parseFloat(document.getElementById('priceAdjustInput').value) || 0;
+    if (pp !== 0 && currentMapping.price) {
+      rawData.forEach(r => {
+        const original = parseFloat(r[currentMapping.price]) || 0;
+        r[currentMapping.price] = original * (1 + pp / 100);
+      });
+      document.getElementById('priceAdjustInput').value = 0;
+      recalc();
+      mappingStatus.textContent = `✅ 总价已调整 ${pp}%`;
+    }
+  };
+
+  document.getElementById('clearDataBtn').onclick = () => {
+    if (confirm('清空所有数据？')) {
+      rawData = [];
+      columns = [];
+      currentPage = 1;
+      promoApplied = false;
+      updateSelectOptions();
+      renderPage();
+      updateSteps(1);
+      promoStatus.style.display = 'none';
+      mappingStatus.textContent = '⚡ 数据已清空';
+    }
+  };
+
+  document.getElementById('saveConfigBtn').onclick = saveConfigToStorage;
+  document.getElementById('loadConfigBtn').onclick = loadConfigFromStorage;
+  document.getElementById('resetConfigBtn').onclick = resetConfig;
+
+  [skuSelect, priceSelect].forEach(s => s.addEventListener('change', () => {
+    readMapping();
+    recalc();
+  }));
+
+  // 初始化渲染
+  updateSelectOptions();
+  renderFreightTable();
+  renderPromoRules();
+  renderPage();
+})();
+</script>
+</body>
+</html>
