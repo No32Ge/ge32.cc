@@ -324,23 +324,47 @@
 
             // ───────── 默认公式 ─────────
             const DEFAULT_FORMULA_CODE = `function compute(row, shippingRates, exchangeRate) {
-    function getWeightBucket(w) { return Math.round((w + 4.99) / 10) * 10; }
+    // ========== 利润率配置（可按需修改） ==========
+    // 注意：原逻辑是 “售价 = 成本 ÷ 因子”，因子越小售价越高。
+    // 例如 0.4 表示成本 $10 时售价 $25，相当于 2.5 倍利润。
+    const PROFIT_FACTOR_LOW  = 0.5;   // 当基准美元价 ≤ $5 时使用
+    const PROFIT_FACTOR_MID  = 0.52;   // 当基准美元价 ≤ $15 时使用
+    const PROFIT_FACTOR_HIGH = 0.65;  // 当基准美元价 > $15 时使用
+    // =============================================
+
+    // 计费重量档位：按 (重量 + 4.99) 四舍五入到 10 的倍数
+    function getWeightBucket(w) {
+        return Math.round((w + 4.99) / 10) * 10;
+    }
+
+    // 根据实际重量查找运费，找不到则返回 999（防止漏档）
     function getShippingCost(w) {
         const bucket = getWeightBucket(w);
         return shippingRates.get(bucket) ?? 999;
     }
+
     const weight = parseFloat(row.weight) || 0;
     const volWeight = parseFloat(row.volWeight) || 0;
     const skuPrice = parseFloat(row.skuPrice) || 0;
+
     const actualWeight = Math.max(weight, volWeight);
     const shippingCNY = getShippingCost(actualWeight);
     const totalCNY = skuPrice + shippingCNY;
-    const usdBase = totalCNY / exchangeRate;
-    let divisor = usdBase <= 5 ? 0.4 : (usdBase <= 15 ? 0.5 : 0.65);
-    const finalPrice = Math.max(9.99, Math.floor(usdBase / divisor) + 0.99);
+    const usdBase = totalCNY / exchangeRate;   // 基准美元成本
+
+    // 根据基准价区间选用对应的利润因子
+    let profitFactor = usdBase <= 5 ? PROFIT_FACTOR_LOW
+                     : usdBase <= 15 ? PROFIT_FACTOR_MID
+                     : PROFIT_FACTOR_HIGH;
+
+    // 最终售价 = 成本 ÷ 利润因子（无最低价限制，无 .99 尾数）
+    const finalPrice = usdBase / profitFactor;
+
     return {
-        actualWeight, shippingCNY, totalCNY,
-        finalUsdPrice: Math.round(finalPrice * 100) / 100
+        actualWeight,
+        shippingCNY,
+        totalCNY,
+        finalUsdPrice: Math.round(finalPrice * 100) / 100   // 保留两位小数
     };
 }`;
 
