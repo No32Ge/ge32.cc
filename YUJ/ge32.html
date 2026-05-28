@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Listing 批处理工作台 v4.8 (Zen-Space Edition)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #334155; margin: 0; overflow: hidden; transition: background-color 0.6s ease; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .workspace-input { width: 100%; background: #ffffff; border: 1px solid #e2e8f0; color: #0f172a; border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; transition: all 0.2s ease; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); }
+        .workspace-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        
+        .panel-header { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+
+        .chat-msg { display: flex; gap: 16px; margin-bottom: 24px; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .avatar { width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .avatar.user { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .avatar.ai { background: linear-gradient(135deg, #10b981, #059669); }
+        .avatar.system { background: linear-gradient(135deg, #64748b, #475569); }
+        .avatar.report { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+
+        .bubble { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); flex: 1; max-width: 85%; }
+        .bubble-header { font-size: 0.8rem; font-weight: 600; color: #1e293b; margin-bottom: 8px; display: flex; justify-content: space-between; }
+
+        .progress-container { width: 100%; background: #f1f5f9; border-radius: 999px; height: 8px; overflow: hidden; margin-top: 12px; }
+        .progress-bar { height: 100%; background: #3b82f6; transition: width 0.3s ease; }
+        .progress-bar.success { background: #10b981; }
+        .progress-bar.error { background: #ef4444; }
+
+        .btn-action { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; font-size: 0.85rem; padding: 8px 18px; border-radius: 6px; transition: all 0.2s; cursor: pointer; }
+        .btn-excel { background: #10b981; color: white; border: 1px solid #059669; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .btn-excel:hover { background: #059669; transform: translateY(-1px); }
+        .btn-secondary { background: #ffffff; color: #334155; border: 1px solid #cbd5e1; }
+        .btn-secondary:hover { background: #f8fafc; border-color: #94a3b8; transform: translateY(-1px); }
+        .btn-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .btn-danger:hover { background: #fee2e2; transform: translateY(-1px); }
+
+        .file-upload-wrapper { position: relative; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; background: #f8fafc; transition: all 0.2s; cursor: pointer; }
+        .file-upload-wrapper:hover { border-color: #3b82f6; background: #eff6ff; }
+        .file-upload-wrapper input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+        textarea.ghost-input { resize: none; background: transparent; border: none; outline: none; padding: 0; box-shadow: none; color: #475569; }
+        textarea.ghost-input:focus { color: #0f172a; ring: 0; outline: none; }
+
+        /* ================= ✨ 禅定空间物理动效引擎 ================= */
+        .panel-section {
+            transition: left 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                        width 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                        opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                        filter 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                        border-radius 0.6s ease,
+                        box-shadow 0.6s ease,
+                        border-color 0.6s ease;
+            will-change: left, width, transform, opacity, filter;
+            transform-origin: center center;
+        }
+
+        /* 缩放防抖：拖拽窗口时临时禁用物理过渡 */
+        .resize-active .panel-section {
+            transition: none !important;
+        }
+
+        .dynamic-mode-active {
+            background-color: #0b0f19 !important; /* 极客深邃纯黑色背景 */
+        }
+
+        /* 禅定态下的面板化为悬浮高阶卡片 */
+        .dynamic-mode-active .panel-section {
+            position: absolute !important;
+            height: calc(100% - 40px) !important;
+            top: 20px !important;
+            flex: none !important;
+            flex-shrink: 0 !important;
+            border-radius: 24px !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+        }
+
+        /* 聚焦态：等比例宽屏放大、无模糊、位于最顶层 */
+        .dynamic-mode-active .panel-focused {
+            transform: scale(0.96);
+            opacity: 1;
+            filter: blur(0px);
+            z-index: 30;
+        }
+
+        /* 失焦态：缩为窄边侧栏、高透、模糊、下潜底层 */
+        .dynamic-mode-active .unfocused {
+            transform: scale(0.88);
+            opacity: 0.35;
+            filter: blur(4px);
+            z-index: 10;
+        }
+
+        /* 禅定模式下隐藏原本的宽屏伸缩按钮（因为已经自动等比例放大了） */
+        .dynamic-mode-active .dynamic-mode-hide {
+            display: none !important;
+        }
+
+        /* 隐形虚空盲切层（流光微动特效） */
+        #dynamicLeftZone:hover {
+            background: linear-gradient(to right, rgba(255, 255, 255, 0.03), transparent);
+        }
+        #dynamicRightZone:hover {
+            background: linear-gradient(to left, rgba(255, 255, 255, 0.03), transparent);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden relative">
+
+    <!-- ================= ✨ Dynamic Mode 灵动空间开关 ================= -->
+    <button id="dynamicModeBtn" onclick="toggleDynamicMode()" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white px-4 py-1.5 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex items-center gap-2.5 hover:bg-slate-800 transition-colors group">
+        <span class="relative flex h-3 w-3">
+            <span id="dynamicPing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-0 transition-opacity"></span>
+            <span id="dynamicDot" class="relative inline-flex rounded-full h-3 w-3 bg-slate-500 transition-colors duration-300"></span>
+        </span>
+        <span class="text-[0.7rem] font-bold font-mono tracking-wider group-hover:text-emerald-400 transition-colors">DYNAMIC MODE</span>
+    </button>
+
+    <!-- ================= 边缘虚空盲切感应区 ================= -->
+    <div id="dynamicLeftZone" onclick="handleGutterClick('left')" class="fixed left-0 top-0 bottom-0 z-[80] cursor-w-resize hidden transition-all duration-300"></div>
+    <div id="dynamicRightZone" onclick="handleGutterClick('right')" class="fixed right-0 top-0 bottom-0 z-[80] cursor-e-resize hidden transition-all duration-300"></div>
+
+    <!-- ================= 空间包装容器 ================= -->
+    <div id="layoutWrapper" class="flex h-full w-full relative">
+
+        <!-- 左侧：引擎与数据配置 -->
+        <aside id="leftPanel" class="w-[340px] bg-white border-r border-slate-200 flex flex-col h-full z-10 shrink-0 panel-section relative">
+            <div class="p-5 border-b border-slate-200 bg-slate-50 flex items-center gap-3 shrink-0">
+                <div class="w-8 h-8 rounded bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-800 text-sm leading-tight">AI Batch Pro</h1>
+                    <p class="text-[0.65rem] text-slate-500 font-mono">Workspace Edition v4.8</p>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5 space-y-6">
+                <!-- 网络配置 -->
+                <div>
+                    <div class="panel-header"><i class="fa-solid fa-network-wired"></i> API Gateway</div>
+                    <div class="space-y-3">
+                        <div><label class="text-[0.7rem] text-slate-500 block mb-1">Base URL</label><input type="text" id="cfgBaseUrl" class="workspace-input" value="https://api.deepseek.com"></div>
+                        <div><label class="text-[0.7rem] text-slate-500 block mb-1">API Key</label><input type="password" id="cfgApiKey" class="workspace-input" value=""></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="text-[0.7rem] text-slate-500 block mb-1">Model</label><input type="text" id="cfgModel" class="workspace-input" value="deepseek-chat"></div>
+                            <div><label class="text-[0.7rem] text-slate-500 block mb-1">Max Workers</label><input type="number" id="cfgMaxWorkers" class="workspace-input" value="50"></div>
+                            <div><label class="text-[0.7rem] text-slate-500 block mb-1">Max Retries</label><input type="number" id="cfgMaxRetries" class="workspace-input" value="3"></div>
+                            <div><label class="text-[0.7rem] text-slate-500 block mb-1">Delay (s)</label><input type="number" id="cfgDelay" class="workspace-input" value="1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据源 -->
+                <div>
+                    <div class="panel-header mt-2"><i class="fa-solid fa-database"></i> Data Source</div>
+                    <div class="file-upload-wrapper mb-3">
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv">
+                        <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-2"></i>
+                        <p class="text-xs text-slate-600 font-medium">拖拽或点击上传 Excel/CSV</p>
+                        <p class="text-[0.65rem] text-slate-400 mt-1" id="fileNameDisplay">未选择文件</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 mb-3 bg-slate-50 p-2 rounded border border-slate-200">
+                        <span class="text-xs text-slate-500">表头所在行:</span>
+                        <input type="number" id="headerRowNum" min="1" value="1" class="workspace-input w-16 !py-1 text-center">
+                        <button id="loadFieldsBtn" class="btn-secondary px-2 py-1 text-xs rounded ml-auto">解析提取</button>
+                    </div>
+
+                    <div class="bg-slate-800 rounded-md p-3 text-xs font-mono text-emerald-400 leading-relaxed shadow-inner">
+                        <div class="text-slate-400 text-[0.65rem] mb-1">可用变量 (可在Template使用):</div>
+                        <div id="fieldPreview" class="break-words">等待解析...</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 中央：AI 对话区 -->
+        <main id="centerPanel" class="flex-1 flex flex-col relative bg-[#f8fafc] h-full overflow-hidden panel-section border-x border-slate-200/50">
+            <div id="chatArea" class="flex-1 overflow-y-auto p-6 md:p-10 pb-32">
+                <!-- 聊天气泡 -->
+            </div>
+
+            <!-- 浮动运行按钮 -->
+            <div class="absolute bottom-8 right-8 z-50 flex flex-col items-end gap-3 pointer-events-none">
+                <div class="bg-white/80 backdrop-blur px-3 py-1.5 rounded-full shadow-sm text-[0.65rem] font-medium text-slate-600 flex items-center gap-2 border border-slate-200 pointer-events-auto">
+                    <span id="dataStatusIndicator"><i class="fa-solid fa-circle text-red-500 text-[0.5rem] align-middle mr-1"></i> 未加载</span>
+                    <span class="w-[1px] h-3 bg-slate-300"></span>
+                    <span id="systemStatusIndicator"><i class="fa-solid fa-circle text-green-500 text-[0.5rem] align-middle mr-1"></i> 引擎空闲</span>
+                </div>
+                
+                <button id="fabBtn" class="group relative w-14 h-14 bg-blue-600 text-white rounded-full shadow-[0_8px_20px_rgba(37,99,235,0.4)] flex items-center justify-center text-xl hover:bg-blue-700 hover:scale-105 transition-all duration-300 border-2 border-white/20 pointer-events-auto">
+                    <i id="fabIcon" class="fa-solid fa-play ml-1"></i>
+                    <span id="fabTooltip" class="absolute right-full mr-4 bg-slate-800 text-white text-xs px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">执行当前策略</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- 右侧：Prompt 策略区 -->
+        <aside id="rightPanel" class="w-[400px] bg-white border-l border-slate-200 flex flex-col h-full z-10 shrink-0 panel-section relative">
+            <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center shrink-0">
+                <h2 class="font-bold text-slate-800 text-sm flex items-center"><i class="fa-solid fa-brain mr-2 text-purple-600"></i>Prompt Workspace</h2>
+                <button id="toggleRightPanelBtn" class="text-slate-400 hover:text-blue-600 text-xs px-2 py-1 bg-slate-200/50 hover:bg-blue-50 rounded transition-colors relative z-[70] dynamic-mode-hide" title="展开/收缩侧边栏">
+                    <i class="fa-solid fa-angles-left"></i> 宽屏模式
+                </button>
+            </div>
+
+            <!-- 策略管理 -->
+            <div class="px-4 py-3 bg-white border-b border-slate-100 flex items-center gap-1.5 shrink-0 shadow-[0_4px_10px_rgba(0,0,0,0.02)] relative z-[70]">
+                <i class="fa-solid fa-cube text-slate-400 text-xs ml-1 mr-1"></i>
+                <select id="strategySelector" class="workspace-input !py-1.5 flex-1 text-xs font-bold text-blue-700 bg-blue-50/50 border-blue-200 cursor-pointer shadow-sm truncate"></select>
+                <button id="btnNewStrategy" class="btn-secondary !p-1.5 rounded text-blue-600 hover:bg-blue-50 w-8 flex justify-center shadow-sm" title="新建策略配置"><i class="fa-solid fa-plus text-xs"></i></button>
+                <button id="btnRenameStrategy" class="btn-secondary !p-1.5 rounded text-slate-500 hover:text-blue-600 w-8 flex justify-center shadow-sm" title="重命名当前策略"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
+                <button id="btnDeleteStrategy" class="btn-secondary !p-1.5 rounded text-slate-500 hover:text-red-600 w-8 flex justify-center shadow-sm" title="删除当前策略"><i class="fa-solid fa-trash-can text-xs"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5 space-y-6 bg-slate-50/50 relative z-[70]">
+                <!-- System Instructions -->
+                <div class="relative group">
+                    <label class="text-[0.75rem] font-semibold text-slate-700 block mb-2"><i class="fa-solid fa-terminal mr-1 text-slate-400"></i> System Instructions</label>
+                    <div class="bg-transparent relative pb-1">
+                        <textarea id="cfgSystem" class="ghost-input font-mono text-[0.75rem] leading-relaxed w-full transition-all" rows="8"></textarea>
+                        <div class="absolute bottom-0 w-full h-[1px] border-b border-dashed border-slate-300 group-hover:border-blue-400 transition-colors"></div>
+                    </div>
+                </div>
+
+                <!-- Template -->
+                <div>
+                    <label class="text-[0.75rem] font-semibold text-slate-700 block mb-2 flex justify-between">
+                        <span><i class="fa-solid fa-code mr-1 text-slate-400"></i> Prompt Template</span>
+                        <span class="text-[0.65rem] text-blue-500 font-normal">支持 {{变量}} 注入</span>
+                    </label>
+                    <textarea id="cfgTemplate" class="workspace-input font-mono text-[0.75rem] leading-relaxed resize-y" rows="4"></textarea>
+                    <div class="mt-2 flex items-center justify-between">
+                        <label class="text-[0.7rem] text-slate-500">Max Chars (防超长截断)</label>
+                        <input type="number" id="cfgMaxChars" class="workspace-input w-24 !py-1 text-center" value="20000">
+                    </div>
+                </div>
+
+                <!-- Few Shot -->
+                <div class="border-t border-slate-200 pt-5">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="text-[0.75rem] font-semibold text-slate-700"><i class="fa-solid fa-layer-group mr-1 text-slate-400"></i> Few-Shot 样本</label>
+                        <button id="addSampleBtn" class="btn-secondary px-2 py-1 text-[0.65rem] rounded shadow-sm">
+                            <i class="fa-solid fa-plus text-blue-600"></i> 添加样本
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4 bg-white p-2.5 rounded border border-slate-200 text-[0.7rem] flex items-center justify-between shadow-sm">
+                        <label class="flex items-center gap-2 cursor-pointer text-slate-600 font-medium">
+                            <input type="checkbox" id="enableRandomSample" class="rounded border-slate-300 text-blue-500 focus:ring-blue-500"> 
+                            <span class="select-none">开启防缓存随机挑选</span>
+                        </label>
+                        <div class="flex items-center gap-1">
+                            <span class="text-slate-400">每次抽取</span>
+                            <input type="number" id="randomSampleCount" class="workspace-input w-12 !py-0.5 text-center font-bold text-blue-600" value="1" min="1">
+                            <span class="text-slate-400">个</span>
+                        </div>
+                    </div>
+
+                    <div id="samplesContainer" class="space-y-3"></div>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- ================= 日志弹窗 Modal ================= -->
+    <div id="logModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] hidden flex items-center justify-center opacity-0 transition-opacity duration-200">
+        <div class="bg-white w-11/12 max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[80vh] transform scale-95 transition-transform duration-200" id="logModalContent">
+            <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
+                <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-terminal text-slate-500 mr-2"></i>服务器运行日志</h3>
+                <button onclick="closeLogsModal()" class="text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto flex-1 bg-[#1e1e1e] text-emerald-400 font-mono text-[0.8rem] leading-relaxed" id="logModalBody"></div>
+            <div class="px-5 py-3 border-t border-slate-100 flex justify-end bg-slate-50 rounded-b-xl">
+                <button onclick="closeLogsModal()" class="btn-action btn-secondary px-4 py-1.5 text-sm shadow-sm">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= 全局基础状态 =================
+        let rawExcelData = []; 
+        let headers = [];
+        let completedResults = {}; 
+        let failedTasks = [];      
+        let currentRunLogs = [];   
+        let isRunning = false;
+        let forceStopFlag = false;
+        const chatArea = document.getElementById('chatArea');
+
+        // ================= ✨ 禅定动效引擎 v4.8 (等距居中 & 虚空盲切) =================
+        let isDynamicMode = false;
+        let currentFocus = 'center'; // 'left', 'center', 'right'
+        let resizeTimer = null;
+
+        function toggleDynamicMode() {
+            setDynamicMode(!isDynamicMode);
+        }
+
+        function setDynamicMode(state) {
+            isDynamicMode = state;
+            const ping = document.getElementById('dynamicPing');
+            const dot = document.getElementById('dynamicDot');
+            const btn = document.getElementById('dynamicModeBtn');
+            
+            if (isDynamicMode) {
+                document.body.classList.add('dynamic-mode-active');
+                ping.classList.remove('opacity-0'); ping.classList.add('opacity-75');
+                dot.classList.replace('bg-slate-500', 'bg-emerald-400');
+                btn.classList.replace('border-slate-700', 'border-emerald-500/50');
+                focusPanel(currentFocus || 'center');
+            } else {
+                document.body.classList.remove('dynamic-mode-active');
+                ping.classList.add('opacity-0'); ping.classList.remove('opacity-75');
+                dot.classList.replace('bg-emerald-400', 'bg-slate-500');
+                btn.classList.replace('border-emerald-500/50', 'border-slate-700');
+                applyDynamicFocus('center'); // 退出时重置位移与样式
+            }
+            saveConfig();
+        }
+
+        function focusPanel(target) {
+            currentFocus = target;
+            applyDynamicFocus(target);
+        }
+
+        // 核心：副 - 主 - 副 环形空间重新排布矩阵
+        function applyDynamicFocus(target) {
+            const leftPanel = document.getElementById('leftPanel');
+            const rightPanel = document.getElementById('rightPanel');
+            const centerPanel = document.getElementById('centerPanel');
+            
+            const leftZone = document.getElementById('dynamicLeftZone');
+            const rightZone = document.getElementById('dynamicRightZone');
+
+            if (!isDynamicMode) {
+                // 还原静态流
+                [leftPanel, centerPanel, rightPanel].forEach(p => {
+                    p.style.left = '';
+                    p.style.width = '';
+                    p.classList.remove('unfocused', 'panel-focused');
+                });
+                leftZone.classList.add('hidden');
+                rightZone.classList.add('hidden');
+                return;
+            }
+
+            // 1. 自适应高阶比例：最大1100px，最小800px（适配等宽宽屏对话框需求）
+            const w = window.innerWidth;
+            const activeWidth = Math.max(800, Math.min(1100, w * 0.58));
+            const subWidth = 280; // 极简副屏宽度
+            const gap = 30; // 完美呼吸感卡片空隙
+
+            // 2. 计算空间卡片插值坐标槽
+            const leftSlotX = (w / 2) - (activeWidth / 2) - gap - subWidth;
+            const centerSlotX = (w / 2) - (activeWidth / 2);
+            const rightSlotX = (w / 2) + (activeWidth / 2) + gap;
+
+            // 3. 自适应边缘点击捕获区设置（精准控制在主界面边缘到视口边界的整个大空白区域）
+            const marginWidth = `${(w / 2) - (activeWidth / 2)}px`;
+            leftZone.style.width = marginWidth;
+            rightZone.style.width = marginWidth;
+            leftZone.classList.remove('hidden');
+            rightZone.classList.remove('hidden');
+
+            // 4. 初始化卡片失焦层级
+            [leftPanel, centerPanel, rightPanel].forEach(p => {
+                p.classList.remove('panel-focused');
+                p.classList.add('unfocused');
+            });
+
+            // 5. 按照 环形对称结构 [副 | 激活 | 副] 重新构建节点物理位置
+            if (target === 'center') {
+                centerPanel.classList.replace('unfocused', 'panel-focused');
+                
+                leftPanel.style.left = `${leftSlotX}px`;
+                leftPanel.style.width = `${subWidth}px`;
+
+                centerPanel.style.left = `${centerSlotX}px`;
+                centerPanel.style.width = `${activeWidth}px`;
+
+                rightPanel.style.left = `${rightSlotX}px`;
+                rightPanel.style.width = `${subWidth}px`;
+            } else if (target === 'left') {
+                leftPanel.classList.replace('unfocused', 'panel-focused');
+
+                rightPanel.style.left = `${leftSlotX}px`;
+                rightPanel.style.width = `${subWidth}px`;
+
+                leftPanel.style.left = `${centerSlotX}px`;
+                leftPanel.style.width = `${activeWidth}px`;
+
+                centerPanel.style.left = `${rightSlotX}px`;
+                centerPanel.style.width = `${subWidth}px`;
+            } else if (target === 'right') {
+                rightPanel.classList.replace('unfocused', 'panel-focused');
+
+                centerPanel.style.left = `${leftSlotX}px`;
+                centerPanel.style.width = `${subWidth}px`;
+
+                rightPanel.style.left = `${centerSlotX}px`;
+                rightPanel.style.width = `${activeWidth}px`;
+
+                leftPanel.style.left = `${rightSlotX}px`;
+                leftPanel.style.width = `${subWidth}px`;
+            }
+        }
+
+        // 核心：无极虚空点击切换状态机
+        function handleGutterClick(zone) {
+            if (!isDynamicMode) return;
+            
+            if (zone === 'left') {
+                if (currentFocus === 'center') focusPanel('left');
+                else if (currentFocus === 'left') focusPanel('right');
+                else if (currentFocus === 'right') focusPanel('center');
+            } else if (zone === 'right') {
+                if (currentFocus === 'center') focusPanel('right');
+                else if (currentFocus === 'left') focusPanel('center');
+                else if (currentFocus === 'right') focusPanel('left');
+            }
+        }
+
+        // 专业级窗体尺寸缩放防抖：拖拽时不产生缓动动画延时
+        window.addEventListener('resize', () => {
+            document.body.classList.add('resize-active');
+            if(isDynamicMode) applyDynamicFocus(currentFocus);
+            
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                document.body.classList.remove('resize-active');
+            }, 100);
+        });
+
+        // ================= V4 数据持久化 (包含 Dynamic 配置) =================
+        const STORE_KEY_V4 = 'AIBatchProConfig_V4';
+        let currentStrategies = [];
+        let activeStrategyId = null;
+        let isSyncingUI = false;
+
+        function getDefaultStrategy(name = "Default Strategy") {
+            return {
+                id: 'strat_' + Date.now() + Math.floor(Math.random()*1000), name: name,
+                system: "你是一位拥有10年经验的亚马逊大卖操盘手。任务是将杂乱信息转化为高转化JSON。\n务必直接输出原生JSON数组。\n[ { \"ID\": \"提取的SKU\", \"Title\": \"高转化英文标题\" } ]",
+                template: "数据：{{描述}}，内容不能包含敏感词...", maxChars: 20000,
+                enableRandomSample: false, randomSampleCount: 1,
+                samples: [{ active: true, collapsed: false, user: "編號SKU: GE32\n描述: Electronic Lighter...", assistant: '[ { "ID": "GE32", "Title": "USB Rechargeable Arc Lighter"} ]' }]
+            };
+        }
+
+        function loadConfig() {
+            const dataV4 = localStorage.getItem(STORE_KEY_V4);
+            if (dataV4) {
+                const config = JSON.parse(dataV4);
+                if(config.baseUrl) document.getElementById('cfgBaseUrl').value = config.baseUrl;
+                if(config.apiKey) document.getElementById('cfgApiKey').value = config.apiKey;
+                if(config.model) document.getElementById('cfgModel').value = config.model;
+                if(config.maxWorkers) document.getElementById('cfgMaxWorkers').value = config.maxWorkers;
+                if(config.maxRetries) document.getElementById('cfgMaxRetries').value = config.maxRetries;
+                if(config.delay) document.getElementById('cfgDelay').value = config.delay;
+                
+                // 加载灵动模式状态
+                if(config.isDynamicMode !== undefined) setDynamicMode(config.isDynamicMode);
+
+                currentStrategies = config.strategies || [];
+                activeStrategyId = config.activeStrategyId;
+                if(currentStrategies.length === 0) currentStrategies = [getDefaultStrategy("Walmart SEO")];
+                if(!currentStrategies.find(s => s.id === activeStrategyId)) activeStrategyId = currentStrategies[0].id;
+            } else {
+                currentStrategies = [getDefaultStrategy("New Strategy")];
+                activeStrategyId = currentStrategies[0].id;
+            }
+            renderStrategySelector(); applyActiveStrategyToUI();
+        }
+
+        function applyActiveStrategyToUI() {
+            isSyncingUI = true;
+            const strat = currentStrategies.find(s => s.id === activeStrategyId) || currentStrategies[0];
+            document.getElementById('cfgSystem').value = strat.system || "";
+            document.getElementById('cfgTemplate').value = strat.template || "";
+            document.getElementById('cfgMaxChars').value = strat.maxChars || 20000;
+            document.getElementById('enableRandomSample').checked = strat.enableRandomSample || false;
+            document.getElementById('randomSampleCount').value = strat.randomSampleCount || 1;
+            const container = document.getElementById('samplesContainer'); container.innerHTML = '';
+            if (strat.samples && strat.samples.length > 0) strat.samples.forEach((s, idx) => addSampleDOM(s, idx + 1));
+            isSyncingUI = false;
+        }
+
+        function syncUIToData() {
+            if (isSyncingUI) return;
+            const strat = currentStrategies.find(s => s.id === activeStrategyId);
+            if (strat) {
+                strat.system = document.getElementById('cfgSystem').value;
+                strat.template = document.getElementById('cfgTemplate').value;
+                strat.maxChars = document.getElementById('cfgMaxChars').value;
+                strat.enableRandomSample = document.getElementById('enableRandomSample').checked;
+                strat.randomSampleCount = document.getElementById('randomSampleCount').value;
+                strat.samples = [];
+                document.querySelectorAll('.sample-item').forEach(el => {
+                    strat.samples.push({
+                        active: el.querySelector('.sample-active-toggle').checked,
+                        collapsed: el.querySelector('.sample-content').classList.contains('hidden'),
+                        user: el.querySelector('.sample-user').value,
+                        assistant: el.querySelector('.sample-assistant').value
+                    });
+                });
+            }
+            saveConfig();
+        }
+
+        function saveConfig() {
+            localStorage.setItem(STORE_KEY_V4, JSON.stringify({
+                baseUrl: document.getElementById('cfgBaseUrl').value, apiKey: document.getElementById('cfgApiKey').value,
+                model: document.getElementById('cfgModel').value, maxWorkers: document.getElementById('cfgMaxWorkers').value,
+                maxRetries: document.getElementById('cfgMaxRetries').value, delay: document.getElementById('cfgDelay').value,
+                isDynamicMode: isDynamicMode, strategies: currentStrategies, activeStrategyId: activeStrategyId
+            }));
+        }
+
+        document.addEventListener('input', (e) => { if (e.target.id !== 'strategySelector' && e.target.matches('input, textarea, select')) syncUIToData(); });
+        document.addEventListener('change', (e) => { if (e.target.id !== 'strategySelector' && e.target.matches('input[type="checkbox"]')) syncUIToData(); });
+
+        // ================= 策略管理控制器 =================
+        function renderStrategySelector() {
+            const sel = document.getElementById('strategySelector'); sel.innerHTML = '';
+            currentStrategies.forEach(s => {
+                const opt = document.createElement('option'); opt.value = s.id; opt.textContent = s.name;
+                if (s.id === activeStrategyId) opt.selected = true; sel.appendChild(opt);
+            });
+        }
+
+        document.getElementById('strategySelector').addEventListener('change', (e) => { activeStrategyId = e.target.value; applyActiveStrategyToUI(); saveConfig(); });
+        document.getElementById('btnNewStrategy').addEventListener('click', () => {
+            const name = prompt("请输入新策略名称:", "New Strategy");
+            if(name && name.trim()) {
+                const newStrat = getDefaultStrategy(name.trim()); currentStrategies.push(newStrat);
+                activeStrategyId = newStrat.id; renderStrategySelector(); applyActiveStrategyToUI(); saveConfig();
+            }
+        });
+        document.getElementById('btnRenameStrategy').addEventListener('click', () => {
+            const strat = currentStrategies.find(s => s.id === activeStrategyId);
+            const name = prompt("重命名当前策略:", strat.name);
+            if(name && name.trim()) { strat.name = name.trim(); renderStrategySelector(); saveConfig(); }
+        });
+        document.getElementById('btnDeleteStrategy').addEventListener('click', () => {
+            if(currentStrategies.length <= 1) return alert("为了系统正常运行，至少需要保留一个策略配置！");
+            if(confirm(`🚨 危险操作！\n确定要永久删除策略【${currentStrategies.find(s=>s.id===activeStrategyId).name}】吗？`)) {
+                currentStrategies = currentStrategies.filter(s => s.id !== activeStrategyId);
+                activeStrategyId = currentStrategies[0].id; renderStrategySelector(); applyActiveStrategyToUI(); saveConfig();
+            }
+        });
+
+        // ================= 界面伸缩 =================
+        const rightPanel = document.getElementById('rightPanel');
+        const togglePanelBtn = document.getElementById('toggleRightPanelBtn');
+        let isExpanded = false;
+
+        togglePanelBtn.addEventListener('click', () => {
+            isExpanded = !isExpanded;
+            if (isExpanded) {
+                rightPanel.classList.replace('w-[400px]', 'w-[600px]');
+                togglePanelBtn.innerHTML = '<i class="fa-solid fa-angles-right"></i> 收缩复原';
+                document.getElementById('cfgSystem').rows = 15;
+            } else {
+                rightPanel.classList.replace('w-[600px]', 'w-[400px]');
+                togglePanelBtn.innerHTML = '<i class="fa-solid fa-angles-left"></i> 宽屏模式';
+                document.getElementById('cfgSystem').rows = 8;
+            }
+        });
+
+        // ================= 样本动态管理 =================
+        function addSampleDOM(data = null, index = null) {
+            const container = document.getElementById('samplesContainer');
+            const idx = index || container.children.length + 1;
+            const div = document.createElement('div'); div.className = "sample-item bg-white border border-slate-200 rounded shadow-sm transition-opacity duration-200";
+            const isActive = data ? data.active !== false : true; const isCollapsed = data ? data.collapsed === true : false;
+            if (!isActive) div.classList.add('opacity-40');
+            div.innerHTML = `
+                <div class="flex justify-between items-center p-2.5 border-b border-slate-100 bg-slate-50/80 rounded-t">
+                    <div class="flex items-center gap-2"><input type="checkbox" class="sample-active-toggle rounded border-slate-300 text-blue-500 focus:ring-blue-500 cursor-pointer" ${isActive ? 'checked' : ''}><span class="text-[0.7rem] font-bold text-slate-700 select-none sample-index">Sample #${idx}</span></div>
+                    <div class="flex gap-2 text-slate-400"><button class="toggle-collapse-btn hover:text-blue-500 text-[0.75rem] px-1"><i class="fa-solid ${isCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'}"></i></button><button class="remove-sample-btn hover:text-red-500 text-[0.75rem] px-1"><i class="fa-solid fa-xmark"></i></button></div>
+                </div>
+                <div class="sample-content p-3 space-y-3 ${isCollapsed ? 'hidden' : ''}">
+                    <div><label class="text-[0.65rem] text-slate-500 mb-1 block">User Input</label><textarea class="sample-user workspace-input font-mono text-[0.65rem] leading-tight resize-y" rows="2">${data ? data.user : ''}</textarea></div>
+                    <div><label class="text-[0.65rem] text-slate-500 mb-1 block">Assistant Output</label><textarea class="sample-assistant workspace-input font-mono text-[0.65rem] leading-tight resize-y" rows="3">${data ? data.assistant : ''}</textarea></div>
+                </div>`;
+            div.querySelector('.sample-active-toggle').addEventListener('change', (e) => { e.target.checked ? div.classList.remove('opacity-40') : div.classList.add('opacity-40'); syncUIToData(); });
+            const toggleCollapse = div.querySelector('.toggle-collapse-btn');
+            toggleCollapse.addEventListener('click', () => {
+                const content = div.querySelector('.sample-content'); content.classList.toggle('hidden');
+                const icon = toggleCollapse.querySelector('i'); content.classList.contains('hidden') ? icon.classList.replace('fa-chevron-up', 'fa-chevron-down') : icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+                syncUIToData();
+            });
+            div.querySelector('.remove-sample-btn').addEventListener('click', () => {
+                div.remove(); Array.from(container.children).forEach((child, i) => child.querySelector('.sample-index').innerText = `Sample #${i + 1}`); syncUIToData();
+            });
+            container.appendChild(div);
+        }
+        document.getElementById('addSampleBtn').addEventListener('click', () => { addSampleDOM({ active: true, collapsed: false, user: "", assistant: "" }); syncUIToData(); });
+
+        // ================= 气泡交互与 AI 处理流 =================
+        function scrollToBottom() { chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' }); }
+        function appendSystemMessage(text) { chatArea.insertAdjacentHTML('beforeend', `<div class="chat-msg"><div class="avatar system"><i class="fa-solid fa-robot"></i></div><div class="bubble"><div class="bubble-header text-slate-500">System <span class="font-normal text-xs text-slate-400">${new Date().toLocaleTimeString()}</span></div><div class="text-sm leading-relaxed">${text}</div></div></div>`); scrollToBottom(); }
+        function appendUserMessage(text) { chatArea.insertAdjacentHTML('beforeend', `<div class="chat-msg"><div class="avatar user"><i class="fa-solid fa-user-astronaut"></i></div><div class="bubble border-blue-200 bg-blue-50/30"><div class="bubble-header text-blue-700">You <span class="font-normal text-xs text-slate-400">${new Date().toLocaleTimeString()}</span></div><div class="text-sm leading-relaxed whitespace-pre-wrap">${text}</div></div></div>`); scrollToBottom(); }
+
+        function createAITaskBubble(totalTasks) {
+            const bubbleId = 'ai-task-' + Date.now();
+            chatArea.insertAdjacentHTML('beforeend', `
+                <div class="chat-msg"><div class="avatar ai"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <div class="bubble border-emerald-200 bg-white shadow-sm">
+                    <div class="bubble-header text-emerald-700">AI Worker <span class="font-normal text-xs text-slate-400">${new Date().toLocaleTimeString()}</span></div>
+                    <div class="text-sm mb-3" id="${bubbleId}-text">后台处理队列中，共计 <strong class="text-slate-800">${totalTasks}</strong> 项任务...</div>
+                    <div class="bg-slate-50 border border-slate-200 rounded p-3 text-xs font-mono">
+                        <div class="flex justify-between mb-1"><span class="text-slate-600">进度: <span id="${bubbleId}-count" class="font-bold text-blue-600">0</span> / ${totalTasks}</span><span id="${bubbleId}-percent" class="text-slate-500">0%</span></div>
+                        <div class="progress-container"><div id="${bubbleId}-bar" class="progress-bar" style="width: 0%"></div></div>
+                        <div class="flex gap-4 mt-2"><span class="text-emerald-600"><i class="fa-solid fa-check-circle"></i> 成功: <span id="${bubbleId}-success">0</span></span><span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> 失败: <span id="${bubbleId}-error">0</span></span></div>
+                        <div id="${bubbleId}-log" class="mt-2 text-[0.65rem] text-slate-400 max-h-20 overflow-y-auto"></div>
+                    </div></div></div>`);
+            scrollToBottom();
+            return {
+                updateProgress: (successCount, errorCount, latestLog) => {
+                    const done = successCount + errorCount; const percent = Math.floor((done / totalTasks) * 100);
+                    document.getElementById(`${bubbleId}-count`).innerText = done; document.getElementById(`${bubbleId}-percent`).innerText = `${percent}%`; document.getElementById(`${bubbleId}-bar`).style.width = `${percent}%`;
+                    document.getElementById(`${bubbleId}-success`).innerText = successCount; document.getElementById(`${bubbleId}-error`).innerText = errorCount;
+                    if(latestLog) { const logEl = document.getElementById(`${bubbleId}-log`); logEl.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${latestLog}</div>` + logEl.innerHTML; }
+                },
+                finish: (finalText) => { document.getElementById(`${bubbleId}-text`).innerHTML = finalText; document.getElementById(`${bubbleId}-bar`).classList.add('success'); scrollToBottom(); }
+            };
+        }
+
+        function appendCompletionReport(successCount, errorCount, isStopped) {
+            let headerText = isStopped ? '任务中止' : '🎉 批处理完成';
+            let mainMsg = isStopped ? '任务已被手动终止。' : '我已经完成了当前批次的所有处理任务！';
+            mainMsg += `<div class="mt-4 p-3 bg-white/50 rounded-md border border-purple-100"><p class="text-sm text-slate-700 mb-2">本次运行 <strong class="text-emerald-600">${successCount}</strong> 个成功，<strong class="text-red-500">${errorCount}</strong> 个报错。</p><button onclick="showLogsModal()" class="btn-secondary px-3 py-1.5 text-xs rounded shadow-sm"><i class="fa-solid fa-rectangle-list"></i> 查看运行日志</button></div>`;
+            let buttonsHtml = '';
+            if (successCount > 0) buttonsHtml += `<button onclick="exportExcel()" class="btn-action btn-excel mr-3 mt-3 shadow-md"><i class="fa-solid fa-file-excel"></i> 导出为 Excel</button><button onclick="exportJSON()" class="btn-action btn-secondary mr-3 mt-3 shadow-md"><i class="fa-solid fa-file-code"></i> 导出 JSON</button>`;
+            if (errorCount > 0) buttonsHtml += `<button onclick="triggerRetry()" class="btn-action btn-danger mt-3 shadow-md"><i class="fa-solid fa-rotate-right"></i> 一键重试 ${errorCount} 失败项</button>`;
+            chatArea.insertAdjacentHTML('beforeend', `<div class="chat-msg"><div class="avatar report"><i class="fa-solid fa-clipboard-check"></i></div><div class="bubble border-purple-200 bg-purple-50/40 shadow-lg"><div class="bubble-header text-purple-700">AI Report <span class="font-normal text-xs text-slate-400">${new Date().toLocaleTimeString()}</span></div><div class="text-[0.9rem] leading-relaxed text-slate-700"><h3 class="font-bold mb-1">${headerText}</h3>${mainMsg}<div class="border-t border-purple-100/50 mt-3 pt-2">${buttonsHtml}</div></div></div></div>`);
+            scrollToBottom();
+        }
+
+        // 解析与执行
+        const excelInput = document.getElementById('excelFileInput');
+        excelInput.addEventListener('change', (e) => { if(e.target.files[0]) document.getElementById('fileNameDisplay').innerText = e.target.files[0].name; });
+        document.getElementById('loadFieldsBtn').addEventListener('click', () => {
+            const file = excelInput.files[0]; if (!file) return alert("请先选择 Excel/CSV 文件！");
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result); const sheet = XLSX.read(data, { type: 'array', cellText: false, cellDates: true }).Sheets[XLSX.read(data, { type: 'array', cellText: false, cellDates: true }).SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                    let hRowIdx = parseInt(document.getElementById('headerRowNum').value, 10) - 1; if (isNaN(hRowIdx) || hRowIdx < 0) hRowIdx = 0;
+                    headers = rows[hRowIdx].map(c => String(c).trim()); rawExcelData = [];
+                    rows.slice(hRowIdx + 1).forEach((row, i) => { if (row.some(cell => String(cell).trim() !== '')) rawExcelData.push({ index: i, row: row }); });
+                    document.getElementById('fieldPreview').innerHTML = headers.map(h => h ? `<span class="bg-slate-700 px-1 py-0.5 rounded mr-1 mb-1 inline-block text-[0.65rem]">{{${h}}}</span>` : '').join('');
+                    document.getElementById('dataStatusIndicator').innerHTML = `<i class="fa-solid fa-circle text-green-500 text-[0.5rem] align-middle mr-1"></i> 已装载 ${rawExcelData.length} 行`;
+                    appendSystemMessage(`已成功读取 <b>${file.name}</b>。<br>提取有效数据 <b>${rawExcelData.length}</b> 行，随时可下发任务。`);
+                    completedResults = {}; failedTasks = [];
+                } catch (err) { appendSystemMessage(`<span class="text-red-500">❌ 解析失败: ${err.message}</span>`); }
+            }; reader.readAsArrayBuffer(file);
+        });
+
+        async function fetchAIResponse(messages, config, attempt = 1) {
+            if (config.delay > 0 && attempt === 1) await new Promise(r => setTimeout(r, config.delay * 1000));
+            try {
+                let endpoint = config.baseUrl; if (!endpoint.endsWith('/chat/completions')) endpoint = endpoint.replace(/\/$/, '') + '/chat/completions';
+                const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` }, body: JSON.stringify({ model: config.model, messages: messages }) });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json(); let text = data.choices[0].message.content.replace(/```json/gi, '').replace(/```/g, '').trim();
+                let firstBracket = text.search(/[\{\[]/); let lastBracket = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+                if (firstBracket !== -1 && lastBracket !== -1) return JSON.parse(text.substring(firstBracket, lastBracket + 1));
+                throw new Error("返回非有效 JSON");
+            } catch (err) {
+                if (attempt < config.maxRetries && !forceStopFlag) { await new Promise(r => setTimeout(r, 2000)); return fetchAIResponse(messages, config, attempt + 1); }
+                throw err;
+            }
+        }
+
+        async function executeBatchLogic(dataToProcess) {
+            const config = { baseUrl: document.getElementById('cfgBaseUrl').value.trim(), apiKey: document.getElementById('cfgApiKey').value.trim(), model: document.getElementById('cfgModel').value.trim(), maxWorkers: parseInt(document.getElementById('cfgMaxWorkers').value, 10) || 10, maxRetries: parseInt(document.getElementById('cfgMaxRetries').value, 10) || 3, delay: parseFloat(document.getElementById('cfgDelay').value) || 0, maxChars: parseInt(document.getElementById('cfgMaxChars').value, 10) || 20000, system: document.getElementById('cfgSystem').value.trim(), template: document.getElementById('cfgTemplate').value.trim(), samples: [] };
+            let activeSamples = []; document.querySelectorAll('.sample-item').forEach(el => { if (el.querySelector('.sample-active-toggle').checked) activeSamples.push({ user: el.querySelector('.sample-user').value.trim(), assistant: el.querySelector('.sample-assistant').value.trim() }); });
+            if (document.getElementById('enableRandomSample').checked && activeSamples.length > 0) config.samples = activeSamples.sort(() => 0.5 - Math.random()).slice(0, parseInt(document.getElementById('randomSampleCount').value, 10) || 1); else config.samples = activeSamples;
+
+            const uiTracker = createAITaskBubble(dataToProcess.length);
+            let currentFailed = [], successCount = 0, errorCount = 0;
+            let i = 0;
+            const worker = async () => {
+                while (i < dataToProcess.length && !forceStopFlag) {
+                    const item = dataToProcess[i++]; const timeStr = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+                    try {
+                        let prompt = config.template; headers.forEach((h, idx) => { if (!h) return; let v = item.row[idx] !== undefined ? String(item.row[idx]) : '[空]'; if (v.length > config.maxChars) v = v.substring(0, config.maxChars) + "\n...[截断]"; prompt = prompt.split(`{{${h}}}`).join(v); });
+                        const messages = []; if (config.system) messages.push({ role: "system", content: config.system }); config.samples.forEach(s => { messages.push({ role: "user", content: s.user }); messages.push({ role: "assistant", content: s.assistant }); }); messages.push({ role: "user", content: prompt });
+                        const result = await fetchAIResponse(messages, config); completedResults[item.index] = result; successCount++;
+                        const logMsg = `[${timeStr}] ID[${item.index}] 生成成功`; currentRunLogs.push(logMsg); uiTracker.updateProgress(successCount, errorCount, logMsg);
+                    } catch (e) {
+                        currentFailed.push({ index: item.index, row: item.row, error: e.message }); errorCount++;
+                        const logMsg = `[${timeStr}] ID[${item.index}] 失败: ${e.message}`; currentRunLogs.push(logMsg); uiTracker.updateProgress(successCount, errorCount, `<span class="text-red-500">${logMsg}</span>`);
+                    }
+                }
+            };
+            await Promise.all(Array.from({ length: Math.min(config.maxWorkers, dataToProcess.length) }, () => worker()));
+            failedTasks = currentFailed;
+            const stratName = document.getElementById('strategySelector').options[document.getElementById('strategySelector').selectedIndex].text;
+            uiTracker.finish(forceStopFlag ? `<span class="text-red-500">🛑 执行中止 (${stratName})</span>` : `✅ 处理结束 (${stratName})`);
+            setTimeout(() => appendCompletionReport(Object.keys(completedResults).length, failedTasks.length, forceStopFlag), 600);
+        }
+
+        // FAB 总控
+        const fabBtn = document.getElementById('fabBtn'); const fabIcon = document.getElementById('fabIcon'); const fabTooltip = document.getElementById('fabTooltip');
+        fabBtn.addEventListener('click', async () => {
+            if (isRunning) {
+                forceStopFlag = true; fabBtn.disabled = true; fabIcon.className = "fa-solid fa-spinner fa-spin"; fabBtn.classList.replace('bg-red-500', 'bg-slate-400');
+            } else {
+                if (rawExcelData.length === 0) return alert("请先装载数据源！");
+                completedResults = {}; failedTasks = []; currentRunLogs = []; isRunning = true; forceStopFlag = false;
+                fabIcon.className = "fa-solid fa-stop"; fabBtn.classList.replace('bg-blue-600', 'bg-red-500'); fabBtn.classList.replace('hover:bg-blue-700', 'hover:bg-red-600'); fabTooltip.innerText = "强行中止任务"; document.getElementById('systemStatusIndicator').innerHTML = `<i class="fa-solid fa-circle text-blue-500 text-[0.5rem] align-middle mr-1"></i> 引擎运转中`;
+                appendUserMessage(`将使用策略 <b>[${document.getElementById('strategySelector').options[document.getElementById('strategySelector').selectedIndex].text}]</b>，处理共计 <b>${rawExcelData.length}</b> 条记录。`);
+                await executeBatchLogic(rawExcelData); cleanupRunState();
+            }
+        });
+        window.triggerRetry = async function() {
+            if (failedTasks.length === 0 || isRunning) return;
+            isRunning = true; forceStopFlag = false; fabIcon.className = "fa-solid fa-stop"; fabBtn.classList.replace('bg-blue-600', 'bg-red-500'); fabBtn.classList.replace('hover:bg-blue-700', 'hover:bg-red-600'); fabTooltip.innerText = "中止重试任务"; document.getElementById('systemStatusIndicator').innerHTML = `<i class="fa-solid fa-circle text-blue-500 text-[0.5rem] align-middle mr-1"></i> 重试运转中`;
+            appendUserMessage(`帮我重试刚才失败的 <b>${failedTasks.length}</b> 条记录。`);
+            await executeBatchLogic(failedTasks.map(f => ({ index: f.index, row: f.row }))); cleanupRunState();
+        };
+        function cleanupRunState() {
+            isRunning = false; fabBtn.disabled = false; fabIcon.className = "fa-solid fa-play ml-1"; fabBtn.classList.remove('bg-slate-400', 'bg-red-500', 'hover:bg-red-600'); fabBtn.classList.add('bg-blue-600', 'hover:bg-blue-700'); fabTooltip.innerText = "执行当前策略"; document.getElementById('systemStatusIndicator').innerHTML = `<i class="fa-solid fa-circle text-green-500 text-[0.5rem] align-middle mr-1"></i> 引擎空闲`;
+        }
+
+        // 导出与日志
+        function getFlattenedData() { return Object.keys(completedResults).sort((a,b)=>a-b).reduce((acc, k) => { const res = completedResults[k]; Array.isArray(res) ? acc.push(...res) : acc.push(res); return acc; }, []); }
+        window.exportJSON = function() { const data = getFlattenedData(); if(!data.length) return alert("暂无数据可导出"); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })); link.download = `AI_Listing_${Date.now()}.json`; link.click(); };
+        window.exportExcel = function() { const data = getFlattenedData(); if(!data.length) return alert("暂无数据可导出"); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "AI_Results"); XLSX.writeFile(wb, `AI_Listing_${Date.now()}.xlsx`); };
+        window.showLogsModal = function() { const modal = document.getElementById('logModal'); const body = document.getElementById('logModalBody'); body.innerHTML = currentRunLogs.map(log => log.includes('失败') ? `<div class="text-red-400 mb-1">${log}</div>` : `<div class="mb-1">${log}</div>`).join('') || '<div class="text-slate-500">本次运行暂无日志。</div>'; modal.classList.remove('hidden'); void modal.offsetWidth; modal.classList.remove('opacity-0'); document.getElementById('logModalContent').classList.remove('scale-95'); setTimeout(() => { body.scrollTop = body.scrollHeight; }, 50); };
+        window.closeLogsModal = function() { document.getElementById('logModal').classList.add('opacity-0'); document.getElementById('logModalContent').classList.add('scale-95'); setTimeout(() => document.getElementById('logModal').classList.add('hidden'), 200); };
+
+        // 初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            loadConfig();
+            appendSystemMessage("工作台 v4.8 (禅定物理引擎) 部署成功。<br>您可以开启顶部 <strong>DYNAMIC MODE</strong>，随手点击屏幕两侧最边缘的深色虚空，体验极致自然的环形卡片切屏。");
+        });
+    </script>
+</body>
+</html>
