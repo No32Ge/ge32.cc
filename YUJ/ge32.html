@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI Listing 批处理工作台 v4.8 (Zen-Space Edition)</title>
+    <title>AI Listing 批处理工作台 v5.0 (Zen-Config Edition)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -72,16 +72,9 @@
             transform-origin: center center;
         }
 
-        /* 缩放防抖：拖拽窗口时临时禁用物理过渡 */
-        .resize-active .panel-section {
-            transition: none !important;
-        }
+        .resize-active .panel-section { transition: none !important; }
+        .dynamic-mode-active { background-color: #0b0f19 !important; }
 
-        .dynamic-mode-active {
-            background-color: #0b0f19 !important; /* 极客深邃纯黑色背景 */
-        }
-
-        /* 禅定态下的面板化为悬浮高阶卡片 */
         .dynamic-mode-active .panel-section {
             position: absolute !important;
             height: calc(100% - 40px) !important;
@@ -94,39 +87,29 @@
             overflow: hidden;
         }
 
-        /* 聚焦态：等比例宽屏放大、无模糊、位于最顶层 */
-        .dynamic-mode-active .panel-focused {
-            transform: scale(0.96);
-            opacity: 1;
-            filter: blur(0px);
-            z-index: 30;
+        .dynamic-mode-active .panel-focused { transform: scale(0.96); opacity: 1; filter: blur(0px); z-index: 30; }
+        .dynamic-mode-active .unfocused { transform: scale(0.88); opacity: 0.35; filter: blur(4px); z-index: 10; }
+        .dynamic-mode-active .dynamic-mode-hide { display: none !important; }
+
+        /* 隐形越界核心：强制跨屏重排的卡片零秒移动（不可见） */
+        .dynamic-mode-active .panel-hidden {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            filter: blur(10px) !important;
+            transition: opacity 0.2s, filter 0.2s, left 0s !important; /* 关键：坐标变动0s执行 */
         }
 
-        /* 失焦态：缩为窄边侧栏、高透、模糊、下潜底层 */
-        .dynamic-mode-active .unfocused {
-            transform: scale(0.88);
-            opacity: 0.35;
-            filter: blur(4px);
-            z-index: 10;
-        }
+        #dynamicLeftZone:hover { background: linear-gradient(to right, rgba(255, 255, 255, 0.03), transparent); }
+        #dynamicRightZone:hover { background: linear-gradient(to left, rgba(255, 255, 255, 0.03), transparent); }
 
-        /* 禅定模式下隐藏原本的宽屏伸缩按钮（因为已经自动等比例放大了） */
-        .dynamic-mode-active .dynamic-mode-hide {
-            display: none !important;
-        }
-
-        /* 隐形虚空盲切层（流光微动特效） */
-        #dynamicLeftZone:hover {
-            background: linear-gradient(to right, rgba(255, 255, 255, 0.03), transparent);
-        }
-        #dynamicRightZone:hover {
-            background: linear-gradient(to left, rgba(255, 255, 255, 0.03), transparent);
-        }
+        /* 4 阶配置舱：非禅定模式下彻底隐藏 */
+        #configPanel { display: none; }
+        .dynamic-mode-active #configPanel { display: flex !important; }
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden relative">
 
-    <!-- ================= ✨ Dynamic Mode 灵动空间开关 ================= -->
+    <!-- ================= ✨ Dynamic Mode 开关 ================= -->
     <button id="dynamicModeBtn" onclick="toggleDynamicMode()" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white px-4 py-1.5 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex items-center gap-2.5 hover:bg-slate-800 transition-colors group">
         <span class="relative flex h-3 w-3">
             <span id="dynamicPing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-0 transition-opacity"></span>
@@ -142,7 +125,7 @@
     <!-- ================= 空间包装容器 ================= -->
     <div id="layoutWrapper" class="flex h-full w-full relative">
 
-        <!-- 左侧：引擎与数据配置 -->
+        <!-- [第一面板] 左侧：引擎与数据配置 -->
         <aside id="leftPanel" class="w-[340px] bg-white border-r border-slate-200 flex flex-col h-full z-10 shrink-0 panel-section relative">
             <div class="p-5 border-b border-slate-200 bg-slate-50 flex items-center gap-3 shrink-0">
                 <div class="w-8 h-8 rounded bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm">
@@ -150,12 +133,12 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-slate-800 text-sm leading-tight">AI Batch Pro</h1>
-                    <p class="text-[0.65rem] text-slate-500 font-mono">Workspace Edition v4.8</p>
+                    <p class="text-[0.65rem] text-slate-500 font-mono">Workspace Edition v5.0</p>
                 </div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-5 space-y-6">
-                <!-- 网络配置 -->
+                <!-- API 网关 -->
                 <div>
                     <div class="panel-header"><i class="fa-solid fa-network-wired"></i> API Gateway</div>
                     <div class="space-y-3">
@@ -187,27 +170,25 @@
                     </div>
 
                     <div class="bg-slate-800 rounded-md p-3 text-xs font-mono text-emerald-400 leading-relaxed shadow-inner">
-                        <div class="text-slate-400 text-[0.65rem] mb-1">可用变量 (可在Template使用):</div>
+                        <div class="text-slate-400 text-[0.65rem] mb-1">可用变量:</div>
                         <div id="fieldPreview" class="break-words">等待解析...</div>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <!-- 中央：AI 对话区 -->
+        <!-- [第二面板] 中央：AI 对话区 -->
         <main id="centerPanel" class="flex-1 flex flex-col relative bg-[#f8fafc] h-full overflow-hidden panel-section border-x border-slate-200/50">
             <div id="chatArea" class="flex-1 overflow-y-auto p-6 md:p-10 pb-32">
                 <!-- 聊天气泡 -->
             </div>
 
-            <!-- 浮动运行按钮 -->
             <div class="absolute bottom-8 right-8 z-50 flex flex-col items-end gap-3 pointer-events-none">
                 <div class="bg-white/80 backdrop-blur px-3 py-1.5 rounded-full shadow-sm text-[0.65rem] font-medium text-slate-600 flex items-center gap-2 border border-slate-200 pointer-events-auto">
                     <span id="dataStatusIndicator"><i class="fa-solid fa-circle text-red-500 text-[0.5rem] align-middle mr-1"></i> 未加载</span>
                     <span class="w-[1px] h-3 bg-slate-300"></span>
                     <span id="systemStatusIndicator"><i class="fa-solid fa-circle text-green-500 text-[0.5rem] align-middle mr-1"></i> 引擎空闲</span>
                 </div>
-                
                 <button id="fabBtn" class="group relative w-14 h-14 bg-blue-600 text-white rounded-full shadow-[0_8px_20px_rgba(37,99,235,0.4)] flex items-center justify-center text-xl hover:bg-blue-700 hover:scale-105 transition-all duration-300 border-2 border-white/20 pointer-events-auto">
                     <i id="fabIcon" class="fa-solid fa-play ml-1"></i>
                     <span id="fabTooltip" class="absolute right-full mr-4 bg-slate-800 text-white text-xs px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">执行当前策略</span>
@@ -215,7 +196,7 @@
             </div>
         </main>
 
-        <!-- 右侧：Prompt 策略区 -->
+        <!-- [第三面板] 右侧：Prompt 策略区 -->
         <aside id="rightPanel" class="w-[400px] bg-white border-l border-slate-200 flex flex-col h-full z-10 shrink-0 panel-section relative">
             <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center shrink-0">
                 <h2 class="font-bold text-slate-800 text-sm flex items-center"><i class="fa-solid fa-brain mr-2 text-purple-600"></i>Prompt Workspace</h2>
@@ -282,6 +263,52 @@
             </div>
         </aside>
 
+        <!-- ★ [第四面板] ⚙️ 系统配置舱（仅在禅定模式可见并接入环形旋转机制） ★ -->
+        <aside id="configPanel" class="w-[300px] bg-white flex flex-col h-full z-10 shrink-0 panel-section relative">
+            <div class="p-5 border-b border-slate-200 bg-slate-50 flex items-center gap-3 shrink-0">
+                <div class="w-8 h-8 rounded bg-slate-800 text-white flex items-center justify-center font-bold shadow-sm">
+                    <i class="fa-solid fa-sliders text-xs text-emerald-400"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-800 text-sm leading-tight">Config Workspace</h1>
+                    <p class="text-[0.65rem] text-slate-500 font-mono">Global JSON Control</p>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5 space-y-6">
+                <!-- 导出 -->
+                <div>
+                    <div class="panel-header"><i class="fa-solid fa-file-export text-blue-500"></i> Export Config</div>
+                    <p class="text-[0.7rem] text-slate-500 mb-2">下载或复制您当前的策略、 Few-Shot 样本及 API 网关等完整环境配置。</p>
+                    <div class="flex gap-2">
+                        <button onclick="exportAppConfig()" class="btn-secondary !py-1 px-3 text-xs flex-1 flex justify-center items-center gap-1.5 shadow-sm"><i class="fa-solid fa-download"></i> 下载 JSON</button>
+                        <button onclick="copyAppConfig()" class="btn-secondary !py-1 px-3 text-xs flex justify-center items-center shadow-sm" title="复制到剪贴板"><i class="fa-solid fa-copy"></i></button>
+                    </div>
+                </div>
+
+                <!-- 导入 -->
+                <div>
+                    <div class="panel-header"><i class="fa-solid fa-file-import text-purple-500"></i> Import Config</div>
+                    <p class="text-[0.7rem] text-slate-500 mb-2">粘贴外部配置 JSON，或点击 File 直接导入 `.json` 配置文件恢复环境。</p>
+                    <textarea id="importArea" class="workspace-input font-mono text-[0.65rem] h-24 mb-2 focus:border-purple-400 focus:ring-purple-100" placeholder="请在这里粘贴导出的 JSON 字符串..."></textarea>
+                    <div class="flex gap-2">
+                        <button onclick="importAppConfigFromText()" class="btn-secondary !py-1 px-3 text-xs flex-1 flex justify-center items-center gap-1.5 shadow-sm"><i class="fa-solid fa-circle-check text-emerald-500"></i> 应用粘贴的 JSON</button>
+                        <div class="relative">
+                            <input type="file" id="configFileImport" accept=".json" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                            <button class="btn-secondary !py-1 px-3 text-xs flex justify-center items-center gap-1.5 shadow-sm"><i class="fa-solid fa-folder-open"></i> 文件</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 危险区域 -->
+                <div class="border-t border-slate-100 pt-5">
+                    <div class="panel-header text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</div>
+                    <p class="text-[0.7rem] text-slate-500 mb-2">重置工作台环境设置。系统将清除 LocalStorage 缓存，并刷新重新加载初始模板。</p>
+                    <button onclick="resetAppConfig()" class="btn-danger w-full !py-1.5 text-xs font-semibold flex justify-center items-center gap-1.5 shadow-sm"><i class="fa-solid fa-trash-arrow-up"></i> 恢复并清除缓存</button>
+                </div>
+            </div>
+        </aside>
+
     </div>
 
     <!-- ================= 日志弹窗 Modal ================= -->
@@ -309,9 +336,9 @@
         let forceStopFlag = false;
         const chatArea = document.getElementById('chatArea');
 
-        // ================= ✨ 禅定动效引擎 v4.8 (等距居中 & 虚空盲切) =================
+        // ================= ✨ 禅定动效引擎 v5.0 (4板对称无限环形矩阵) =================
         let isDynamicMode = false;
-        let currentFocus = 'center'; // 'left', 'center', 'right'
+        let currentFocus = 'center'; // 'left' | 'center' | 'right' | 'config'
         let resizeTimer = null;
 
         function toggleDynamicMode() {
@@ -335,7 +362,7 @@
                 ping.classList.add('opacity-0'); ping.classList.remove('opacity-75');
                 dot.classList.replace('bg-emerald-400', 'bg-slate-500');
                 btn.classList.replace('border-emerald-500/50', 'border-slate-700');
-                applyDynamicFocus('center'); // 退出时重置位移与样式
+                applyDynamicFocus('center'); // 重置
             }
             saveConfig();
         }
@@ -345,104 +372,116 @@
             applyDynamicFocus(target);
         }
 
-        // 核心：副 - 主 - 副 环形空间重新排布矩阵
+        // 核心排布矩阵：实现 [副 | 聚焦主屏 | 副] + [后台快速闪现第四面板] 的无暇越界转动
         function applyDynamicFocus(target) {
             const leftPanel = document.getElementById('leftPanel');
             const rightPanel = document.getElementById('rightPanel');
             const centerPanel = document.getElementById('centerPanel');
+            const configPanel = document.getElementById('configPanel');
             
             const leftZone = document.getElementById('dynamicLeftZone');
             const rightZone = document.getElementById('dynamicRightZone');
 
             if (!isDynamicMode) {
-                // 还原静态流
-                [leftPanel, centerPanel, rightPanel].forEach(p => {
-                    p.style.left = '';
-                    p.style.width = '';
-                    p.classList.remove('unfocused', 'panel-focused');
+                [leftPanel, centerPanel, rightPanel, configPanel].forEach(p => {
+                    p.style.left = ''; p.style.width = '';
+                    p.classList.remove('unfocused', 'panel-focused', 'panel-hidden');
                 });
                 leftZone.classList.add('hidden');
                 rightZone.classList.add('hidden');
                 return;
             }
 
-            // 1. 自适应高阶比例：最大1100px，最小800px（适配等宽宽屏对话框需求）
             const w = window.innerWidth;
-            const activeWidth = Math.max(800, Math.min(1100, w * 0.58));
-            const subWidth = 280; // 极简副屏宽度
-            const gap = 30; // 完美呼吸感卡片空隙
+            const activeWidth = Math.max(800, Math.min(1100, w * 0.58)); // 聚焦主屏宽度
+            const subWidth = 280; // 侧边副屏宽度
+            const gap = 30; // 卡片呼吸感间距
 
-            // 2. 计算空间卡片插值坐标槽
+            // 定义 5 槽映射坐标
+            const farLeftSlotX = -subWidth - 100; // 左越界隐藏槽
             const leftSlotX = (w / 2) - (activeWidth / 2) - gap - subWidth;
             const centerSlotX = (w / 2) - (activeWidth / 2);
             const rightSlotX = (w / 2) + (activeWidth / 2) + gap;
+            const farRightSlotX = w + 100; // 右越界隐藏槽
 
-            // 3. 自适应边缘点击捕获区设置（精准控制在主界面边缘到视口边界的整个大空白区域）
+            // 点击盲切感应区宽度动态计算
             const marginWidth = `${(w / 2) - (activeWidth / 2)}px`;
             leftZone.style.width = marginWidth;
             rightZone.style.width = marginWidth;
             leftZone.classList.remove('hidden');
             rightZone.classList.remove('hidden');
 
-            // 4. 初始化卡片失焦层级
-            [leftPanel, centerPanel, rightPanel].forEach(p => {
-                p.classList.remove('panel-focused');
+            // 初始化重置所有面板
+            [leftPanel, centerPanel, rightPanel, configPanel].forEach(p => {
+                p.classList.remove('panel-focused', 'panel-hidden');
                 p.classList.add('unfocused');
             });
 
-            // 5. 按照 环形对称结构 [副 | 激活 | 副] 重新构建节点物理位置
+            // 四面板无影越界对齐核心逻辑 (L -> C -> R -> X -> L)
             if (target === 'center') {
                 centerPanel.classList.replace('unfocused', 'panel-focused');
                 
-                leftPanel.style.left = `${leftSlotX}px`;
-                leftPanel.style.width = `${subWidth}px`;
+                leftPanel.style.left = `${leftSlotX}px`; leftPanel.style.width = `${subWidth}px`;
+                centerPanel.style.left = `${centerSlotX}px`; centerPanel.style.width = `${activeWidth}px`;
+                rightPanel.style.left = `${rightSlotX}px`; rightPanel.style.width = `${subWidth}px`;
 
-                centerPanel.style.left = `${centerSlotX}px`;
-                centerPanel.style.width = `${activeWidth}px`;
+                // Config 悄然遁形于右侧隐藏槽
+                configPanel.classList.add('panel-hidden');
+                configPanel.style.left = `${farRightSlotX}px`; configPanel.style.width = `${subWidth}px`;
 
-                rightPanel.style.left = `${rightSlotX}px`;
-                rightPanel.style.width = `${subWidth}px`;
             } else if (target === 'left') {
                 leftPanel.classList.replace('unfocused', 'panel-focused');
 
-                rightPanel.style.left = `${leftSlotX}px`;
-                rightPanel.style.width = `${subWidth}px`;
+                configPanel.style.left = `${leftSlotX}px`; configPanel.style.width = `${subWidth}px`;
+                leftPanel.style.left = `${centerSlotX}px`; leftPanel.style.width = `${activeWidth}px`;
+                centerPanel.style.left = `${rightSlotX}px`; centerPanel.style.width = `${subWidth}px`;
 
-                leftPanel.style.left = `${centerSlotX}px`;
-                leftPanel.style.width = `${activeWidth}px`;
+                // Right 悄然遁形于右侧隐藏槽
+                rightPanel.classList.add('panel-hidden');
+                rightPanel.style.left = `${farRightSlotX}px`; rightPanel.style.width = `${subWidth}px`;
 
-                centerPanel.style.left = `${rightSlotX}px`;
-                centerPanel.style.width = `${subWidth}px`;
             } else if (target === 'right') {
                 rightPanel.classList.replace('unfocused', 'panel-focused');
 
-                centerPanel.style.left = `${leftSlotX}px`;
-                centerPanel.style.width = `${subWidth}px`;
+                centerPanel.style.left = `${leftSlotX}px`; centerPanel.style.width = `${subWidth}px`;
+                rightPanel.style.left = `${centerSlotX}px`; rightPanel.style.width = `${activeWidth}px`;
+                configPanel.style.left = `${rightSlotX}px`; configPanel.style.width = `${subWidth}px`;
 
-                rightPanel.style.left = `${centerSlotX}px`;
-                rightPanel.style.width = `${activeWidth}px`;
+                // Left 悄然遁形于左侧隐藏槽
+                leftPanel.classList.add('panel-hidden');
+                leftPanel.style.left = `${farLeftSlotX}px`; leftPanel.style.width = `${subWidth}px`;
 
-                leftPanel.style.left = `${rightSlotX}px`;
-                leftPanel.style.width = `${subWidth}px`;
+            } else if (target === 'config') {
+                configPanel.classList.replace('unfocused', 'panel-focused');
+
+                rightPanel.style.left = `${leftSlotX}px`; rightPanel.style.width = `${subWidth}px`;
+                configPanel.style.left = `${centerSlotX}px`; configPanel.style.width = `${activeWidth}px`;
+                leftPanel.style.left = `${rightSlotX}px`; leftPanel.style.width = `${subWidth}px`;
+
+                // Center 悄然遁形于右侧隐藏槽
+                centerPanel.classList.add('panel-hidden');
+                centerPanel.style.left = `${farRightSlotX}px`; centerPanel.style.width = `${subWidth}px`;
             }
         }
 
-        // 核心：无极虚空点击切换状态机
+        // 核心：无感虚空盲切状态跳转器
         function handleGutterClick(zone) {
             if (!isDynamicMode) return;
             
             if (zone === 'left') {
                 if (currentFocus === 'center') focusPanel('left');
-                else if (currentFocus === 'left') focusPanel('right');
+                else if (currentFocus === 'left') focusPanel('config');
+                else if (currentFocus === 'config') focusPanel('right');
                 else if (currentFocus === 'right') focusPanel('center');
             } else if (zone === 'right') {
                 if (currentFocus === 'center') focusPanel('right');
+                else if (currentFocus === 'right') focusPanel('config');
+                else if (currentFocus === 'config') focusPanel('left');
                 else if (currentFocus === 'left') focusPanel('center');
-                else if (currentFocus === 'right') focusPanel('left');
             }
         }
 
-        // 专业级窗体尺寸缩放防抖：拖拽时不产生缓动动画延时
+        // 窗口缩放阻尼
         window.addEventListener('resize', () => {
             document.body.classList.add('resize-active');
             if(isDynamicMode) applyDynamicFocus(currentFocus);
@@ -540,6 +579,84 @@
 
         document.addEventListener('input', (e) => { if (e.target.id !== 'strategySelector' && e.target.matches('input, textarea, select')) syncUIToData(); });
         document.addEventListener('change', (e) => { if (e.target.id !== 'strategySelector' && e.target.matches('input[type="checkbox"]')) syncUIToData(); });
+
+
+        // ================= ★ 全局配置导入、导出与彻底重置核心逻辑 ★ =================
+        
+        // 1. 导出 JSON 文件
+        window.exportAppConfig = function() {
+            const data = localStorage.getItem(STORE_KEY_V4);
+            if (!data) return alert("暂无有效的配置数据可供导出！");
+            
+            const blob = new Blob([data], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `AI_Batch_Pro_Config_${Date.now()}.json`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        };
+
+        // 2. 拷贝至剪贴板
+        window.copyAppConfig = function() {
+            const data = localStorage.getItem(STORE_KEY_V4);
+            if (!data) return alert("暂无配置数据可供拷贝！");
+            
+            navigator.clipboard.writeText(data).then(() => {
+                alert("📋 全量环境配置文件已成功复制到您的剪贴板！");
+            }).catch(err => {
+                alert("复制到剪贴板失败，请检查浏览器权限: " + err);
+            });
+        };
+
+        // 3. 粘贴 JSON 一键恢复应用设置
+        window.importAppConfigFromText = function() {
+            const raw = document.getElementById('importArea').value.trim();
+            if(!raw) return alert("请先粘贴导出的配置 JSON 字符串！");
+            try {
+                const parsed = JSON.parse(raw);
+                if(!parsed.strategies || !parsed.activeStrategyId) {
+                    throw new Error("配置文件架构检测不合规 (缺少 strategies 或 activeStrategyId)");
+                }
+                localStorage.setItem(STORE_KEY_V4, raw);
+                alert("✅ 配置已成功载入！系统页面将自动刷新应用新设置。");
+                location.reload();
+            } catch(e) {
+                alert("❌ 应用配置失败，请确认 JSON 格式完整合法。\n原因: " + e.message);
+            }
+        };
+
+        // 4. 读取 JSON 文件恢复
+        const configFileInput = document.getElementById('configFileImport');
+        configFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const raw = evt.target.result;
+                    const parsed = JSON.parse(raw);
+                    if(!parsed.strategies || !parsed.activeStrategyId) {
+                        throw new Error("配置文件不符合本工作台标准规范。");
+                    }
+                    localStorage.setItem(STORE_KEY_V4, raw);
+                    alert("✅ 外部配置文件一键导入成功！正在自动重载界面...");
+                    location.reload();
+                } catch(err) {
+                    alert("❌ 载入文件配置失败: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // 5. 恢复出厂设置
+        window.resetAppConfig = function() {
+            if (confirm("🚨 警告：\n此操作将清空您所有的自定义 Prompt 策略配置、 Few-Shot 样本及 API Gateway 密钥细节！\n\n确定要清除缓存并恢复出厂初始状态吗？")) {
+                localStorage.removeItem(STORE_KEY_V4);
+                alert("🔄 LocalStorage 缓存已彻底重置。应用将自动刷新载入默认配置模板。");
+                location.reload();
+            }
+        };
+
 
         // ================= 策略管理控制器 =================
         function renderStrategySelector() {
@@ -659,7 +776,6 @@
             chatArea.insertAdjacentHTML('beforeend', `<div class="chat-msg"><div class="avatar report"><i class="fa-solid fa-clipboard-check"></i></div><div class="bubble border-purple-200 bg-purple-50/40 shadow-lg"><div class="bubble-header text-purple-700">AI Report <span class="font-normal text-xs text-slate-400">${new Date().toLocaleTimeString()}</span></div><div class="text-[0.9rem] leading-relaxed text-slate-700"><h3 class="font-bold mb-1">${headerText}</h3>${mainMsg}<div class="border-t border-purple-100/50 mt-3 pt-2">${buttonsHtml}</div></div></div></div>`);
             scrollToBottom();
         }
-        
 
         // 解析与执行
         const excelInput = document.getElementById('excelFileInput');
@@ -760,7 +876,7 @@
         // 初始化
         window.addEventListener('DOMContentLoaded', () => {
             loadConfig();
-            appendSystemMessage("工作台 v4.8 (禅定物理引擎) 部署成功。<br>您可以开启顶部 <strong>DYNAMIC MODE</strong>，随手点击屏幕两侧最边缘的深色虚空，体验极致自然的环形卡片切屏。");
+            appendSystemMessage("工作台 v5.0 (禅定 4 面板矩阵配置版) 部署成功。<br>您可以开启顶部 <strong>DYNAMIC MODE</strong>，通过边缘虚空盲切调出隐藏的 <strong>⚙️ Config Global Workspace</strong> 开展全局配置文件管理。");
         });
     </script>
 </body>
