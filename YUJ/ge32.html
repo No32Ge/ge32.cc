@@ -659,6 +659,7 @@
             chatArea.insertAdjacentHTML('beforeend', `<div class="chat-msg"><div class="avatar report"><i class="fa-solid fa-clipboard-check"></i></div><div class="bubble border-purple-200 bg-purple-50/40 shadow-lg"><div class="bubble-header text-purple-700">AI Report <span class="font-normal text-xs text-slate-400">${new Date().toLocaleTimeString()}</span></div><div class="text-[0.9rem] leading-relaxed text-slate-700"><h3 class="font-bold mb-1">${headerText}</h3>${mainMsg}<div class="border-t border-purple-100/50 mt-3 pt-2">${buttonsHtml}</div></div></div></div>`);
             scrollToBottom();
         }
+        
 
         // 解析与执行
         const excelInput = document.getElementById('excelFileInput');
