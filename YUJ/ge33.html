@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <title>AI Batch Pro v6.0 (Singularity Edition)</title>
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+        <style>
+            body {
+                font-family: 'Inter', sans-serif;
+                background-color: #f1f5f9;
+                color: #334155;
+                margin: 0;
+                overflow: hidden;
+                transition: background-color 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            .font-mono {
+                font-family: 'JetBrains Mono', monospace;
+            }
+
+            ::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 4px;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+            }
+
+            .workspace-input {
+                width: 100%;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                color: #0f172a;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 0.85rem;
+                transition: all 0.2s ease;
+                box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+            }
+
+            .workspace-input:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+            }
+
+            .panel-header {
+                font-size: 0.75rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: #64748b;
+                margin-bottom: 12px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                border-bottom: 1px solid #e2e8f0;
+                padding-bottom: 8px;
+            }
+
+            .chat-msg {
+                display: flex;
+                gap: 16px;
+                margin-bottom: 24px;
+                animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(15px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .avatar {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 1.1rem;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            }
+
+            .avatar.user {
+                background: linear-gradient(135deg, #3b82f6, #2563eb);
+            }
+
+            .avatar.ai {
+                background: linear-gradient(135deg, #10b981, #059669);
+            }
+
+            .avatar.system {
+                background: linear-gradient(135deg, #64748b, #475569);
+            }
+
+            .avatar.report {
+                background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            }
+
+            .bubble {
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                padding: 16px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                flex: 1;
+                max-width: 85%;
+            }
+
+            .bubble-header {
+                font-size: 0.8rem;
+                font-weight: 600;
+                color: #1e293b;
+                margin-bottom: 8px;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            .progress-container {
+                width: 100%;
+                background: #f1f5f9;
+                border-radius: 999px;
+                height: 8px;
+                overflow: hidden;
+                margin-top: 12px;
+            }
+
+            .progress-bar {
+                height: 100%;
+                background: #3b82f6;
+                transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            .progress-bar.success {
+                background: #10b981;
+            }
+
+            .progress-bar.error {
+                background: #ef4444;
+            }
+
+            .btn-action {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 500;
+                font-size: 0.85rem;
+                padding: 8px 18px;
+                border-radius: 6px;
+                transition: all 0.2s;
+                cursor: pointer;
+            }
+
+            .btn-excel {
+                background: #10b981;
+                color: white;
+                border: 1px solid #059669;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            }
+
+            .btn-excel:hover {
+                background: #059669;
+                transform: translateY(-1px);
+            }
+
+            .btn-secondary {
+                background: #ffffff;
+                color: #334155;
+                border: 1px solid #cbd5e1;
+            }
+
+            .btn-secondary:hover {
+                background: #f8fafc;
+                border-color: #94a3b8;
+                transform: translateY(-1px);
+            }
+
+            .btn-danger {
+                background: #fef2f2;
+                color: #dc2626;
+                border: 1px solid #fecaca;
+            }
+
+            .btn-danger:hover {
+                background: #fee2e2;
+                transform: translateY(-1px);
+            }
+
+            .file-upload-wrapper {
+                position: relative;
+                border: 2px dashed #cbd5e1;
+                border-radius: 8px;
+                padding: 20px;
+                text-align: center;
+                background: #f8fafc;
+                transition: all 0.2s;
+                cursor: pointer;
+            }
+
+            .file-upload-wrapper:hover {
+                border-color: #3b82f6;
+                background: #eff6ff;
+            }
+
+            .file-upload-wrapper input[type="file"] {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                opacity: 0;
+                cursor: pointer;
+            }
+
+            textarea.ghost-input {
+                resize: none;
+                background: transparent;
+                border: none;
+                outline: none;
+                padding: 0;
+                box-shadow: none;
+                color: #475569;
+            }
+
+            textarea.ghost-input:focus {
+                color: #0f172a;
+                ring: 0;
+                outline: none;
+            }
+
+            /* ================= ✨ V6 奇点动效引擎 ================= */
+            .panel-section {
+                transition: left 0.7s cubic-bezier(0.19, 1, 0.22, 1), width 0.7s cubic-bezier(0.19, 1, 0.22, 1), transform 0.7s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.7s cubic-bezier(0.19, 1, 0.22, 1), filter 0.7s cubic-bezier(0.19, 1, 0.22, 1), border-radius 0.7s ease, border-color 0.7s ease;
+                will-change: left, width, transform, opacity, filter;
+                transform-origin: center center;
+                --mouse-x: -1000px;
+                --mouse-y: -1000px;
+            }
+
+            .resize-active .panel-section {
+                transition: none !important;
+            }
+
+            .dynamic-mode-active {
+                background-color: #030712 !important;
+            }
+
+            /* 深渊黑 */
+            .dynamic-mode-active .panel-section {
+                position: absolute !important;
+                height: calc(100% - 40px) !important;
+                top: 20px !important;
+                flex: none !important;
+                flex-shrink: 0 !important;
+                border-radius: 24px !important;
+                border: 1px solid rgba(255, 255, 255, 0.05) !important;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.1);
+                overflow: hidden;
+                background-color: rgba(15, 23, 42, 0.6) !important;
+                backdrop-filter: blur(20px);
+            }
+
+            /* ★ 核心：光线追踪材质（Spotlight Overlay） ★ */
+            .dynamic-mode-active .panel-section::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                z-index: 100;
+                pointer-events: none;
+                background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255,255,255,0.06), transparent 40%);
+                transition: opacity 0.3s ease;
+                opacity: 0;
+            }
+
+            .dynamic-mode-active .panel-focused:hover::after {
+                opacity: 1;
+            }
+
+            .dynamic-mode-active .panel-focused {
+                transform: scale(0.96);
+                opacity: 1;
+                filter: blur(0px);
+                z-index: 30;
+            }
+
+            .dynamic-mode-active .unfocused {
+                transform: scale(0.86);
+                opacity: 0.2;
+                filter: blur(8px);
+                z-index: 10;
+            }
+
+            .dynamic-mode-active .dynamic-mode-hide {
+                display: none !important;
+            }
+
+            .dynamic-mode-active .panel-hidden {
+                opacity: 0 !important;
+                pointer-events: none !important;
+                filter: blur(20px) !important;
+                transition: opacity 0.2s, filter 0.2s, left 0s !important;
+            }
+
+            #dynamicLeftZone:hover {
+                background: linear-gradient(to right, rgba(56, 189, 248, 0.05), transparent);
+            }
+
+            #dynamicRightZone:hover {
+                background: linear-gradient(to left, rgba(56, 189, 248, 0.05), transparent);
+            }
+
+            #configPanel {
+                display: none;
+            }
+
+            .dynamic-mode-active #configPanel {
+                display: flex !important;
+            }
+
+            /* 曲率引擎背景 */
+            #warpCanvas {
+                position: fixed;
+                inset: 0;
+                z-index: 0;
+                opacity: 0;
+                transition: opacity 1s ease;
+                pointer-events: none;
+            }
+
+            .warp-active #warpCanvas {
+                opacity: 1;
+            }
+
+            /* 反应堆按钮动画 */
+            @keyframes reactorPulse {
+                0% {
+                    box-shadow: 0 0 10px #ef4444, 0 0 20px #ef4444;
+                }
+
+                50% {
+                    box-shadow: 0 0 30px #ef4444, 0 0 50px #ef4444;
+                }
+
+                100% {
+                    box-shadow: 0 0 10px #ef4444, 0 0 20px #ef4444;
+                }
+            }
+
+            .reactor-active {
+                animation: reactorPulse 2s infinite;
+                border-color: #fca5a5 !important;
+            }
+
+            /* 拖拽变量标签悬浮效果 */
+            .var-tag {
+                transform: translateZ(0);
+                transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+
+            .var-tag:hover {
+                transform: scale(1.1) translateY(-2px);
+                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+                z-index: 10;
+            }
+        </style>
+    </head>
+    <body class="h-screen w-screen overflow-hidden relative">
+        <!-- 曲率引擎星际画布 -->
+        <canvas id="warpCanvas"></canvas>
+        <button id="dynamicModeBtn" onclick="toggleDynamicMode()" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-slate-900/80 backdrop-blur-md border border-slate-700 text-white px-5 py-2 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.2)] flex items-center gap-3 hover:bg-slate-800 hover:scale-105 transition-all group">
+            <span class="relative flex h-3 w-3">
+                <span id="dynamicPing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-0 transition-opacity duration-500"></span>
+                <span id="dynamicDot" class="relative inline-flex rounded-full h-3 w-3 bg-slate-500 transition-colors duration-500"></span>
+            </span>
+            <span class="text-[0.7rem] font-bold font-mono tracking-widest group-hover:text-cyan-400 transition-colors">SINGULARITY MODE</span>
+        </button>
+        <div id="dynamicLeftZone" onclick="handleGutterClick('left')" class="fixed left-0 top-0 bottom-0 z-[80] cursor-w-resize hidden transition-all duration-300"></div>
+        <div id="dynamicRightZone" onclick="handleGutterClick('right')" class="fixed right-0 top-0 bottom-0 z-[80] cursor-e-resize hidden transition-all duration-300"></div>
+        <div id="layoutWrapper" class="flex h-full w-full relative z-10">
+            <!-- [第一面板] 左侧配置 -->
+            <aside id="leftPanel" class="w-[340px] bg-white border-r border-slate-200 flex flex-col h-full z-10 shrink-0 panel-section relative">
+                <div class="p-5 border-b border-slate-200/50 flex items-center gap-3 shrink-0 bg-gradient-to-r from-slate-50 to-white dynamic-mode-hide">
+                    <div class="w-8 h-8 rounded bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/20">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-slate-800 text-sm leading-tight">AI Batch Pro</h1>
+                        <p class="text-[0.65rem] text-slate-500 font-mono">Singularity v6.0</p>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto p-5 space-y-6">
+                    <div>
+                        <div class="panel-header">
+                            <i class="fa-solid fa-network-wired text-blue-500"></i>
+                            API Gateway
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-[0.7rem] text-slate-500 block mb-1">Base URL</label>
+                                <input type="text" id="cfgBaseUrl" class="workspace-input" value="https://api.deepseek.com">
+                            </div>
+                            <div>
+                                <label class="text-[0.7rem] text-slate-500 block mb-1">API Key</label>
+                                <input type="password" id="cfgApiKey" class="workspace-input" value="">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[0.7rem] text-slate-500 block mb-1">Model</label>
+                                    <input type="text" id="cfgModel" class="workspace-input" value="deepseek-chat">
+                                </div>
+                                <div>
+                                    <label class="text-[0.7rem] text-slate-500 block mb-1">Workers</label>
+                                    <input type="number" id="cfgMaxWorkers" class="workspace-input" value="50">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="panel-header mt-2">
+                            <i class="fa-solid fa-database text-purple-500"></i>
+                            Data Source
+                        </div>
+                        <div class="file-upload-wrapper mb-3 border-slate-300">
+                            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-blue-400 mb-2"></i>
+                            <p class="text-xs text-slate-600 font-medium">拖拽或点击上传 Excel/CSV</p>
+                            <p class="text-[0.65rem] text-slate-400 mt-1" id="fileNameDisplay">未选择文件</p>
+                        </div>
+                        <div class="flex items-center gap-2 mb-3 bg-slate-50/50 p-2 rounded border border-slate-200">
+                            <span class="text-xs text-slate-500">表头所在行:</span>
+                            <input type="number" id="headerRowNum" min="1" value="1" class="workspace-input w-16 !py-1 text-center">
+                            <button id="loadFieldsBtn" class="btn-secondary px-2 py-1 text-xs rounded ml-auto border-blue-200 text-blue-600">解析提取</button>
+                        </div>
+                        <!-- 磁性变量区 -->
+                        <div class="bg-slate-800 rounded-md p-4 text-xs font-mono text-cyan-400 shadow-[inset_0_2px_10px_rgba(0,0,0,0.3)] relative overflow-hidden group">
+                            <div class="text-slate-400 text-[0.65rem] mb-2 flex justify-between">
+                                <span>
+                                    <i class="fa-solid fa-magnet mr-1"></i>
+                                    可用变量 (可直接拖拽至右侧):
+                                </span>
+                            </div>
+                            <div id="fieldPreview" class="break-words relative z-10 flex flex-wrap gap-1">等待解析...</div>
+                            <div class="absolute -right-4 -bottom-4 text-[4rem] text-slate-700/30 group-hover:scale-110 transition-transform">
+                                <i class="fa-brands fa-space-awesome"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+            <!-- [第二面板] 中央区 -->
+            <main id="centerPanel" class="flex-1 flex flex-col relative bg-[#f8fafc] h-full overflow-hidden panel-section border-x border-slate-200/50">
+                <div id="chatArea" class="flex-1 overflow-y-auto p-6 md:p-10 pb-32 relative z-10"></div>
+                <div class="absolute bottom-8 right-8 z-50 flex flex-col items-end gap-3 pointer-events-none">
+                    <div class="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-lg text-[0.65rem] font-bold text-slate-600 flex items-center gap-2 border border-slate-200 pointer-events-auto">
+                        <span id="dataStatusIndicator">
+                            <i class="fa-solid fa-circle text-red-500 text-[0.5rem] align-middle mr-1 animate-pulse"></i>
+                            离线
+                        </span>
+                        <span class="w-[1px] h-3 bg-slate-300"></span>
+                        <span id="systemStatusIndicator">
+                            <i class="fa-solid fa-circle text-emerald-500 text-[0.5rem] align-middle mr-1"></i>
+                            空闲
+                        </span>
+                    </div>
+                    <button id="fabBtn" class="group relative w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full shadow-[0_8px_25px_rgba(79,70,229,0.5)] flex items-center justify-center text-xl hover:scale-110 transition-all duration-300 border border-white/20 pointer-events-auto">
+                        <i id="fabIcon" class="fa-solid fa-bolt ml-0.5"></i>
+                        <span id="fabTooltip" class="absolute right-full mr-4 bg-slate-800 text-white text-xs px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">奇点引擎就绪</span>
+                    </button>
+                </div>
+            </main>
+            <!-- [第三面板] 右侧策略 -->
+            <aside id="rightPanel" class="w-[400px] bg-white border-l border-slate-200 flex flex-col h-full z-10 shrink-0 panel-section relative">
+                <div class="p-4 border-b border-slate-200/50 flex justify-between items-center shrink-0 bg-gradient-to-l from-slate-50 to-white dynamic-mode-hide">
+                    <h2 class="font-bold text-slate-800 text-sm flex items-center">
+                        <i class="fa-solid fa-brain mr-2 text-indigo-600"></i>
+                        Prompt Artifact
+                    </h2>
+                    <button id="toggleRightPanelBtn" class="text-slate-400 hover:text-blue-600 text-xs px-2 py-1 bg-slate-200/50 hover:bg-blue-50 rounded transition-colors relative z-[70]">
+                        <i class="fa-solid fa-angles-left"></i>
+                        宽屏模式
+                    </button>
+                </div>
+                <div class="px-4 py-3 bg-white border-b border-slate-100 flex items-center gap-1.5 shrink-0 shadow-sm relative z-[70]">
+                    <i class="fa-solid fa-cube text-indigo-400 text-xs ml-1 mr-1"></i>
+                    <select id="strategySelector" class="workspace-input !py-1.5 flex-1 text-xs font-bold text-indigo-700 bg-indigo-50/50 border-indigo-200 cursor-pointer"></select>
+                    <button id="btnNewStrategy" class="btn-secondary !p-1.5 rounded text-indigo-600 hover:bg-indigo-50 w-8 flex justify-center">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                    </button>
+                    <button id="btnRenameStrategy" class="btn-secondary !p-1.5 rounded text-slate-500 hover:text-indigo-600 w-8 flex justify-center">
+                        <i class="fa-solid fa-pen text-xs"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-5 space-y-6 bg-slate-50/30 relative z-[70]">
+                    <div class="relative group">
+                        <label class="text-[0.75rem] font-semibold text-slate-700 block mb-2">
+                            <i class="fa-solid fa-terminal mr-1 text-slate-400"></i>
+                            System Instructions
+                        </label>
+                        <div class="bg-transparent relative pb-1">
+                            <textarea id="cfgSystem" class="ghost-input font-mono text-[0.75rem] leading-relaxed w-full transition-all" rows="8"></textarea>
+                            <div class="absolute bottom-0 w-full h-[1px] border-b border-dashed border-slate-300 group-hover:border-indigo-400 transition-colors"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[0.75rem] font-semibold text-slate-700 block mb-2 flex justify-between">
+                            <span>
+                                <i class="fa-solid fa-code-branch mr-1 text-slate-400"></i>
+                                Prompt Template
+                            </span>
+                            <span class="text-[0.65rem] text-indigo-500 font-normal animate-pulse">支持左侧变量拖拽放入</span>
+                        </label>
+                        <!-- 拖拽接收目标 -->
+                        <textarea id="cfgTemplate" class="workspace-input font-mono text-[0.75rem] leading-relaxed resize-y border-dashed border-slate-300 focus:border-solid focus:border-indigo-400 bg-slate-50 focus:bg-white" rows="5" placeholder="将左侧能量胶囊拖拽至此处..."></textarea>
+                    </div>
+                    <div class="border-t border-slate-200 pt-5">
+                        <div class="flex justify-between items-center mb-3">
+                            <label class="text-[0.75rem] font-semibold text-slate-700">
+                                <i class="fa-solid fa-layer-group mr-1 text-slate-400"></i>
+                                Few-Shot 样本
+                            </label>
+                            <button id="addSampleBtn" class="btn-secondary px-2 py-1 text-[0.65rem] rounded shadow-sm text-indigo-600 border-indigo-200">
+                                <i class="fa-solid fa-plus"></i>
+                                样本
+                            </button>
+                        </div>
+                        <div class="mb-4 bg-white p-2.5 rounded border border-slate-200 text-[0.7rem] flex items-center justify-between shadow-sm">
+                            <label class="flex items-center gap-2 cursor-pointer text-slate-600 font-medium">
+                                <input type="checkbox" id="enableRandomSample" class="rounded border-slate-300 text-indigo-500 focus:ring-indigo-500">
+                                <span>开启随机防缓存抽取</span>
+                            </label>
+                            <div class="flex items-center gap-1">
+                                <span class="text-slate-400">取</span>
+                                <input type="number" id="randomSampleCount" class="workspace-input w-10 !py-0.5 text-center font-bold text-indigo-600" value="1" min="1">
+                                <span class="text-slate-400">个</span>
+                            </div>
+                        </div>
+                        <div id="samplesContainer" class="space-y-3"></div>
+                    </div>
+                </div>
+            </aside>
+            <!-- [第四面板] Config -->
+            <aside id="configPanel" class="w-[300px] bg-white flex flex-col h-full z-10 shrink-0 panel-section relative">
+                <div class="p-5 border-b border-slate-200 bg-slate-50 flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 rounded bg-slate-800 text-white flex items-center justify-center font-bold shadow-sm">
+                        <i class="fa-solid fa-sliders text-xs text-cyan-400"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-slate-800 text-sm leading-tight">Config Workspace</h1>
+                        <p class="text-[0.65rem] text-slate-500 font-mono">Multiverse Control</p>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto p-5 space-y-6">
+                    <div>
+                        <div class="panel-header">
+                            <i class="fa-solid fa-file-export text-blue-500"></i>
+                            Export Space
+                        </div>
+                        <p class="text-[0.7rem] text-slate-500 mb-2">打包当前多元宇宙的全量策略快照。</p>
+                        <div class="flex gap-2">
+                            <button onclick="exportAppConfig()" class="btn-secondary !py-1 px-3 text-xs flex-1 flex justify-center items-center gap-1.5">
+                                <i class="fa-solid fa-download"></i>
+                                JSON
+                            </button>
+                            <button onclick="copyAppConfig()" class="btn-secondary !py-1 px-3 text-xs flex justify-center items-center">
+                                <i class="fa-solid fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="panel-header">
+                            <i class="fa-solid fa-file-import text-purple-500"></i>
+                            Import Space
+                        </div>
+                        <textarea id="importArea" class="workspace-input font-mono text-[0.65rem] h-24 mb-2 focus:border-purple-400" placeholder="粘贴 JSON..."></textarea>
+                        <div class="flex gap-2">
+                            <button onclick="importAppConfigFromText()" class="btn-secondary !py-1 px-3 text-xs flex-1 flex justify-center items-center gap-1.5">
+                                <i class="fa-solid fa-check text-emerald-500"></i>
+                                应用
+                            </button>
+                            <div class="relative">
+                                <input type="file" id="configFileImport" accept=".json" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                                <button class="btn-secondary !py-1 px-3 text-xs flex justify-center items-center gap-1.5">
+                                    <i class="fa-regular fa-folder-open"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-100 pt-5">
+                        <div class="panel-header text-red-500">
+                            <i class="fa-solid fa-skull"></i>
+                            Oblivion Zone
+                        </div>
+                        <button onclick="resetAppConfig()" class="btn-danger w-full !py-1.5 text-xs font-semibold flex justify-center items-center gap-1.5">
+                            <i class="fa-solid fa-burst"></i>
+                            坍缩并重置系统
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+        <!-- Modal -->
+        <div id="logModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[150] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+            <div class="bg-slate-900 border border-slate-700 w-11/12 max-w-2xl rounded-xl shadow-2xl flex flex-col max-h-[80vh] transform scale-95 transition-transform duration-300" id="logModalContent">
+                <div class="px-5 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50 rounded-t-xl">
+                    <h3 class="font-bold text-slate-200 text-sm">
+                        <i class="fa-solid fa-terminal text-emerald-400 mr-2"></i>
+                        Matrix Core Logs
+                    </h3>
+                    <button onclick="closeLogsModal()" class="text-slate-400 hover:text-red-500 transition-colors">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <div class="p-5 overflow-y-auto flex-1 text-emerald-400 font-mono text-[0.8rem] leading-relaxed" id="logModalBody"></div>
+            </div>
+        </div>
+        <script>
+            // ================= 🎵 神经元音效引擎 (WebAudio API Zero-Dependency) =================
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            function playTone(freq, type, duration, vol=0.1) {
+                if (audioCtx.state === 'suspended')
+                    audioCtx.resume();
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + duration);
+                } catch (e) {}
+            }
+            function playSoundZenEnter() {
+                playTone(100, 'sine', 1.0, 0.3);
+                setTimeout( () => playTone(60, 'triangle', 1.2, 0.2), 100);
+            }
+            function playSoundZenExit() {
+                playTone(300, 'sine', 0.4, 0.1);
+                playTone(400, 'sine', 0.2, 0.05);
+            }
+            function playSoundTaskSuccess() {
+                playTone(800, 'sine', 0.15, 0.05);
+                setTimeout( () => playTone(1200, 'sine', 0.3, 0.05), 100);
+            }
+            function playSoundTaskFail() {
+                playTone(150, 'sawtooth', 0.4, 0.1);
+            }
+
+            // 全局唤醒 AudioContext (须用户手势)
+            document.body.addEventListener('click', () => {
+                if (audioCtx.state === 'suspended')
+                    audioCtx.resume();
+            }
+            , {
+                once: true
+            });
+
+            // ================= ☄️ 曲率引擎视觉 Canvas =================
+            const canvas = document.getElementById('warpCanvas');
+            const ctx = canvas.getContext('2d');
+            let stars = [], warpSpeed = 0, targetWarpSpeed = 0, animFrameId;
+
+            function initCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                stars = Array.from({
+                    length: 400
+                }, () => ({
+                    x: Math.random() * canvas.width - canvas.width / 2,
+                    y: Math.random() * canvas.height - canvas.height / 2,
+                    z: Math.random() * canvas.width
+                }));
+            }
+            function drawWarp() {
+                ctx.fillStyle = '#030712';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                const cx = canvas.width / 2
+                  , cy = canvas.height / 2;
+                warpSpeed += (targetWarpSpeed - warpSpeed) * 0.05;
+                // 平滑加速
+                if (warpSpeed > 0.1) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    stars.forEach(s => {
+                        s.z -= warpSpeed;
+                        if (s.z <= 0) {
+                            s.x = Math.random() * canvas.width - cx;
+                            s.y = Math.random() * canvas.height - cy;
+                            s.z = canvas.width;
+                        }
+                        const px = (s.x / s.z) * canvas.width + cx
+                          , py = (s.y / s.z) * canvas.width + cy;
+                        const size = Math.max(0.1, (1 - s.z / canvas.width) * 3);
+                        ctx.beginPath();
+                        ctx.arc(px, py, size, 0, Math.PI * 2);
+                        ctx.fill();
+                        // 尾迹
+                        const pzx = (s.x / (s.z + warpSpeed * 2)) * canvas.width + cx
+                          , pzy = (s.y / (s.z + warpSpeed * 2)) * canvas.width + cy;
+                        ctx.strokeStyle = `rgba(56, 189, 248, ${1 - s.z / canvas.width})`;
+                        ctx.lineWidth = size;
+                        ctx.beginPath();
+                        ctx.moveTo(px, py);
+                        ctx.lineTo(pzx, pzy);
+                        ctx.stroke();
+                    }
+                    );
+                }
+                animFrameId = requestAnimationFrame(drawWarp);
+            }
+            window.addEventListener('resize', initCanvas);
+            initCanvas();
+            drawWarp();
+
+            // ================= 🔦 光线追踪探照灯 (Glassmorphism Spotlight) =================
+            document.querySelectorAll('.panel-section').forEach(panel => {
+                panel.addEventListener('mousemove', e => {
+                    if (!isDynamicMode)
+                        return;
+                    const rect = panel.getBoundingClientRect();
+                    panel.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                    panel.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+                }
+                );
+                panel.addEventListener('mouseleave', () => {
+                    panel.style.setProperty('--mouse-x', `-1000px`);
+                    panel.style.setProperty('--mouse-y', `-1000px`);
+                }
+                );
+            }
+            );
+
+            // ================= 🧲 磁性变量拖拽 =================
+            function dragVarStart(e, val) {
+                e.dataTransfer.setData('text/plain', `{{${val}}}`);
+                e.target.style.opacity = '0.5';
+            }
+            function dragVarEnd(e) {
+                e.target.style.opacity = '1';
+            }
+
+            const templateArea = document.getElementById('cfgTemplate');
+            templateArea.addEventListener('dragover', e => {
+                e.preventDefault();
+                templateArea.classList.add('ring-2', 'ring-indigo-400');
+            }
+            );
+            templateArea.addEventListener('dragleave', () => templateArea.classList.remove('ring-2', 'ring-indigo-400'));
+            templateArea.addEventListener('drop', e => {
+                e.preventDefault();
+                templateArea.classList.remove('ring-2', 'ring-indigo-400');
+                const text = e.dataTransfer.getData('text');
+                const start = templateArea.selectionStart
+                  , end = templateArea.selectionEnd;
+                templateArea.value = templateArea.value.substring(0, start) + text + templateArea.value.substring(end);
+                templateArea.focus();
+                templateArea.setSelectionRange(start + text.length, start + text.length);
+                syncUIToData();
+                // 拖拽后保存
+            }
+            );
+
+            // ================= 基础逻辑 & V6 奇点流排版 =================
+            let rawExcelData = []
+              , headers = []
+              , completedResults = {}
+              , failedTasks = []
+              , currentRunLogs = [];
+            let isRunning = false
+              , forceStopFlag = false;
+            const chatArea = document.getElementById('chatArea');
+
+            let isDynamicMode = false
+              , currentFocus = 'center'
+              , resizeTimer = null;
+
+            function toggleDynamicMode() {
+                setDynamicMode(!isDynamicMode);
+            }
+
+            function setDynamicMode(state) {
+                isDynamicMode = state;
+                const ping = document.getElementById('dynamicPing')
+                  , dot = document.getElementById('dynamicDot')
+                  , btn = document.getElementById('dynamicModeBtn');
+                if (isDynamicMode) {
+                    document.body.classList.add('dynamic-mode-active');
+                    ping.classList.replace('opacity-0', 'opacity-75');
+                    dot.classList.replace('bg-slate-500', 'bg-cyan-400');
+                    btn.classList.replace('border-slate-700', 'border-cyan-500/50');
+                    playSoundZenEnter();
+                    focusPanel(currentFocus || 'center');
+                } else {
+                    document.body.classList.remove('dynamic-mode-active');
+                    ping.classList.replace('opacity-75', 'opacity-0');
+                    dot.classList.replace('bg-cyan-400', 'bg-slate-500');
+                    btn.classList.replace('border-cyan-500/50', 'border-slate-700');
+                    playSoundZenExit();
+                    applyDynamicFocus('center');
+                }
+                saveConfig();
+            }
+
+            function focusPanel(target) {
+                currentFocus = target;
+                applyDynamicFocus(target);
+            }
+
+            function applyDynamicFocus(target) {
+                const panels = {
+                    l: document.getElementById('leftPanel'),
+                    c: document.getElementById('centerPanel'),
+                    r: document.getElementById('rightPanel'),
+                    cfg: document.getElementById('configPanel')
+                };
+                const lz = document.getElementById('dynamicLeftZone')
+                  , rz = document.getElementById('dynamicRightZone');
+
+                if (!isDynamicMode) {
+                    Object.values(panels).forEach(p => {
+                        p.style.left = '';
+                        p.style.width = '';
+                        p.classList.remove('unfocused', 'panel-focused', 'panel-hidden');
+                    }
+                    );
+                    lz.classList.add('hidden');
+                    rz.classList.add('hidden');
+                    return;
+                }
+
+                const w = window.innerWidth
+                  , activeWidth = Math.max(800, Math.min(1100, w * 0.58))
+                  , subWidth = 280
+                  , gap = 30;
+                const slots = {
+                    farL: -subWidth - 100,
+                    l: (w / 2) - (activeWidth / 2) - gap - subWidth,
+                    c: (w / 2) - (activeWidth / 2),
+                    r: (w / 2) + (activeWidth / 2) + gap,
+                    farR: w + 100
+                };
+                const marginWidth = `${(w / 2) - (activeWidth / 2)}px`;
+                lz.style.width = marginWidth;
+                rz.style.width = marginWidth;
+                lz.classList.remove('hidden');
+                rz.classList.remove('hidden');
+
+                Object.values(panels).forEach(p => {
+                    p.classList.remove('panel-focused', 'panel-hidden');
+                    p.classList.add('unfocused');
+                }
+                );
+
+                const setP = (p, slot, width, hideClass='') => {
+                    if (hideClass)
+                        p.classList.add(hideClass);
+                    else if (slot === slots.c)
+                        p.classList.replace('unfocused', 'panel-focused');
+                    p.style.left = `${slot}px`;
+                    p.style.width = `${width}px`;
+                }
+                ;
+
+                if (target === 'center') {
+                    setP(panels.l, slots.l, subWidth);
+                    setP(panels.c, slots.c, activeWidth);
+                    setP(panels.r, slots.r, subWidth);
+                    setP(panels.cfg, slots.farR, subWidth, 'panel-hidden');
+                } else if (target === 'left') {
+                    setP(panels.cfg, slots.l, subWidth);
+                    setP(panels.l, slots.c, activeWidth);
+                    setP(panels.c, slots.r, subWidth);
+                    setP(panels.r, slots.farR, subWidth, 'panel-hidden');
+                } else if (target === 'right') {
+                    setP(panels.c, slots.l, subWidth);
+                    setP(panels.r, slots.c, activeWidth);
+                    setP(panels.cfg, slots.r, subWidth);
+                    setP(panels.l, slots.farL, subWidth, 'panel-hidden');
+                } else if (target === 'config') {
+                    setP(panels.r, slots.l, subWidth);
+                    setP(panels.cfg, slots.c, activeWidth);
+                    setP(panels.l, slots.r, subWidth);
+                    setP(panels.c, slots.farR, subWidth, 'panel-hidden');
+                }
+            }
+
+            function handleGutterClick(zone) {
+                if (!isDynamicMode)
+                    return;
+                const tMap = {
+                    'left': {
+                        'center': 'left',
+                        'left': 'config',
+                        'config': 'right',
+                        'right': 'center'
+                    },
+                    'right': {
+                        'center': 'right',
+                        'right': 'config',
+                        'config': 'left',
+                        'left': 'center'
+                    }
+                };
+                focusPanel(tMap[zone][currentFocus]);
+            }
+
+            window.addEventListener('resize', () => {
+                document.body.classList.add('resize-active');
+                if (isDynamicMode)
+                    applyDynamicFocus(currentFocus);
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout( () => document.body.classList.remove('resize-active'), 100);
+            }
+            );
+
+            // ================= 数据源装载 =================
+            const excelInput = document.getElementById('excelFileInput');
+            excelInput.addEventListener('change', (e) => {
+                if (e.target.files[0])
+                    document.getElementById('fileNameDisplay').innerText = e.target.files[0].name;
+            }
+            );
+            document.getElementById('loadFieldsBtn').addEventListener('click', () => {
+                const file = excelInput.files[0];
+                if (!file)
+                    return alert("请先选择 Excel/CSV 文件！");
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const sheet = XLSX.read(data, {
+                            type: 'array',
+                            cellText: false,
+                            cellDates: true
+                        }).Sheets[XLSX.read(data, {
+                            type: 'array',
+                            cellText: false,
+                            cellDates: true
+                        }).SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(sheet, {
+                            header: 1,
+                            defval: ''
+                        });
+                        let hRowIdx = parseInt(document.getElementById('headerRowNum').value, 10) - 1;
+                        if (isNaN(hRowIdx) || hRowIdx < 0)
+                            hRowIdx = 0;
+                        headers = rows[hRowIdx].map(c => String(c).trim());
+                        rawExcelData = [];
+                        rows.slice(hRowIdx + 1).forEach( (row, i) => {
+                            if (row.some(cell => String(cell).trim() !== ''))
+                                rawExcelData.push({
+                                    index: i,
+                                    row: row
+                                });
+                        }
+                        );
+
+                        // 渲染磁性胶囊
+                        document.getElementById('fieldPreview').innerHTML = headers.map(h => h ? `<span draggable="true" ondragstart="dragVarStart(event, '${h}')" ondragend="dragVarEnd(event)" class="var-tag bg-slate-700 hover:bg-cyan-500 hover:text-white px-2 py-1 rounded-full mr-1 mb-1 inline-block text-[0.65rem] cursor-grab border border-slate-600 hover:border-cyan-400 font-bold tracking-wider"><i class="fa-solid fa-link text-[0.5rem] opacity-50 mr-1"></i>${h}</span>` : '').join('');
+
+                        document.getElementById('dataStatusIndicator').innerHTML = `<i class="fa-solid fa-circle text-emerald-500 text-[0.5rem] align-middle mr-1"></i> 就绪 ${rawExcelData.length} 行`;
+                        appendSystemMessage(`已成功读取 <b>${file.name}</b>。<br>提取核心数据 <b>${rawExcelData.length}</b> 行，可将左侧磁性胶囊拖入 Prompt。`);
+                        completedResults = {};
+                        failedTasks = [];
+                    } catch (err) {
+                        appendSystemMessage(`<span class="text-red-500">❌ 解析失败: ${err.message}</span>`);
+                    }
+                }
+                ;
+                reader.readAsArrayBuffer(file);
+            }
+            );
+
+            // ================= V6 持久化 =================
+            const STORE_KEY = 'AIBatchProConfig_V6';
+            let currentStrategies = []
+              , activeStrategyId = null
+              , isSyncingUI = false;
+
+            function getDefaultStrategy(name) {
+                return {
+                    id: 'strat_' + Date.now(),
+                    name: name,
+                    system: "你是一位拥有10年经验的亚马逊大卖操盘手。任务是将杂乱信息转化为高转化JSON。\n务必直接输出原生JSON数组。\n[ { \"ID\": \"提取的SKU\", \"Title\": \"高转化英文标题\" } ]",
+                    template: "数据：{{描述}}，注意去敏...",
+                    maxChars: 20000,
+                    enableRandomSample: false,
+                    randomSampleCount: 1,
+                    samples: [{
+                        active: true,
+                        collapsed: false,
+                        user: "編號SKU: GE32\n描述: Lighter...",
+                        assistant: '[{"ID":"GE32","Title":"Arc Lighter"}]'
+                    }]
+                };
+            }
+
+            function loadConfig() {
+                const data = localStorage.getItem(STORE_KEY);
+                if (data) {
+                    const cfg = JSON.parse(data);
+                    if (cfg.baseUrl)
+                        document.getElementById('cfgBaseUrl').value = cfg.baseUrl;
+                    if (cfg.apiKey)
+                        document.getElementById('cfgApiKey').value = cfg.apiKey;
+                    if (cfg.model)
+                        document.getElementById('cfgModel').value = cfg.model;
+                    if (cfg.maxWorkers)
+                        document.getElementById('cfgMaxWorkers').value = cfg.maxWorkers;
+                    if (cfg.maxRetries)
+                        document.getElementById('cfgMaxRetries').value = cfg.maxRetries;
+                    if (cfg.delay)
+                        document.getElementById('cfgDelay').value = cfg.delay;
+                    if (cfg.isDynamicMode !== undefined)
+                        setDynamicMode(cfg.isDynamicMode);
+                    currentStrategies = cfg.strategies || [];
+                    activeStrategyId = cfg.activeStrategyId;
+                }
+                if (!currentStrategies.length) {
+                    currentStrategies = [getDefaultStrategy("Quantum Space")];
+                    activeStrategyId = currentStrategies[0].id;
+                }
+                if (!currentStrategies.find(s => s.id === activeStrategyId))
+                    activeStrategyId = currentStrategies[0].id;
+                renderStrategySelector();
+                applyActiveStrategyToUI();
+            }
+
+            function applyActiveStrategyToUI() {
+                isSyncingUI = true;
+                const s = currentStrategies.find(x => x.id === activeStrategyId);
+                document.getElementById('cfgSystem').value = s.system || "";
+                document.getElementById('cfgTemplate').value = s.template || "";
+                document.getElementById('cfgMaxChars').value = s.maxChars || 20000;
+                document.getElementById('enableRandomSample').checked = s.enableRandomSample || false;
+                document.getElementById('randomSampleCount').value = s.randomSampleCount || 1;
+                const c = document.getElementById('samplesContainer');
+                c.innerHTML = '';
+                if (s.samples)
+                    s.samples.forEach( (x, i) => addSampleDOM(x, i + 1));
+                isSyncingUI = false;
+            }
+
+            function syncUIToData() {
+                if (isSyncingUI)
+                    return;
+                const s = currentStrategies.find(x => x.id === activeStrategyId);
+                if (s) {
+                    s.system = document.getElementById('cfgSystem').value;
+                    s.template = document.getElementById('cfgTemplate').value;
+                    s.maxChars = document.getElementById('cfgMaxChars').value;
+                    s.enableRandomSample = document.getElementById('enableRandomSample').checked;
+                    s.randomSampleCount = document.getElementById('randomSampleCount').value;
+                    s.samples = [];
+                    document.querySelectorAll('.sample-item').forEach(el => s.samples.push({
+                        active: el.querySelector('.sample-active-toggle').checked,
+                        collapsed: el.querySelector('.sample-content').classList.contains('hidden'),
+                        user: el.querySelector('.sample-user').value,
+                        assistant: el.querySelector('.sample-assistant').value
+                    }));
+                }
+                saveConfig();
+            }
+
+            function saveConfig() {
+                localStorage.setItem(STORE_KEY, JSON.stringify({
+                    baseUrl: document.getElementById('cfgBaseUrl').value,
+                    apiKey: document.getElementById('cfgApiKey').value,
+                    model: document.getElementById('cfgModel').value,
+                    maxWorkers: document.getElementById('cfgMaxWorkers').value,
+                    maxRetries: document.getElementById('cfgMaxRetries').value,
+                    delay: document.getElementById('cfgDelay').value,
+                    isDynamicMode,
+                    strategies: currentStrategies,
+                    activeStrategyId
+                }));
+            }
+
+            document.addEventListener('input', e => {
+                if (e.target.id !== 'strategySelector' && e.target.matches('input, textarea, select'))
+                    syncUIToData();
+            }
+            );
+            document.addEventListener('change', e => {
+                if (e.target.id !== 'strategySelector' && e.target.matches('input[type="checkbox"]'))
+                    syncUIToData();
+            }
+            );
+
+            // Strategy Selector
+            function renderStrategySelector() {
+                const sel = document.getElementById('strategySelector');
+                sel.innerHTML = '';
+                currentStrategies.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.name;
+                    if (s.id === activeStrategyId)
+                        opt.selected = true;
+                    sel.appendChild(opt);
+                }
+                );
+            }
+            document.getElementById('strategySelector').addEventListener('change', e => {
+                activeStrategyId = e.target.value;
+                applyActiveStrategyToUI();
+                saveConfig();
+            }
+            );
+            document.getElementById('btnNewStrategy').addEventListener('click', () => {
+                const n = prompt("新策略名:", "New Space");
+                if (n && n.trim()) {
+                    const ns = getDefaultStrategy(n.trim());
+                    currentStrategies.push(ns);
+                    activeStrategyId = ns.id;
+                    renderStrategySelector();
+                    applyActiveStrategyToUI();
+                    saveConfig();
+                }
+            }
+            );
+            document.getElementById('btnRenameStrategy').addEventListener('click', () => {
+                const s = currentStrategies.find(x => x.id === activeStrategyId);
+                const n = prompt("重命名:", s.name);
+                if (n && n.trim()) {
+                    s.name = n.trim();
+                    renderStrategySelector();
+                    saveConfig();
+                }
+            }
+            );
+
+            // Sample DOM
+            function addSampleDOM(data=null, index=null) {
+                const c = document.getElementById('samplesContainer');
+                const idx = index || c.children.length + 1;
+                const div = document.createElement('div');
+                div.className = "sample-item bg-white border border-slate-200 rounded shadow-sm transition-opacity duration-200";
+                const isActive = data ? data.active !== false : true
+                  , isCollapsed = data ? data.collapsed === true : false;
+                if (!isActive)
+                    div.classList.add('opacity-40');
+                div.innerHTML = `
+                <div class="flex justify-between items-center p-2 border-b border-slate-100 bg-slate-50/80"><div class="flex items-center gap-2"><input type="checkbox" class="sample-active-toggle rounded text-indigo-500" ${isActive ? 'checked' : ''}><span class="text-[0.7rem] font-bold text-slate-700 sample-index">Shot #${idx}</span></div><div class="flex gap-2 text-slate-400"><button class="toggle-collapse-btn hover:text-indigo-500 text-[0.75rem] px-1"><i class="fa-solid ${isCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'}"></i></button><button class="remove-sample-btn hover:text-red-500 text-[0.75rem] px-1"><i class="fa-solid fa-xmark"></i></button></div></div>
+                <div class="sample-content p-2 space-y-2 ${isCollapsed ? 'hidden' : ''}"><div><label class="text-[0.6rem] text-slate-500 block">User Input</label><textarea class="sample-user workspace-input font-mono text-[0.65rem] p-1.5" rows="2">${data ? data.user : ''}</textarea></div><div><label class="text-[0.6rem] text-slate-500 block">Assistant JSON</label><textarea class="sample-assistant workspace-input font-mono text-[0.65rem] p-1.5" rows="2">${data ? data.assistant : ''}</textarea></div></div>`;
+                div.querySelector('.sample-active-toggle').addEventListener('change', e => {
+                    e.target.checked ? div.classList.remove('opacity-40') : div.classList.add('opacity-40');
+                    syncUIToData();
+                }
+                );
+                const t = div.querySelector('.toggle-collapse-btn');
+                t.addEventListener('click', () => {
+                    const ct = div.querySelector('.sample-content');
+                    ct.classList.toggle('hidden');
+                    const i = t.querySelector('i');
+                    ct.classList.contains('hidden') ? i.classList.replace('fa-chevron-up', 'fa-chevron-down') : i.classList.replace('fa-chevron-down', 'fa-chevron-up');
+                    syncUIToData();
+                }
+                );
+                div.querySelector('.remove-sample-btn').addEventListener('click', () => {
+                    div.remove();
+                    Array.from(c.children).forEach( (child, i) => child.querySelector('.sample-index').innerText = `Shot #${i + 1}`);
+                    syncUIToData();
+                }
+                );
+                c.appendChild(div);
+            }
+            document.getElementById('addSampleBtn').addEventListener('click', () => {
+                addSampleDOM({
+                    active: true,
+                    collapsed: false,
+                    user: "",
+                    assistant: ""
+                });
+                syncUIToData();
+            }
+            );
+
+            // Config Import/Export
+            window.exportAppConfig = () => {
+                const d = localStorage.getItem(STORE_KEY);
+                if (!d)
+                    return alert("无配置");
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([d],{
+                    type: 'application/json'
+                }));
+                a.download = `Singularity_${Date.now()}.json`;
+                a.click();
+            }
+            ;
+            window.copyAppConfig = () => {
+                const d = localStorage.getItem(STORE_KEY);
+                if (!d)
+                    return alert("无配置");
+                navigator.clipboard.writeText(d).then( () => alert("📋 已复制！"));
+            }
+            ;
+            window.importAppConfigFromText = () => {
+                try {
+                    const r = document.getElementById('importArea').value.trim();
+                    const p = JSON.parse(r);
+                    if (!p.strategies)
+                        throw new Error("格式错误");
+                    localStorage.setItem(STORE_KEY, r);
+                    alert("✅ 载入成功");
+                    location.reload();
+                } catch (e) {
+                    alert("❌ 失败: " + e.message);
+                }
+            }
+            ;
+            document.getElementById('configFileImport').addEventListener('change', e => {
+                const f = e.target.files[0];
+                if (!f)
+                    return;
+                const r = new FileReader();
+                r.onload = evt => {
+                    try {
+                        const p = JSON.parse(evt.target.result);
+                        if (!p.strategies)
+                            throw new Error();
+                        localStorage.setItem(STORE_KEY, evt.target.result);
+                        alert("✅ 载入成功");
+                        location.reload();
+                    } catch (err) {
+                        alert("❌ 失败");
+                    }
+                }
+                ;
+                r.readAsText(f);
+            }
+            );
+            window.resetAppConfig = () => {
+                if (confirm("🚨 将摧毁所有自定义数据，确定引爆？")) {
+                    localStorage.removeItem(STORE_KEY);
+                    location.reload();
+                }
+            }
+            ;
+
+            // ================= 奇点执行流 =================
+            function scrollToBottom() {
+                chatArea.scrollTo({
+                    top: chatArea.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+            function appendSystemMessage(text) {
+                chatArea.insertAdjacentHTML('beforeend', `<div class="chat-msg"><div class="avatar system bg-gradient-to-br from-slate-600 to-slate-800"><i class="fa-solid fa-robot"></i></div><div class="bubble border-slate-200/50 bg-white/80 backdrop-blur"><div class="bubble-header text-slate-500">System <span class="font-normal text-[0.65rem] text-slate-400">${new Date().toLocaleTimeString()}</span></div><div class="text-sm leading-relaxed">${text}</div></div></div>`);
+                scrollToBottom();
+            }
+            function appendUserMessage(text) {
+                chatArea.insertAdjacentHTML('beforeend', `<div class="chat-msg"><div class="avatar user bg-gradient-to-br from-blue-500 to-cyan-500"><i class="fa-solid fa-user-astronaut"></i></div><div class="bubble border-blue-200/50 bg-blue-50/50 backdrop-blur"><div class="bubble-header text-blue-700">You <span class="font-normal text-[0.65rem] text-slate-400">${new Date().toLocaleTimeString()}</span></div><div class="text-sm leading-relaxed whitespace-pre-wrap">${text}</div></div></div>`);
+                scrollToBottom();
+            }
+
+            function createAITaskBubble(totalTasks) {
+                const bId = 'ai-task-' + Date.now();
+                chatArea.insertAdjacentHTML('beforeend', `<div class="chat-msg"><div class="avatar ai bg-gradient-to-br from-emerald-400 to-teal-600"><i class="fa-solid fa-wave-square"></i></div><div class="bubble border-emerald-200/50 bg-white/80 backdrop-blur shadow-xl"><div class="bubble-header text-emerald-700">Singularity Core <span class="font-normal text-[0.65rem] text-slate-400">${new Date().toLocaleTimeString()}</span></div><div class="text-sm mb-3 font-bold" id="${bId}-text">核心超频中... [${totalTasks} 线程]</div><div class="bg-slate-900 rounded-lg p-3 text-xs font-mono text-cyan-400 shadow-inner"><div class="flex justify-between mb-1"><span>算力释放: <span id="${bId}-count" class="text-white">0</span> / ${totalTasks}</span><span id="${bId}-percent" class="text-emerald-400">0%</span></div><div class="progress-container !bg-slate-700"><div id="${bId}-bar" class="progress-bar !bg-cyan-500 shadow-[0_0_10px_#06b6d4]" style="width: 0%"></div></div><div class="flex gap-4 mt-2"><span class="text-emerald-400">SUCCESS <span id="${bId}-success">0</span></span><span class="text-red-400">FAIL <span id="${bId}-error">0</span></span></div><div id="${bId}-log" class="mt-2 text-[0.65rem] text-slate-500 max-h-20 overflow-y-auto border-t border-slate-700 pt-1"></div></div></div></div>`);
+                scrollToBottom();
+                return {
+                    updateProgress: (successCount, errorCount, latestLog, isErr=false) => {
+                        const done = successCount + errorCount
+                          , pct = Math.floor((done / totalTasks) * 100);
+                        document.getElementById(`${bId}-count`).innerText = done;
+                        document.getElementById(`${bId}-percent`).innerText = `${pct}%`;
+                        document.getElementById(`${bId}-bar`).style.width = `${pct}%`;
+                        document.getElementById(`${bId}-success`).innerText = successCount;
+                        document.getElementById(`${bId}-error`).innerText = errorCount;
+                        if (latestLog) {
+                            const l = document.getElementById(`${bId}-log`);
+                            l.innerHTML = `<div class="${isErr ? 'text-red-400' : ''}"><span class="opacity-50">[${new Date().toLocaleTimeString()}]</span> ${latestLog}</div>` + l.innerHTML;
+                        }
+                    }
+                    ,
+                    finish: (txt) => {
+                        document.getElementById(`${bId}-text`).innerHTML = txt;
+                        document.getElementById(`${bId}-bar`).classList.add('!bg-emerald-500');
+                        scrollToBottom();
+                    }
+                };
+            }
+
+            async function fetchAIResponse(messages, config, attempt=1) {
+                if (config.delay > 0 && attempt === 1)
+                    await new Promise(r => setTimeout(r, config.delay * 1000));
+                try {
+                    let ep = config.baseUrl;
+                    if (!ep.endsWith('/chat/completions'))
+                        ep = ep.replace(/\/$/, '') + '/chat/completions';
+                    const r = await fetch(ep, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${config.apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: config.model,
+                            messages: messages
+                        })
+                    });
+                    if (!r.ok)
+                        throw new Error(`HTTP ${r.status}`);
+                    const d = await r.json();
+                    let text = d.choices[0].message.content.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    let f1 = text.search(/[\{\[]/)
+                      , f2 = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+                    if (f1 !== -1 && f2 !== -1)
+                        return JSON.parse(text.substring(f1, f2 + 1));
+                    throw new Error("JSON Parse Err");
+                } catch (err) {
+                    if (attempt < config.maxRetries && !forceStopFlag) {
+                        await new Promise(r => setTimeout(r, 2000));
+                        return fetchAIResponse(messages, config, attempt + 1);
+                    }
+                    throw err;
+                }
+            }
+
+            async function executeBatchLogic(dataToProcess) {
+                const config = {
+                    baseUrl: document.getElementById('cfgBaseUrl').value.trim(),
+                    apiKey: document.getElementById('cfgApiKey').value.trim(),
+                    model: document.getElementById('cfgModel').value.trim(),
+                    maxWorkers: parseInt(document.getElementById('cfgMaxWorkers').value, 10) || 10,
+                    maxRetries: parseInt(document.getElementById('cfgMaxRetries').value, 10) || 3,
+                    delay: parseFloat(document.getElementById('cfgDelay').value) || 0,
+                    maxChars: parseInt(document.getElementById('cfgMaxChars').value, 10) || 20000,
+                    system: document.getElementById('cfgSystem').value.trim(),
+                    template: document.getElementById('cfgTemplate').value.trim(),
+                    samples: []
+                };
+                let actS = [];
+                document.querySelectorAll('.sample-item').forEach(el => {
+                    if (el.querySelector('.sample-active-toggle').checked)
+                        actS.push({
+                            user: el.querySelector('.sample-user').value.trim(),
+                            assistant: el.querySelector('.sample-assistant').value.trim()
+                        });
+                }
+                );
+                config.samples = (document.getElementById('enableRandomSample').checked && actS.length > 0) ? actS.sort( () => 0.5 - Math.random()).slice(0, parseInt(document.getElementById('randomSampleCount').value, 10) || 1) : actS;
+
+                const uiT = createAITaskBubble(dataToProcess.length);
+                let fail = []
+                  , sCount = 0
+                  , eCount = 0
+                  , i = 0;
+
+                const worker = async () => {
+                    while (i < dataToProcess.length && !forceStopFlag) {
+                        const item = dataToProcess[i++];
+                        try {
+                            let pt = config.template;
+                            headers.forEach( (h, idx) => {
+                                if (!h)
+                                    return;
+                                let v = item.row[idx] !== undefined ? String(item.row[idx]) : '[空]';
+                                if (v.length > config.maxChars)
+                                    v = v.substring(0, config.maxChars) + "\n...[截断]";
+                                pt = pt.split(`{{${h}}}`).join(v);
+                            }
+                            );
+                            const msgs = [];
+                            if (config.system)
+                                msgs.push({
+                                    role: "system",
+                                    content: config.system
+                                });
+                            config.samples.forEach(s => {
+                                msgs.push({
+                                    role: "user",
+                                    content: s.user
+                                });
+                                msgs.push({
+                                    role: "assistant",
+                                    content: s.assistant
+                                });
+                            }
+                            );
+                            msgs.push({
+                                role: "user",
+                                content: pt
+                            });
+
+                            const res = await fetchAIResponse(msgs, config);
+                            completedResults[item.index] = res;
+                            sCount++;
+                            currentRunLogs.push(`ID[${item.index}] SUCCESS`);
+                            uiT.updateProgress(sCount, eCount, `ID[${item.index}] GENERATED`);
+                            playSoundTaskSuccess();
+                            // 成功音效
+                        } catch (e) {
+                            fail.push({
+                                index: item.index,
+                                row: item.row,
+                                error: e.message
+                            });
+                            eCount++;
+                            currentRunLogs.push(`ID[${item.index}] FAIL: ${e.message}`);
+                            uiT.updateProgress(sCount, eCount, `ID[${item.index}] ${e.message}`, true);
+                            playSoundTaskFail();
+                            // 失败音效
+                        }
+                    }
+                }
+                ;
+                await Promise.all(Array.from({
+                    length: Math.min(config.maxWorkers, dataToProcess.length)
+                }, () => worker()));
+                failedTasks = fail;
+                uiT.finish(forceStopFlag ? `<span class="text-red-400">⚡ 引擎紧急制动</span>` : `✨ 奇点运算终结`);
+                setTimeout( () => {
+                    let hTxt = forceStopFlag ? '运算中止' : '演算完毕';
+                    let btns = sCount > 0 ? `<button onclick="exportExcel()" class="btn-action bg-emerald-600 text-white border-none mr-2"><i class="fa-solid fa-file-excel"></i> 导出 Excel</button><button onclick="exportJSON()" class="btn-action bg-cyan-600 text-white border-none mr-2"><i class="fa-solid fa-file-code"></i> JSON</button>` : '';
+                    if (eCount > 0)
+                        btns += `<button onclick="triggerRetry()" class="btn-action bg-red-600 text-white border-none"><i class="fa-solid fa-rotate-right"></i> 重试残损节点 (${eCount})</button>`;
+                    chatArea.insertAdjacentHTML('beforeend', `<div class="chat-msg"><div class="avatar report bg-gradient-to-br from-purple-500 to-indigo-600"><i class="fa-solid fa-box-open"></i></div><div class="bubble border-purple-200/50 bg-purple-50/50 backdrop-blur"><div class="bubble-header text-purple-700">Space Report <span class="font-normal text-[0.65rem] text-slate-400">${new Date().toLocaleTimeString()}</span></div><div class="text-[0.9rem] text-slate-700"><h3 class="font-bold mb-1">${hTxt}</h3><div class="mt-2 p-3 bg-white/60 rounded-md border border-purple-100 shadow-sm"><p class="text-sm mb-2"><strong class="text-emerald-600">${sCount}</strong> SUCCESS / <strong class="text-red-500">${eCount}</strong> FAIL</p><button onclick="showLogsModal()" class="text-xs bg-slate-800 text-white px-3 py-1.5 rounded"><i class="fa-solid fa-terminal"></i> 检视底层日志</button></div><div class="mt-3 pt-3 border-t border-purple-200/50">${btns}</div></div></div></div>`);
+                    scrollToBottom();
+                }
+                , 600);
+            }
+
+            const fabBtn = document.getElementById('fabBtn')
+              , fabIcon = document.getElementById('fabIcon')
+              , fabTooltip = document.getElementById('fabTooltip');
+            fabBtn.addEventListener('click', async () => {
+                if (isRunning) {
+                    forceStopFlag = true;
+                    fabBtn.disabled = true;
+                    fabIcon.className = "fa-solid fa-spinner fa-spin";
+                } else {
+                    if (rawExcelData.length === 0)
+                        return alert("空间站未检测到数据源！");
+                    if (audioCtx.state === 'suspended')
+                        audioCtx.resume();
+
+                    completedResults = {};
+                    failedTasks = [];
+                    currentRunLogs = [];
+                    isRunning = true;
+                    forceStopFlag = false;
+
+                    // 激活曲率引擎背景 & 反应堆动画
+                    if (isDynamicMode)
+                        document.body.classList.add('warp-active');
+                    targetWarpSpeed = 5;
+                    // 加速
+                    fabBtn.classList.add('reactor-active');
+
+                    fabIcon.className = "fa-solid fa-stop";
+                    fabTooltip.innerText = "紧急中止";
+                    document.getElementById('systemStatusIndicator').innerHTML = `<i class="fa-solid fa-circle text-cyan-500 text-[0.5rem] align-middle mr-1 animate-pulse"></i> 引擎狂飙中`;
+
+                    appendUserMessage(`激活策略 <b>[${document.getElementById('strategySelector').options[document.getElementById('strategySelector').selectedIndex].text}]</b>。<br>投入运算量: <b>${rawExcelData.length}</b> 节点。`);
+                    await executeBatchLogic(rawExcelData);
+                    cleanupRunState();
+                }
+            }
+            );
+            window.triggerRetry = async function() {
+                if (failedTasks.length === 0 || isRunning)
+                    return;
+                isRunning = true;
+                forceStopFlag = false;
+                fabIcon.className = "fa-solid fa-stop";
+                if (isDynamicMode)
+                    document.body.classList.add('warp-active');
+                targetWarpSpeed = 5;
+                fabBtn.classList.add('reactor-active');
+                document.getElementById('systemStatusIndicator').innerHTML = `<i class="fa-solid fa-circle text-orange-500 text-[0.5rem] align-middle mr-1 animate-pulse"></i> 重载破损节点`;
+                appendUserMessage(`引擎重启，重拾 <b>${failedTasks.length}</b> 个坠毁节点。`);
+                await executeBatchLogic(failedTasks.map(f => ({
+                    index: f.index,
+                    row: f.row
+                })));
+                cleanupRunState();
+            }
+            ;
+            function cleanupRunState() {
+                isRunning = false;
+                fabBtn.disabled = false;
+                fabIcon.className = "fa-solid fa-bolt ml-0.5";
+                document.body.classList.remove('warp-active');
+                targetWarpSpeed = 0;
+                // 减速停止
+                fabBtn.classList.remove('reactor-active');
+                fabTooltip.innerText = "奇点引擎就绪";
+                document.getElementById('systemStatusIndicator').innerHTML = `<i class="fa-solid fa-circle text-emerald-500 text-[0.5rem] align-middle mr-1"></i> 空闲`;
+            }
+
+            // Export/Logs
+            function getFlattenedData() {
+                return Object.keys(completedResults).sort( (a, b) => a - b).reduce( (acc, k) => {
+                    const res = completedResults[k];
+                    Array.isArray(res) ? acc.push(...res) : acc.push(res);
+                    return acc;
+                }
+                , []);
+            }
+            window.exportJSON = function() {
+                const data = getFlattenedData();
+                if (!data.length)
+                    return alert("无数据");
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)],{
+                    type: 'application/json'
+                }));
+                link.download = `Singularity_${Date.now()}.json`;
+                link.click();
+            }
+            ;
+            window.exportExcel = function() {
+                const data = getFlattenedData();
+                if (!data.length)
+                    return alert("无数据");
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Matrix");
+                XLSX.writeFile(wb, `Singularity_${Date.now()}.xlsx`);
+            }
+            ;
+            window.showLogsModal = function() {
+                const modal = document.getElementById('logModal')
+                  , body = document.getElementById('logModalBody');
+                body.innerHTML = currentRunLogs.map(log => log.includes('FAIL') ? `<div class="text-red-400 mb-1">${log}</div>` : `<div class="mb-1 text-cyan-500/80">${log}</div>`).join('') || '<div class="text-slate-500">System Clear.</div>';
+                modal.classList.remove('hidden');
+                void modal.offsetWidth;
+                modal.classList.remove('opacity-0');
+                document.getElementById('logModalContent').classList.remove('scale-95');
+                setTimeout( () => {
+                    body.scrollTop = body.scrollHeight;
+                }
+                , 50);
+            }
+            ;
+            window.closeLogsModal = function() {
+                document.getElementById('logModal').classList.add('opacity-0');
+                document.getElementById('logModalContent').classList.add('scale-95');
+                setTimeout( () => document.getElementById('logModal').classList.add('hidden'), 300);
+            }
+            ;
+
+            window.addEventListener('DOMContentLoaded', () => {
+                loadConfig();
+                appendSystemMessage("欢迎接入 <strong>v6.0 Singularity Edition (奇点核心)</strong>。<br><br>💡 新特性指南：<br>1. 左侧解析出的 <span class='bg-slate-700 text-white px-1 rounded text-xs'><i class='fa-solid fa-magnet text-[0.5rem]'></i>变量</span> 可直接<strong>鼠标拖拽</strong>放入右侧的 Template 模板中。<br>2. 开启顶部的 <strong>SINGULARITY MODE</strong> 体验光线追踪磨砂玻璃面板。<br>3. 在该模式下点击右下角闪电图标执行，将激活底层的 <strong>WebAudio ASMR 音效</strong>与<strong>曲率引擎画布</strong>。");
+            }
+            );
+        </script>
+    </body>
+</html>
