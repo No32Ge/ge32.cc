@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WalNavi Pro · 沃尔玛卖家旗舰导航终端</title>
+  
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    :root {
+      /* 沃尔玛及高端 SaaS 调色板 */
+      --sidebar-bg: #041E42; /* Walmart Navy */
+      --sidebar-surface: #0A2855;
+      --sidebar-border: #133A71;
+      --sidebar-text: #94A3B8;
+      --sidebar-text-hover: #FFFFFF;
+      --sidebar-active-bg: rgba(0, 113, 206, 0.2);
+      
+      --app-bg: #F4F6F8;
+      --panel-bg: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --border-light: #E2E8F0;
+      
+      --walmart-blue: #0071CE;
+      --walmart-yellow: #FFC220;
+      
+      --primary: #0071CE;
+      --primary-hover: #005FA3;
+      --accent-teal: #0D9488;
+      --accent-rose: #E11D48;
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      --shadow-hover: 0 10px 25px -5px rgba(0, 113, 206, 0.15), 0 8px 10px -6px rgba(0, 113, 206, 0.1);
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--app-bg); color: var(--text-main); height: 100vh; display: flex; overflow: hidden; -webkit-font-smoothing: antialiased; }
+
+    /* === Sidebar (JSON Driven) === */
+    .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--sidebar-border); display: flex; flex-direction: column; flex-shrink: 0; z-index: 100; }
+    
+    .brand { height: 64px; display: flex; align-items: center; padding: 0 20px; gap: 12px; border-bottom: 1px solid var(--sidebar-border); }
+    .brand-logo { width: 32px; height: 32px; background: var(--walmart-yellow); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--sidebar-bg); font-size: 20px; }
+    .brand-text { color: white; font-weight: 700; font-size: 16px; letter-spacing: 0.5px; }
+    .brand-version { background: rgba(255,255,255,0.1); color: var(--walmart-yellow); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700;}
+
+    .nav-container { flex: 1; overflow-y: auto; padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-container::-webkit-scrollbar { width: 4px; }
+    .nav-container::-webkit-scrollbar-thumb { background: var(--sidebar-surface); border-radius: 4px; }
+    
+    .nav-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; color: var(--sidebar-text); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); user-select: none; }
+    .nav-item:hover { background: var(--sidebar-surface); color: var(--sidebar-text-hover); }
+    .nav-item.active { background: var(--sidebar-active-bg); color: #FFF; border-left: 3px solid var(--walmart-yellow); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+    
+    .nav-item-left { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; }
+    .nav-icon { font-size: 18px; color: var(--walmart-blue); transition: color 0.2s;}
+    .nav-item.active .nav-icon { color: var(--walmart-yellow); }
+    
+    .nav-count { background: rgba(255,255,255,0.1); font-size: 11px; padding: 2px 8px; border-radius: 12px; }
+
+    /* === Main Content === */
+    .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    
+    /* Topbar */
+    .topbar { height: 64px; background: var(--panel-bg); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; box-shadow: var(--shadow-sm); z-index: 50; }
+    
+    .top-search { position: relative; width: 400px; }
+    .top-search i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--primary); font-size: 18px; }
+    .top-search input { width: 100%; background: #F1F5F9; border: 1px solid transparent; border-radius: 8px; padding: 10px 16px 10px 40px; font-size: 14px; color: var(--text-main); outline: none; transition: var(--transition); }
+    .top-search input:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(0, 113, 206, 0.1); }
+    
+    .top-tools { display: flex; align-items: center; gap: 16px; }
+    .btn-submit { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transition); }
+    .btn-submit:hover { background: var(--primary-hover); }
+
+    /* Dashboard Canvas */
+    .dashboard-canvas { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+    
+    /* "Fake" KPI Grid to maintain the ERP illusion */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .kpi-card { background: var(--panel-bg); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 16px; display: flex; align-items: center; gap: 16px; }
+    .kpi-icon { width: 40px; height: 40px; border-radius: 8px; background: #F1F5F9; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .kpi-info { flex: 1; }
+    .kpi-title { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; text-transform: uppercase;}
+    .kpi-val { font-size: 18px; font-weight: 700; color: var(--text-main); font-family: var(--font-mono); }
+    
+    /* Category Title */
+    .section-title { font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    
+    /* Link Cards Grid */
+    .link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    
+    .link-card { 
+      background: var(--panel-bg); border: 1px solid var(--border-light); border-radius: var(--radius-md); 
+      padding: 20px; text-decoration: none; display: flex; flex-direction: column; gap: 12px; 
+      transition: var(--transition); position: relative; overflow: hidden;
+    }
+    .link-card::before {
+      content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--primary); 
+      transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease;
+    }
+    .link-card:hover { border-color: #B9D5F0; box-shadow: var(--shadow-hover); transform: translateY(-3px); }
+    .link-card:hover::before { transform: scaleX(1); }
+    
+    .card-header { display: flex; align-items: center; justify-content: space-between; }
+    .card-icon-wrap { width: 40px; height: 40px; border-radius: 10px; background: #F8FAFC; border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text-main); }
+    .card-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; }
+    .tag-official { background: #E0F2FE; color: #0284C7; }
+    .tag-pro { background: #FEF3C7; color: #D97706; }
+    .tag-hot { background: #FEE2E2; color: #E11D48; }
+    .tag-tool { background: #F1F5F9; color: #475569; }
+
+    .card-title { font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+    .card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    
+    .card-footer { margin-top: auto; padding-top: 12px; border-top: 1px dashed var(--border-light); display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--primary); }
+    .card-footer i { transition: transform 0.2s; }
+    .link-card:hover .card-footer i { transform: translateX(4px); }
+
+    /* Empty State for Search */
+    .empty-state { grid-column: 1 / -1; padding: 60px 20px; text-align: center; color: var(--text-muted); }
+    .empty-state i { font-size: 48px; color: #CBD5E1; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><i class="ph-bold ph-lightning"></i></div>
+      <div class="brand-text">WalNavi Pro</div>
+      <div class="brand-version">DATA TERMINAL</div>
+    </div>
+    
+    <!-- 侧边栏注入区 -->
+    <nav class="nav-container" id="navContainer"></nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-area">
+    
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="top-search">
+        <i class="ph-bold ph-magnifying-glass"></i>
+        <input type="text" id="searchInput" placeholder="检索沃尔玛运营工具、插件、系统...">
+      </div>
+      
+      <div class="top-tools">
+        <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">
+          <i class="ph-fill ph-check-circle" style="color: #10B981;"></i> 链路加密安全
+        </div>
+        <button class="btn-submit"><i class="ph-bold ph-plus"></i> 提交新工具</button>
+      </div>
+    </header>
+
+    <!-- Canvas -->
+    <div class="dashboard-canvas">
+      
+      <!-- 伪装成高端ERP的 KPI 模块 -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon"><i class="ph-fill ph-storefront"></i></div>
+          <div class="kpi-info">
+            <div class="kpi-title">Walmart Seller Center</div>
+            <div class="kpi-val" style="color: #10B981; font-size: 14px;">API 运行正常</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon"><i class="ph-fill ph-package"></i></div>
+          <div class="kpi-info">
+            <div class="kpi-title">WFS 仓储拥堵指数</div>
+            <div class="kpi-val">24<span style="font-size:12px; color:var(--text-muted)"> /100</span></div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon"><i class="ph-fill ph-chart-polar"></i></div>
+          <div class="kpi-info">
+            <div class="kpi-title">今日收录核心工具数</div>
+            <div class="kpi-val" id="kpiTotalTools">0</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon"><i class="ph-fill ph-fire"></i></div>
+          <div class="kpi-info">
+            <div class="kpi-title">热搜推荐词</div>
+            <div class="kpi-val" style="font-size: 14px;">Helium 10, WFS</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 当前分类标题 -->
+      <div class="section-title">
+        <i id="currentCatIcon" class="ph-fill ph-squares-four" style="color: var(--walmart-blue);"></i>
+        <span id="currentCatName">所有导航</span>
+      </div>
+
+      <!-- 工具卡片网格注入区 -->
+      <div class="link-grid" id="linkGrid">
+        <!-- 卡片动态生成 -->
+      </div>
+
+    </div>
+  </main>
+
+  <!-- === 核心数据引擎 (纯 JSON) === -->
+  <script>
+    /**
+     * ==========================================
+     * 沃尔玛运营导航核心 JSON 数据源
+     * 后期维护只需修改此处，自动渲染侧边栏和右侧卡片
+     * ==========================================
+     */
+    const navigationData = [
+      {
+        id: "official",
+        name: "沃尔玛官方枢纽",
+        icon: "ph-storefront",
+        links: [
+          { title: "Seller Center", desc: "沃尔玛官方卖家后台中心", url: "https://seller.walmart.com", icon: "ph-briefcase", tag: "Official", tagClass: "tag-official" },
+          { title: "Walmart Connect", desc: "沃尔玛官方广告投放平台，CPC与展示广告管理", url: "https://www.walmartconnect.com", icon: "ph-megaphone", tag: "Ads", tagClass: "tag-official" },
+          { title: "WFS (Fulfillment)", desc: "沃尔玛官方物流服务介绍与入仓指南", url: "https://seller.walmart.com/wfs", icon: "ph-truck", tag: "Logistics", tagClass: "tag-official" },
+          { title: "Retail Link", desc: "供应商(1P)及深度零售数据分析入口", url: "https://retaillink.walmart.com", icon: "ph-chart-bar", tag: "Vendor", tagClass: "tag-official" }
+        ]
+      },
+      {
+        id: "seo",
+        name: "选品与 SEO 关键词",
+        icon: "ph-magnifying-glass-chart",
+        links: [
+          { title: "Helium 10", desc: "全球顶级的电商选品与关键词工具，现已深度支持沃尔玛数据", url: "https://www.helium10.com/walmart/", icon: "ph-trend-up", tag: "Top 1", tagClass: "tag-hot" },
+          { title: "Jungle Scout", desc: "经典选品工具，提供沃尔玛市场数据预估与竞品追踪", url: "https://www.junglescout.com", icon: "ph-compass", tag: "Pro", tagClass: "tag-pro" },
+          { title: "DataSpark", desc: "专注于沃尔玛平台的底层数据选品与流量词分析", url: "https://dataspark.co", icon: "ph-sparkle", tag: "Tool", tagClass: "tag-tool" },
+          { title: "DataHawk", desc: "面向中大型卖家的 eCommerce BI 搜索引擎优化监控", url: "https://datahawk.co", icon: "ph-hawk", tag: "Pro", tagClass: "tag-pro" }
+        ]
+      },
+      {
+        id: "erp",
+        name: "ERP 与 多渠道刊登",
+        icon: "ph-layers-intersect",
+        links: [
+          { title: "店小秘 (Dianxiaomi)", desc: "国内卖家最常用的免费/高性价比多平台跨境ERP系统", url: "https://www.dianxiaomi.com", icon: "ph-robot", tag: "Hot", tagClass: "tag-hot" },
+          { title: "马帮 ERP", desc: "支持沃尔玛无缝对接，适合大型铺货及精品团队的数据中台", url: "https://www.mabang.com", icon: "ph-horse", tag: "ERP", tagClass: "tag-tool" },
+          { title: "ChannelAdvisor", desc: "海外老牌多渠道聚合平台，全平台库存与Listing一键分发", url: "https://www.channeladvisor.com", icon: "ph-git-branch", tag: "Enterprise", tagClass: "tag-pro" },
+          { title: "GeekSeller", desc: "沃尔玛官方推荐的第三方 API 整合服务商，刊登极度顺滑", url: "https://www.geekseller.com", icon: "ph-code", tag: "Pro", tagClass: "tag-pro" }
+        ]
+      },
+      {
+        id: "pricing",
+        name: "自动调价与利润计算",
+        icon: "ph-currency-circle-dollar",
+        links: [
+          { title: "RepricerExpress", desc: "自动赢得 Buy Box 购物车，基于竞品价格全自动上下调价", url: "https://www.repricerexpress.com", icon: "ph-arrows-down-up", tag: "Pro", tagClass: "tag-pro" },
+          { title: "Informed.co", desc: "智能重定价引擎，最大化沃尔玛利润空间", url: "https://www.informed.co", icon: "ph-brain", tag: "Tool", tagClass: "tag-tool" }
+        ]
+      },
+      {
+        id: "logistics",
+        name: "3PL 第三方海外仓",
+        icon: "ph-package",
+        links: [
+          { title: "Flexport (原 Deliverr)", desc: "提供类似 2-Day Shipping 标签的顶级沃尔玛配送合作方", url: "https://www.flexport.com", icon: "ph-airplane", tag: "Hot", tagClass: "tag-hot" },
+          { title: "ShipBob", desc: "全美多节点仓储，无缝对接 Walmart 订单系统自动打单发货", url: "https://www.shipbob.com", icon: "ph-box-arrow-up", tag: "Logistics", tagClass: "tag-tool" },
+          { title: "ShipStation", desc: "最强大的打单面单生成系统，自发货卖家的标配工具", url: "https://www.shipstation.com", icon: "ph-printer", tag: "Tool", tagClass: "tag-tool" }
+        ]
+      }
+    ];
+
+    /**
+     * ==========================================
+     * 前端渲染逻辑 (无需修改此处代码)
+     * ==========================================
+     */
+    
+    let activeCategoryId = "all"; // 默认加载全部
+    let allLinks = []; // 扁平化的所有链接，用于搜索
+
+    // 1. 初始化数据处理
+    function initData() {
+      let totalTools = 0;
+      navigationData.forEach(cat => {
+        cat.links.forEach(link => {
+          link.categoryId = cat.id; // 给每个 link 绑定父级 ID
+          allLinks.push(link);
+          totalTools++;
+        });
+      });
+      document.getElementById('kpiTotalTools').innerText = totalTools;
+    }
+
+    // 2. 渲染左侧分类导航
+    function renderSidebar() {
+      const navContainer = document.getElementById('navContainer');
+      
+      // 添加 "全部" 选项
+      let html = `
+        <div class="nav-item active" data-id="all" onclick="selectCategory('all', '全部导航', 'ph-squares-four')">
+          <div class="nav-item-left"><i class="ph-fill ph-squares-four nav-icon"></i><span>聚合概览 (All)</span></div>
+          <div class="nav-count">${allLinks.length}</div>
+        </div>
+      `;
+
+      navigationData.forEach(cat => {
+        html += `
+          <div class="nav-item" data-id="${cat.id}" onclick="selectCategory('${cat.id}', '${cat.name}', '${cat.icon}')">
+            <div class="nav-item-left"><i class="ph-fill ${cat.icon} nav-icon"></i><span>${cat.name}</span></div>
+            <div class="nav-count">${cat.links.length}</div>
+          </div>
+        `;
+      });
+      navContainer.innerHTML = html;
+    }
+
+    // 3. 点击侧边栏切换分类
+    window.selectCategory = function(id, name, icon) {
+      // 更新 UI 激活状态
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.querySelector(`.nav-item[data-id="${id}"]`).classList.add('active');
+      
+      // 更新标题
+      document.getElementById('currentCatName').innerText = name;
+      document.getElementById('currentCatIcon').className = `ph-fill ${icon}`;
+
+      // 清空搜索框
+      document.getElementById('searchInput').value = '';
+      
+      activeCateg
