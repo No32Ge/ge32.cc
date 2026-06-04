@@ -28,8 +28,11 @@
     .brand { display: flex; align-items: baseline; gap: 12px; }
     .brand h1 { font-size: 16px; font-weight: 700; margin: 0; }
     .brand span { font-size: 11px; color: #93c5fd; font-family: var(--font-mono); }
+    .nav-actions { display: flex; gap: 10px; align-items: center; }
     .btn { background: #fff; border: 1px solid #fff; color: var(--finance-blue); padding: 4px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
     .btn:hover { background: #e0e7ff; }
+    .btn-dark { background: transparent; color: #fff; border-color: rgba(255,255,255,0.4); }
+    .btn-dark:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: #fff; }
 
     /* Workspace & Screener */
     .workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
@@ -56,7 +59,7 @@
     .macro-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
     .macro-val { font-size: 15px; font-family: var(--font-mono); font-weight: 700; color: var(--text-main); }
 
-    /* Quant Insights Bar (NEW) */
+    /* Quant Insights Bar */
     .quant-bar { background: #111827; color: #fff; padding: 8px 16px; display: flex; gap: 20px; font-size: 11px; align-items: center; flex-shrink: 0; }
     .quant-badge { background: #374151; padding: 4px 8px; border-radius: 4px; font-family: var(--font-mono); color: #60a5fa; }
     .quant-highlight { color: #34d399; font-weight: bold; }
@@ -70,7 +73,7 @@
     .chart-dom { height: 280px; width: 100%; padding: 8px; }
     .chart-actions { display: flex; gap: 8px; }
     .chart-btn { background: #fff; border: 1px solid var(--border); padding: 2px 8px; font-size: 10px; border-radius: var(--radius); cursor: pointer; color: var(--finance-blue); font-weight: 700; }
-    .card.is-fullscreen { position: fixed; top: 44px; left: 0; width: 100vw; height: calc(100vh - 44px); z-index: 9999; border: none; }
+    .card.is-fullscreen { position: fixed; top: 44px; left: 0; width: 100vw; height: calc(100vh - 44px); z-index: 999; border: none; }
     .card.is-fullscreen .chart-dom { height: calc(100vh - 90px) !important; }
 
     /* Tabulator Data Grid */
@@ -108,6 +111,23 @@
 
     #toast { position: fixed; top: 60px; right: 20px; background: #111827; color: white; padding: 10px 20px; border-radius: var(--radius); font-size: 12px; font-weight: 600; transform: translateX(150%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999; }
     #toast.show { transform: translateX(0); }
+
+    /* Modal - Scorecard */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.7); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); opacity: 0; transition: opacity 0.2s ease; }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal-box { background: var(--bg-app); width: 700px; max-width: 95vw; border-radius: 6px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); transform: scale(0.95); transition: transform 0.2s ease; overflow: hidden; display: flex; flex-direction: column; }
+    .modal-overlay.show .modal-box { transform: scale(1); }
+    .modal-header { padding: 16px 24px; background: var(--finance-blue); color: white; display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h2 { font-size: 16px; margin: 0; font-family: var(--font-mono); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .modal-close { cursor: pointer; font-size: 24px; line-height: 1; opacity: 0.8; transition: 0.2s; }
+    .modal-close:hover { opacity: 1; }
+    .modal-body { padding: 24px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .sc-card { background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 16px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .sc-card.highlight { background: #f0fdf4; border-color: #86efac; }
+    .sc-card.warning { background: #fef2f2; border-color: #fca5a5; }
+    .sc-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+    .sc-val { font-size: 24px; font-family: var(--font-mono); font-weight: 700; color: var(--text-main); }
+    .sc-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
   </style>
 </head>
 <body>
@@ -117,7 +137,8 @@
     <h1>QuantCom</h1>
     <span>Deep-Dive Analytics Terminal</span>
   </div>
-  <div>
+  <div class="nav-actions">
+    <button class="btn btn-dark" id="btnScorecard" onclick="openScorecard()" style="display:none;">📊 GLOBAL SCORECARD</button>
     <button class="btn" onclick="document.getElementById('fileInput').click()">📥 LOAD DATASET</button>
     <input type="file" id="fileInput" style="display:none;" accept=".xlsx,.xls,.csv" onchange="handleFile(event)">
   </div>
@@ -176,7 +197,6 @@
     </div>
 
     <div class="content-scroll" id="contentScroll" style="display:none;">
-      <!-- Charts -->
       <div class="chart-grid">
         <div class="card" id="card_sector">
           <div class="card-title">
@@ -248,6 +268,65 @@
   </div>
 </div>
 
+<!-- Scorecard Modal -->
+<div class="modal-overlay" id="scorecardModal" onclick="if(event.target===this) closeScorecard()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>📊 Global Strategic Scorecard</h2>
+      <div class="modal-close" onclick="closeScorecard()">×</div>
+    </div>
+    <div class="modal-body">
+      <!-- Row 1: High Level -->
+      <div class="sc-card">
+        <div class="sc-label">Total Filtered SKUs</div>
+        <div class="sc-val" id="sc_total_sku">0</div>
+        <div class="sc-sub">Entire filtered universe</div>
+      </div>
+      <div class="sc-card highlight">
+        <div class="sc-label">Total Generated GMV</div>
+        <div class="sc-val text-green" id="sc_total_gmv">$0.00</div>
+        <div class="sc-sub">Cumulative sales volume</div>
+      </div>
+      
+      <!-- Row 2: Conversion breakdown -->
+      <div class="sc-card">
+        <div class="sc-label">Total Page Views (Volume)</div>
+        <div class="sc-val" id="sc_total_pv">0</div>
+        <div class="sc-sub">Aggregate traffic exposure</div>
+      </div>
+      <div class="sc-card">
+        <div class="sc-label">Average Conversion Yield</div>
+        <div class="sc-val" id="sc_avg_conv">0.00%</div>
+        <div class="sc-sub">Mean conversion across items</div>
+      </div>
+
+      <!-- Row 3: Funnel Drill Down -->
+      <div class="sc-card">
+        <div class="sc-label">Winning SKUs (Has Orders)</div>
+        <div class="sc-val text-green" id="sc_ordered">0</div>
+        <div class="sc-sub" id="sc_ordered_sub">0.0% of total catalog</div>
+      </div>
+      <div class="sc-card warning">
+        <div class="sc-label">Bleeding SKUs (Exposed, NO Orders)</div>
+        <div class="sc-val text-red" id="sc_exposed_no_order">0</div>
+        <div class="sc-sub" style="color:var(--negative-red);"><b>URGENT:</b> Wasting traffic. Fix Listings.</div>
+      </div>
+
+      <!-- Row 4: Dead Links -->
+      <div class="sc-card">
+        <div class="sc-label">Total Zero Order SKUs</div>
+        <div class="sc-val" id="sc_zero_order">0</div>
+        <div class="sc-sub" id="sc_zero_order_sub">0.0% of total catalog</div>
+      </div>
+      <div class="sc-card" style="background:#f3f4f6;">
+        <div class="sc-label" style="color:#9ca3af;">Dead SKUs (Zero Exposure & Zero Orders)</div>
+        <div class="sc-val" style="color:#9ca3af;" id="sc_no_exposure">0</div>
+        <div class="sc-sub" style="color:#9ca3af;">Invisible to market. Consider ads or cuts.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast">Action Successful</div>
 
 <script>
@@ -263,7 +342,6 @@ const formatNum = n => new Intl.NumberFormat('en-US').format(n||0);
 const parsePct = v => { if (v==null||v===''||v==='--') return 0; const s = String(v).trim(); const n = parseFloat(s.replace(/,/g, '')); return isNaN(n)?0:n; };
 const parseNum = v => { if(v==null||v===''||v==='--') return 0; const s = String(v).trim(); if(s==='No Match') return 0; const n = parseFloat(s.replace(/[^0-9.-]/g, '')); return isNaN(n)?0:n; };
 
-// Math: Pearson Correlation
 function getPearson(x, y) {
   let n = x.length; if(n===0) return 0;
   let sumX=0, sumY=0, sumXY=0, sumX2=0, sumY2=0;
@@ -276,7 +354,6 @@ function getPearson(x, y) {
   return den === 0 ? 0 : num/den;
 }
 
-// Math: Pareto (What % of SKUs make 80% of GMV)
 function getPareto(data) {
   let totalG = data.reduce((s,d)=>s+d.gmv, 0);
   if(totalG===0) return null;
@@ -337,7 +414,7 @@ function processData(raw) {
   
   $('uploadZone').style.display = 'none'; 
   $('tickerBar').style.display = 'flex'; $('quantBar').style.display = 'flex';
-  $('contentScroll').style.display = 'flex'; 
+  $('contentScroll').style.display = 'flex'; $('btnScorecard').style.display = 'inline-flex';
   $('screenerPanel').style.opacity = '1'; $('screenerPanel').style.pointerEvents = 'auto';
   
   initScreener(); initTabulator(); applyFilters(); toast('Dataset Parsed Successfully.');
@@ -401,19 +478,41 @@ function updateWorkspace() {
   const goodConv = goodPrice.length ? goodPrice.reduce((s,d)=>s+d.conv,0)/goodPrice.length : 0;
   $('q_elasticity').innerText = `BadPrice Conv ${badConv.toFixed(1)}% vs GoodPrice ${goodConv.toFixed(1)}%`;
 
+  // Scorecard Math Update
+  const totalPv = fData.reduce((s,d) => s + d.pv, 0);
+  const exposedData = fData.filter(d => d.isExposed);
+  const orderedSkus = orderedData.length;
+  const zeroOrderSkus = tTotal - orderedSkus;
+  const exposedNoOrderSkus = exposedData.filter(d => !d.isOrdered).length;
+  const noExposureSkus = tTotal - exposedData.length;
+  const avgConv = tTotal ? (fData.reduce((s, d) => s + d.conv, 0) / tTotal) : 0;
+
+  $('sc_total_sku').innerText = formatNum(tTotal);
+  $('sc_total_gmv').innerText = formatMoney(totalGmv);
+  $('sc_total_pv').innerText = formatNum(totalPv);
+  $('sc_avg_conv').innerText = avgConv.toFixed(2) + '%';
+  $('sc_ordered').innerText = formatNum(orderedSkus);
+  $('sc_ordered_sub').innerText = tTotal ? `${((orderedSkus/tTotal)*100).toFixed(1)}% of total catalog` : '--';
+  $('sc_zero_order').innerText = formatNum(zeroOrderSkus);
+  $('sc_zero_order_sub').innerText = tTotal ? `${((zeroOrderSkus/tTotal)*100).toFixed(1)}% of total catalog` : '--';
+  $('sc_exposed_no_order').innerText = formatNum(exposedNoOrderSkus);
+  $('sc_no_exposure').innerText = formatNum(noExposureSkus);
+
   updateGrid(); drawSectorChart(); drawScatterChart();
 }
+
+// --- Scorecard Modal Controls ---
+function openScorecard() { $('scorecardModal').classList.add('show'); }
+function closeScorecard() { $('scorecardModal').classList.remove('show'); }
+document.addEventListener('keydown', function(event){ if(event.key === "Escape") closeScorecard(); });
 
 // --- Tabulator Integration ---
 function initTabulator() {
   table = new Tabulator("#dataGrid", {
     layout: "fitColumns", responsiveLayout: "collapse",
-    selectableRows: true, // v5 Selection
-    // FIX 2: Prevent row clicking from triggering checkbox selection automatically
-    selectableRowsRangeMode: "click",
+    selectableRows: true, selectableRowsRangeMode: "click",
     height: "100%", placeholder: "No Data Available",
     columns: [
-      // FIX 2: Removed titleFormatter: "rowSelection" to prevent accidental "Select All"
       { formatter: "rowSelection", titleFormatter: "", hozAlign: "center", headerSort: false, width: 45, cellClick: function(e, cell) { cell.getRow().toggleSelect(); e.stopPropagation(); } },
       { title: "TICKER / SKU", field: "sku", width: 130, cssClass: "cell-mono" },
       { title: "SECTOR", field: "type", width: 140 },
@@ -426,8 +525,6 @@ function initTabulator() {
       { title: "PRIORITY", field: "priority", width: 100, hozAlign:"center", formatter: cell => { const v = cell.getValue(); const cls = v==='HIGH'?'badge-high':(v==='LOW'?'badge-low':'badge-med'); return `<span class="badge ${cls}">${v}</span>`; }}
     ]
   });
-  
-  // FIX 2: Clicking row opens info but does NOT select the checkbox (managed by e.stopPropagation() above)
   table.on("rowClick", function(e, row){ openTearSheet(row.getData()); });
 }
 function updateGrid() { if(table) table.setData(fData); }
@@ -464,19 +561,17 @@ function drawSectorChart() {
     grouped[d.type].skus += 1; if(d.isOrdered) grouped[d.type].ordered += 1;
   });
   
-  // FIX 1: Removed .slice(0,10) to keep ALL categories
   const cats = Object.keys(grouped).sort((a,b)=>grouped[b].pv - grouped[a].pv);
   
   const opt = {
     ...chartTheme, 
-    grid: { top: 40, right: 30, bottom: 65, left: 50 }, // Increased bottom to fit dataZoom
+    grid: { top: 40, right: 30, bottom: 65, left: 50 },
     tooltip: { trigger: 'axis' }, 
     legend: { 
       data: ['Volume (PV)', 'GMV ($)', 'Order Rate %', 'Avg Quality %', 'Total Issues'], 
-      bottom: 30, textStyle: { fontSize: 10 }, // Moved legend up slightly
+      bottom: 30, textStyle: { fontSize: 10 },
       selected: { 'Order Rate %': false, 'Avg Quality %': false, 'Total Issues': false }
     },
-    // FIX 1: Added dataZoom slider for 30+ items
     dataZoom: [
       { type: 'slider', show: true, bottom: 5, height: 16, start: 0, end: cats.length > 10 ? (10/cats.length)*100 : 100 },
       { type: 'inside', start: 0, end: 100 }
