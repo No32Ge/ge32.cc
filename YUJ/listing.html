@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -13,22 +12,12 @@
 
   <style>
     :root {
-      --bg-app: #f3f4f6;
-      --bg-panel: #ffffff;
-      --border: #d1d5db;
-      --border-light: #e5e7eb;
-      --text-main: #111827;
-      --text-muted: #6b7280;
-      --finance-blue: #0f4c81;
-      --finance-blue-hover: #0a365c;
-      --positive-green: #059669;
-      --negative-red: #dc2626;
-      --dot-zero: #d1d5db; /* 零出单灰色 */
-      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
-      --shadow: 0 1px 3px rgba(0,0,0,0.1);
-      --radius: 2px;
-      --transition: all 0.3s ease;
+      --bg-app: #f3f4f6; --bg-panel: #ffffff; --border: #d1d5db; --border-light: #e5e7eb;
+      --text-main: #111827; --text-muted: #6b7280; --finance-blue: #0f4c81; 
+      --finance-blue-hover: #0a365c; --positive-green: #059669; --negative-red: #dc2626;
+      --dot-zero: #d1d5db; --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: "JetBrains Mono", Consolas, monospace;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1); --radius: 2px; --transition: all 0.3s ease;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -37,15 +26,13 @@
     /* Navbar */
     .navbar { background: var(--finance-blue); color: #fff; height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; }
     .brand { display: flex; align-items: baseline; gap: 12px; }
-    .brand h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; margin: 0; }
+    .brand h1 { font-size: 16px; font-weight: 700; margin: 0; }
     .brand span { font-size: 11px; color: #93c5fd; font-family: var(--font-mono); }
     .btn { background: #fff; border: 1px solid #fff; color: var(--finance-blue); padding: 4px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
     .btn:hover { background: #e0e7ff; }
 
-    /* Workspace */
+    /* Workspace & Screener */
     .workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
-
-    /* Screener */
     .screener { width: 260px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; box-shadow: var(--shadow); }
     .panel-header { padding: 10px 16px; border-bottom: 1px solid var(--border); background: #f9fafb; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
     .screener-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
@@ -53,13 +40,11 @@
     .form-group label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
     .input-row { display: flex; gap: 6px; align-items: center; }
     .input-row input, .input-row select { flex: 1; width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; font-size: 12px; font-family: var(--font-sans); outline: none; }
-    .input-row input:focus, .input-row select:focus { border-color: var(--finance-blue); }
-    .checkbox-list { display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; background: #fafafa; }
+    .checkbox-list { display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; background: #fafafa; }
     .checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; }
     .btn-action { background: var(--finance-blue); color: #fff; border: none; padding: 8px; width: 100%; font-weight: 600; cursor: pointer; margin-top: 8px; }
-    .btn-action:hover { background: var(--finance-blue-hover); }
 
-    /* Dashboard */
+    /* Dashboard & Dropzone */
     .dashboard { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; background: var(--bg-app); }
     #uploadZone { position: absolute; inset: 20px; background: #fff; border: 2px dashed var(--finance-blue); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; cursor: pointer; transition: 0.2s; }
     #uploadZone:hover { background: #f0f4f8; }
@@ -68,63 +53,56 @@
     /* Macro Bar */
     .macro-bar { display: flex; flex-wrap: wrap; background: var(--bg-panel); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); }
     .macro-group { display: flex; border-right: 1px solid var(--border-light); padding: 8px 16px; flex-direction: column; justify-content: center; flex: 1; min-width: 120px; }
-    .macro-group:last-child { border-right: none; }
     .macro-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
     .macro-val { font-size: 15px; font-family: var(--font-mono); font-weight: 700; color: var(--text-main); }
 
-    .content-scroll { flex: 1; overflow-y: auto; padding: 16px; display: none; display: flex; flex-direction: column; gap: 16px; }
+    /* Quant Insights Bar (NEW) */
+    .quant-bar { background: #111827; color: #fff; padding: 8px 16px; display: flex; gap: 20px; font-size: 11px; align-items: center; flex-shrink: 0; }
+    .quant-badge { background: #374151; padding: 4px 8px; border-radius: 4px; font-family: var(--font-mono); color: #60a5fa; }
+    .quant-highlight { color: #34d399; font-weight: bold; }
 
-    /* Charts Grid & Fullscreen Modifiers */
+    .content-scroll { flex: 1; overflow-y: auto; padding: 16px; display: none; flex-direction: column; gap: 16px; }
+
+    /* Charts */
     .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; flex-shrink: 0; }
     .card { background: var(--bg-panel); border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; flex-direction: column; position: relative; transition: var(--transition); }
     .card-title { padding: 10px 16px; border-bottom: 1px solid var(--border-light); font-size: 12px; font-weight: 700; color: var(--text-main); background: #fcfcfc; display: flex; justify-content: space-between; align-items: center; }
     .chart-dom { height: 280px; width: 100%; padding: 8px; }
-    
     .chart-actions { display: flex; gap: 8px; }
     .chart-btn { background: #fff; border: 1px solid var(--border); padding: 2px 8px; font-size: 10px; border-radius: var(--radius); cursor: pointer; color: var(--finance-blue); font-weight: 700; }
-    .chart-btn:hover { background: #f0f4f8; }
-
-    /* Fullscreen Chart Class */
-    .card.is-fullscreen {
-      position: fixed; top: 44px; left: 0; width: 100vw; height: calc(100vh - 44px);
-      z-index: 9999; border: none; border-radius: 0;
-    }
+    .card.is-fullscreen { position: fixed; top: 44px; left: 0; width: 100vw; height: calc(100vh - 44px); z-index: 9999; border: none; }
     .card.is-fullscreen .chart-dom { height: calc(100vh - 90px) !important; }
 
     /* Tabulator Data Grid */
     .grid-container { flex: 1; display: flex; flex-direction: column; min-height: 350px; background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow); }
     .tabulator { border: none !important; font-size: 12px !important; font-family: var(--font-sans); }
     .tabulator-header { background: #f9fafb !important; border-bottom: 1px solid var(--border) !important; color: var(--text-muted) !important; font-weight: 700 !important; text-transform: uppercase; font-size: 11px; }
-    .tabulator-row { border-bottom: 1px solid #f3f4f6 !important; }
+    .tabulator-row { border-bottom: 1px solid #f3f4f6 !important; cursor: pointer; }
     .tabulator-row:hover { background-color: #f0f4f8 !important; }
     .tabulator-row.tabulator-selected { background-color: #e0e7ff !important; }
-    .tabulator-cell { padding: 8px 12px !important; display: flex; align-items: center; }
     .cell-mono { font-family: var(--font-mono) !important; font-weight: 500; }
 
-    /* Status Badges */
+    /* Badge & Tear Sheet */
     .badge { padding: 2px 6px; border-radius: 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
     .badge-high { background: #fee2e2; color: #b91c1c; }
     .badge-med { background: #fef3c7; color: #b45309; }
     .badge-low { background: #f3f4f6; color: #4b5563; }
     .badge-success { background: #d1fae5; color: #047857; }
 
-    /* Tear Sheet */
     .tear-sheet { width: 0; background: var(--bg-panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.2s ease-out; overflow: hidden; flex-shrink: 0; box-shadow: -4px 0 12px rgba(0,0,0,0.05); z-index: 20; }
     .tear-sheet.open { width: 360px; }
     .ts-header { padding: 16px; border-bottom: 1px solid var(--border); background: #f9fafb; display: flex; justify-content: space-between; align-items: flex-start; }
     .ts-title { font-size: 16px; font-weight: 700; color: var(--finance-blue); font-family: var(--font-mono); margin-bottom: 4px; word-break: break-all; }
-    .ts-subtitle { font-size: 12px; color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .ts-subtitle { font-size: 12px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .ts-close { cursor: pointer; font-size: 20px; color: var(--text-muted); line-height: 1; }
-    .ts-close:hover { color: var(--text-main); }
     .ts-body { padding: 16px; overflow-y: auto; flex: 1; }
     .sec-title { font-size: 11px; font-weight: 700; color: var(--finance-blue); text-transform: uppercase; margin: 16px 0 8px 0; border-bottom: 1px solid var(--border-light); padding-bottom: 4px; }
     .kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .kv-item { display: flex; flex-direction: column; }
     .kv-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
     .kv-val { font-size: 13px; font-family: var(--font-mono); font-weight: 600; color: var(--text-main); }
-    .btn-copy-huge { width: 100%; padding: 10px; background: var(--finance-blue); border: none; color: #fff; font-size: 12px; font-weight: 700; border-radius: var(--radius); cursor: pointer; transition: 0.15s; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .btn-copy-huge:hover { background: var(--finance-blue-hover); }
-
+    .btn-copy-huge { width: 100%; padding: 10px; background: var(--finance-blue); border: none; color: #fff; font-size: 12px; font-weight: 700; border-radius: var(--radius); cursor: pointer; margin-bottom: 10px; }
+    
     .text-green { color: var(--positive-green) !important; }
     .text-red { color: var(--negative-red) !important; }
 
@@ -177,13 +155,24 @@
     <!-- Macro Bar -->
     <div class="macro-bar" id="tickerBar" style="display:none;">
       <div class="macro-group"><div class="macro-label">Total SKUs</div><div class="macro-val" id="k_sku">0</div></div>
-      <div class="macro-group"><div class="macro-label">Total Order Rate</div><div class="macro-val text-green" id="k_rate_all">0.0%</div></div>
-      <div class="macro-group" style="background: #f0fdf4;"><div class="macro-label">Exposed Order Rate</div><div class="macro-val text-green" id="k_rate_exp">0.0%</div></div>
+      <div class="macro-group"><div class="macro-label">Order Rate</div><div class="macro-val text-green" id="k_rate_all">0.0%</div></div>
       <div class="macro-group"><div class="macro-label">Avg GMV (All)</div><div class="macro-val" id="k_avg_all">$0</div></div>
-      <div class="macro-group"><div class="macro-label">Avg GMV (Exposed)</div><div class="macro-val" id="k_avg_exp">$0</div></div>
       <div class="macro-group" style="background: #eff6ff;"><div class="macro-label" style="color:var(--finance-blue);">Avg GMV (Ordered)</div><div class="macro-val" style="color:var(--finance-blue);" id="k_avg_ord">$0</div></div>
       <div class="macro-group"><div class="macro-label">Max Single GMV</div><div class="macro-val text-red" id="k_max_gmv">$0</div></div>
-      <div class="macro-group"><div class="macro-label">Max Exposure</div><div class="macro-val" id="k_max_pv">0</div></div>
+    </div>
+
+    <!-- Quant Insights Bar -->
+    <div class="quant-bar" id="quantBar" style="display:none;">
+      <span>📐 <strong>QUANT INSIGHTS</strong></span>
+      <span class="quant-badge" title="Correlation between Listing Quality and Conversion Rate. Closer to 1 means LQ drives sales.">
+        LQ ↔ Conv Math Correlation: <span id="q_pearson" class="quant-highlight">--</span>
+      </span>
+      <span class="quant-badge" title="Percentage of SKUs that generate 80% of your total GMV (Risk Indicator)">
+        Pareto 80/20 Efficiency: <span id="q_pareto" class="quant-highlight">--</span>
+      </span>
+      <span class="quant-badge" title="Difference in conversion rate for items priced higher than competitors vs lower">
+        Price Elasticity Proxy: <span id="q_elasticity" class="quant-highlight">--</span>
+      </span>
     </div>
 
     <div class="content-scroll" id="contentScroll" style="display:none;">
@@ -193,7 +182,7 @@
           <div class="card-title">
             <span>Multi-Dimensional Sector Analysis</span>
             <div class="chart-actions">
-              <span style="font-size:10px; color:#aaa; font-weight:normal; margin-right:5px;">* Toggle lines in legend</span>
+              <span style="font-size:10px; color:#aaa; font-weight:normal; margin-right:5px;">* Toggle lines in legend | Scroll to view all</span>
               <button class="chart-btn" onclick="toggleChartFullscreen('card_sector', 'chart_sector')">⛶ EXPAND</button>
             </div>
           </div>
@@ -264,18 +253,38 @@
 <script>
 // --- Core State ---
 let rawData = []; let fData = []; let charts = {};
-let table; 
-let currentSku = null;
-let scatterMode = 'bubble'; // 'bubble' | 'heat'
+let table; let currentSku = null; let scatterMode = 'bubble';
 
-// --- Utilities ---
+// --- Utilities & Math ---
 const $ = id => document.getElementById(id);
 const toast = msg => { const t = $('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); };
 const formatMoney = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n||0);
 const formatNum = n => new Intl.NumberFormat('en-US').format(n||0);
-
 const parsePct = v => { if (v==null||v===''||v==='--') return 0; const s = String(v).trim(); const n = parseFloat(s.replace(/,/g, '')); return isNaN(n)?0:n; };
 const parseNum = v => { if(v==null||v===''||v==='--') return 0; const s = String(v).trim(); if(s==='No Match') return 0; const n = parseFloat(s.replace(/[^0-9.-]/g, '')); return isNaN(n)?0:n; };
+
+// Math: Pearson Correlation
+function getPearson(x, y) {
+  let n = x.length; if(n===0) return 0;
+  let sumX=0, sumY=0, sumXY=0, sumX2=0, sumY2=0;
+  for(let i=0; i<n; i++) {
+    sumX += x[i]; sumY += y[i]; sumXY += x[i]*y[i];
+    sumX2 += x[i]*x[i]; sumY2 += y[i]*y[i];
+  }
+  let num = (n*sumXY) - (sumX*sumY);
+  let den = Math.sqrt(((n*sumX2)-(sumX*sumX)) * ((n*sumY2)-(sumY*sumY)));
+  return den === 0 ? 0 : num/den;
+}
+
+// Math: Pareto (What % of SKUs make 80% of GMV)
+function getPareto(data) {
+  let totalG = data.reduce((s,d)=>s+d.gmv, 0);
+  if(totalG===0) return null;
+  let sorted = [...data].sort((a,b)=>b.gmv - a.gmv);
+  let cum=0, count=0;
+  for(let d of sorted) { cum+=d.gmv; count++; if(cum >= totalG*0.8) break; }
+  return (count/data.length)*100;
+}
 
 // --- File Handling ---
 const uz = $('uploadZone');
@@ -302,13 +311,11 @@ function processData(raw) {
     const name = String(r['Product Name'] || '--').trim();
     const type = String(r['Product Type'] || 'Uncategorized').trim();
     const priority = String(r['Priority'] || 'MEDIUM').trim().toUpperCase();
-    
     const lq = parsePct(r['Listing Quality']);
     const scoreContent = parsePct(r['Content & Discoverability']);
     const scoreReview = parsePct(r['Ratings and Reviews']);
     const scoreShip = parsePct(r['Shipping Score']);
     const conv = parsePct(r['Conversion Rate']);
-    
     const wp = parseNum(r['Walmart Price']);
     const gmv = parseNum(r['GMV'] || r['Gmv']);
     const pv = parseNum(r['Page Views']);
@@ -316,7 +323,6 @@ function processData(raw) {
     
     const isOrdered = gmv > 0;
     const isExposed = pv > 0;
-
     const cpStr = String(r['Competitive Price']||'');
     let cp = parseNum(cpStr);
     let spread = 0;
@@ -329,8 +335,10 @@ function processData(raw) {
 
   if(!rawData.length) { toast('No data found.'); return; }
   
-  $('uploadZone').style.display = 'none'; $('tickerBar').style.display = 'flex';
-  $('contentScroll').style.display = 'flex'; $('screenerPanel').style.opacity = '1'; $('screenerPanel').style.pointerEvents = 'auto';
+  $('uploadZone').style.display = 'none'; 
+  $('tickerBar').style.display = 'flex'; $('quantBar').style.display = 'flex';
+  $('contentScroll').style.display = 'flex'; 
+  $('screenerPanel').style.opacity = '1'; $('screenerPanel').style.pointerEvents = 'auto';
   
   initScreener(); initTabulator(); applyFilters(); toast('Dataset Parsed Successfully.');
 }
@@ -369,41 +377,44 @@ function resetFilters() {
 
 function updateWorkspace() {
   const tTotal = fData.length;
-  const exposedData = fData.filter(d => d.isExposed);
   const orderedData = fData.filter(d => d.isOrdered);
   const totalGmv = fData.reduce((s,d)=>s+d.gmv, 0);
 
-  const rateAll = tTotal ? (orderedData.length / tTotal)*100 : 0;
-  const rateExp = exposedData.length ? (orderedData.length / exposedData.length)*100 : 0;
-  
-  const avgAll = tTotal ? totalGmv / tTotal : 0;
-  const avgExp = exposedData.length ? totalGmv / exposedData.length : 0;
-  const avgOrd = orderedData.length ? totalGmv / orderedData.length : 0;
-
-  const maxGmv = tTotal ? Math.max(...fData.map(d=>d.gmv)) : 0;
-  const maxPv = tTotal ? Math.max(...fData.map(d=>d.pv)) : 0;
-
   $('k_sku').innerText = formatNum(tTotal);
-  $('k_rate_all').innerText = rateAll.toFixed(2) + '%';
-  $('k_rate_exp').innerText = rateExp.toFixed(2) + '%';
-  $('k_avg_all').innerText = formatMoney(avgAll);
-  $('k_avg_exp').innerText = formatMoney(avgExp);
-  $('k_avg_ord').innerText = formatMoney(avgOrd);
-  $('k_max_gmv').innerText = formatMoney(maxGmv);
-  $('k_max_pv').innerText = formatNum(maxPv);
+  $('k_rate_all').innerText = (tTotal ? (orderedData.length / tTotal)*100 : 0).toFixed(2) + '%';
+  $('k_avg_all').innerText = formatMoney(tTotal ? totalGmv / tTotal : 0);
+  $('k_avg_ord').innerText = formatMoney(orderedData.length ? totalGmv / orderedData.length : 0);
+  $('k_max_gmv').innerText = formatMoney(tTotal ? Math.max(...fData.map(d=>d.gmv)) : 0);
   $('t_count').innerText = `${tTotal} Records`;
+
+  // Quant Math Execution
+  const pearson = getPearson(fData.map(d=>d.lq), fData.map(d=>d.conv));
+  let pText = pearson > 0.5 ? 'Strong +' : (pearson < -0.5 ? 'Strong -' : (pearson > 0.2 ? 'Weak +' : 'No Rel'));
+  $('q_pearson').innerText = `${pearson.toFixed(2)} (${pText})`;
+
+  const pareto = getPareto(fData);
+  $('q_pareto').innerText = pareto ? `${pareto.toFixed(1)}% of SKUs` : 'N/A';
+
+  const badPrice = fData.filter(d => d.spread < 0);
+  const goodPrice = fData.filter(d => d.spread >= 0);
+  const badConv = badPrice.length ? badPrice.reduce((s,d)=>s+d.conv,0)/badPrice.length : 0;
+  const goodConv = goodPrice.length ? goodPrice.reduce((s,d)=>s+d.conv,0)/goodPrice.length : 0;
+  $('q_elasticity').innerText = `BadPrice Conv ${badConv.toFixed(1)}% vs GoodPrice ${goodConv.toFixed(1)}%`;
 
   updateGrid(); drawSectorChart(); drawScatterChart();
 }
 
-// --- Tabulator Integration with Checkbox & Export ---
+// --- Tabulator Integration ---
 function initTabulator() {
   table = new Tabulator("#dataGrid", {
     layout: "fitColumns", responsiveLayout: "collapse",
-    selectable: true, // Enables row selection
+    selectableRows: true, // v5 Selection
+    // FIX 2: Prevent row clicking from triggering checkbox selection automatically
+    selectableRowsRangeMode: "click",
     height: "100%", placeholder: "No Data Available",
     columns: [
-      { formatter: "rowSelection", titleFormatter: "rowSelection", hozAlign: "center", headerSort: false, width: 45 },
+      // FIX 2: Removed titleFormatter: "rowSelection" to prevent accidental "Select All"
+      { formatter: "rowSelection", titleFormatter: "", hozAlign: "center", headerSort: false, width: 45, cellClick: function(e, cell) { cell.getRow().toggleSelect(); e.stopPropagation(); } },
       { title: "TICKER / SKU", field: "sku", width: 130, cssClass: "cell-mono" },
       { title: "SECTOR", field: "type", width: 140 },
       { title: "ORDERS?", field: "isOrdered", width: 90, hozAlign:"center", formatter: cell => cell.getValue() ? `<span class="badge badge-success">YES</span>` : `<span class="badge badge-low">NO</span>` },
@@ -415,6 +426,8 @@ function initTabulator() {
       { title: "PRIORITY", field: "priority", width: 100, hozAlign:"center", formatter: cell => { const v = cell.getValue(); const cls = v==='HIGH'?'badge-high':(v==='LOW'?'badge-low':'badge-med'); return `<span class="badge ${cls}">${v}</span>`; }}
     ]
   });
+  
+  // FIX 2: Clicking row opens info but does NOT select the checkbox (managed by e.stopPropagation() above)
   table.on("rowClick", function(e, row){ openTearSheet(row.getData()); });
 }
 function updateGrid() { if(table) table.setData(fData); }
@@ -426,24 +439,21 @@ function exportSelectedData() {
   if (selected.length === 0) return toast("No data to export.");
   
   const exportFormat = selected.map(d => ({
-    'SKU': d.sku, 'Product Name': d.name, 'Sector': d.type,
-    'Has Orders': d.isOrdered ? 'Yes' : 'No', 'Page Views': d.pv,
-    'Conversion %': d.conv, 'GMV': d.gmv, 'Walmart Price': d.wp,
+    'SKU': d.sku, 'Product Name': d.name, 'Sector': d.type, 'Has Orders': d.isOrdered ? 'Yes' : 'No', 
+    'Page Views': d.pv, 'Conversion %': d.conv, 'GMV': d.gmv, 'Walmart Price': d.wp,
     'Price Spread': d.spread, 'Listing Quality %': d.lq, 'Issues': d.issues
   }));
   
-  const ws = XLSX.utils.json_to_sheet(exportFormat);
-  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(exportFormat); const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Blotter_Export");
   XLSX.writeFile(wb, "QuantCom_Action_Blotter.xlsx");
   toast(`Exported ${selected.length} ${modeMsg} rows to Excel.`);
 }
 
 // --- ECharts ---
-const chartTheme = { textStyle: { fontFamily: 'inherit', color: '#6b7280', fontSize: 10 }, grid: { top: 40, right: 30, bottom: 30, left: 50 }, tooltip: { backgroundColor: '#fff', borderColor: '#d1d5db', textStyle: { color: '#111827', fontSize: 11 }, padding: 10 } };
+const chartTheme = { textStyle: { fontFamily: 'inherit', color: '#6b7280', fontSize: 10 }, tooltip: { backgroundColor: '#fff', borderColor: '#d1d5db', textStyle: { color: '#111827', fontSize: 11 }, padding: 10 } };
 function getChart(id) { if(!charts[id]) charts[id] = echarts.init($(id)); return charts[id]; }
 
-// Chart 1: Multi-Dimensional Sector Analysis
 function drawSectorChart() {
   const chart = getChart('chart_sector');
   const grouped = {};
@@ -453,15 +463,24 @@ function drawSectorChart() {
     grouped[d.type].lqSum += d.lq; grouped[d.type].issues += d.issues;
     grouped[d.type].skus += 1; if(d.isOrdered) grouped[d.type].ordered += 1;
   });
-  const cats = Object.keys(grouped).sort((a,b)=>grouped[b].pv - grouped[a].pv).slice(0,10);
+  
+  // FIX 1: Removed .slice(0,10) to keep ALL categories
+  const cats = Object.keys(grouped).sort((a,b)=>grouped[b].pv - grouped[a].pv);
   
   const opt = {
-    ...chartTheme, tooltip: { trigger: 'axis' }, 
+    ...chartTheme, 
+    grid: { top: 40, right: 30, bottom: 65, left: 50 }, // Increased bottom to fit dataZoom
+    tooltip: { trigger: 'axis' }, 
     legend: { 
       data: ['Volume (PV)', 'GMV ($)', 'Order Rate %', 'Avg Quality %', 'Total Issues'], 
-      bottom: 0, textStyle: { fontSize: 10 },
-      selected: { 'Order Rate %': false, 'Avg Quality %': false, 'Total Issues': false } // Hidden by default, togglable by user
+      bottom: 30, textStyle: { fontSize: 10 }, // Moved legend up slightly
+      selected: { 'Order Rate %': false, 'Avg Quality %': false, 'Total Issues': false }
     },
+    // FIX 1: Added dataZoom slider for 30+ items
+    dataZoom: [
+      { type: 'slider', show: true, bottom: 5, height: 16, start: 0, end: cats.length > 10 ? (10/cats.length)*100 : 100 },
+      { type: 'inside', start: 0, end: 100 }
+    ],
     xAxis: { type: 'category', data: cats, axisLabel: { interval: 0, rotate: 15, width: 70, overflow: 'truncate' } },
     yAxis: [ { type: 'value', name: 'Volume' }, { type: 'value', name: 'Secondary Scale', splitLine: { show: false } } ],
     series: [
@@ -475,7 +494,6 @@ function drawSectorChart() {
   chart.setOption(opt, true);
 }
 
-// Chart 2: Scatter Toggle Logic
 function toggleScatterMode() {
   scatterMode = scatterMode === 'bubble' ? 'heat' : 'bubble';
   $('btnScatterMode').innerText = scatterMode === 'bubble' ? 'MODE: BUBBLE' : 'MODE: HEAT-DOT';
@@ -486,58 +504,44 @@ function drawScatterChart() {
   const chart = getChart('chart_scatter');
   const maxGmv = Math.max(...fData.map(d=>d.gmv), 1);
   const data = fData.filter(d=>d.isExposed).map(d => ({ name: d.sku, value: [d.lq, d.conv, d.gmv], raw: d }));
-  
-  // Heat Colors (Deep Blue for high GMV, Light Blue for low GMV, Grey for Zero)
   const heatColors = ['#93c5fd', '#3b82f6', '#1d4ed8', '#1e3a8a'];
   
   const opt = {
-    ...chartTheme, tooltip: { formatter: p => `<strong>${p.data.name}</strong><br>Quality: ${p.data.value[0]}%<br>Yield: ${p.data.value[1]}%<br>GMV: ${formatMoney(p.data.value[2])}` },
+    ...chartTheme, grid: { top: 40, right: 30, bottom: 30, left: 50 },
+    tooltip: { formatter: p => `<strong>${p.data.name}</strong><br>Quality: ${p.data.value[0]}%<br>Yield: ${p.data.value[1]}%<br>GMV: ${formatMoney(p.data.value[2])}` },
     xAxis: { type: 'value', name: 'Quality %', splitLine: { lineStyle: { type: 'dashed' } } },
     yAxis: { type: 'value', name: 'Conv %', splitLine: { lineStyle: { color: '#e5e7eb' } } },
     series: [{ 
       type: 'scatter', 
-      symbolSize: p => {
-        if (scatterMode === 'heat') return 7; // Fixed small dot size
-        return p[2]===0 ? 4 : Math.max((p[2]/maxGmv)*60, 8); // Bubble size
-      }, 
+      symbolSize: p => scatterMode === 'heat' ? 7 : (p[2]===0 ? 4 : Math.max((p[2]/maxGmv)*60, 8)), 
       itemStyle: { 
         color: p => {
           if (p.data.value[2] === 0) return scatterMode === 'heat' ? 'var(--dot-zero)' : 'rgba(220, 38, 38, 0.4)';
-          if (scatterMode === 'bubble') return 'rgba(5, 150, 105, 0.7)'; // Green bubble
-          // Heat Dot mode: Intensity calculation
-          const intensity = Math.min(3, Math.floor((p.data.value[2] / maxGmv) * 4));
-          return heatColors[intensity];
+          if (scatterMode === 'bubble') return 'rgba(5, 150, 105, 0.7)';
+          return heatColors[Math.min(3, Math.floor((p.data.value[2] / maxGmv) * 4))];
         }
       }, 
       data: data 
     }],
-    animationDurationUpdate: 800 // Smooth transition
+    animationDurationUpdate: 800
   };
   chart.setOption(opt, true); 
   chart.off('click'); chart.on('click', p => openTearSheet(p.data.raw));
 }
 
-// Chart Fullscreen Logic
 function toggleChartFullscreen(cardId, chartId) {
   const card = document.getElementById(cardId);
-  const isFS = card.classList.contains('is-fullscreen');
-  
-  if (isFS) {
-    card.classList.remove('is-fullscreen');
-    card.querySelector('.chart-btn:last-child').innerText = '⛶ EXPAND';
+  if (card.classList.contains('is-fullscreen')) {
+    card.classList.remove('is-fullscreen'); card.querySelector('.chart-btn:last-child').innerText = '⛶ EXPAND';
   } else {
-    card.classList.add('is-fullscreen');
-    card.querySelector('.chart-btn:last-child').innerText = '✖ CLOSE';
+    card.classList.add('is-fullscreen'); card.querySelector('.chart-btn:last-child').innerText = '✖ CLOSE';
   }
-  
-  if(charts[chartId]) {
-    setTimeout(() => charts[chartId].resize(), 300); // Wait for CSS transition
-  }
+  if(charts[chartId]) setTimeout(() => charts[chartId].resize(), 300);
 }
 
 // --- Tear Sheet ---
 function openTearSheet(d) {
-  currentSku = d.sku; if(table) table.selectRow(d.sku);
+  currentSku = d.sku; 
   $('tearSheet').classList.add('open');
   $('ts_sku').innerText = d.sku; $('ts_name').innerText = d.name;
   $('ts_ordered').innerHTML = d.isOrdered ? `<span class="badge badge-success" style="font-size:12px;">YES</span>` : `<span class="badge badge-low" style="font-size:12px;">NO</span>`;
@@ -549,7 +553,7 @@ function openTearSheet(d) {
   $('ts_scoreReview').innerText = d.scoreReview.toFixed(2) + '%'; $('ts_scoreShip').innerText = d.scoreShip.toFixed(2) + '%';
   $('btnCopySku').onclick = () => { navigator.clipboard.writeText(d.sku).then(() => toast(`COPIED: ${d.sku}`)); };
 }
-function closeTearSheet() { $('tearSheet').classList.remove('open'); currentSku = null; if(table) table.deselectRow(); }
+function closeTearSheet() { $('tearSheet').classList.remove('open'); currentSku = null; }
 
 window.addEventListener('resize', () => { Object.values(charts).forEach(c => c.resize()); });
 </script>
