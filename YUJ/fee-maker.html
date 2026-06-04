@@ -1,0 +1,759 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>运费促销策略配置中台</title>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Element Plus 样式 -->
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <!-- Element Plus JS -->
+  <script src="https://unpkg.com/element-plus"></script>
+  <!-- Element Plus Icons -->
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <!-- SheetJS (Excel) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f2f3f5;
+      font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+    }
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .top-header {
+      background: #1e222d;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 10;
+    }
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .store-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .main-container {
+      padding: 24px;
+      flex: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1d2129;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .el-card {
+      border-radius: 8px;
+      border: none;
+      box-shadow: 0 2px 6px 0 rgba(28,31,35,.04);
+      margin-bottom: 20px;
+    }
+    .el-table th.el-table__cell {
+      background-color: #f7f8fa !important;
+      color: #4e5969;
+      font-weight: 600;
+    }
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .highlight-col {
+      background-color: #f0f9eb !important;
+    }
+    .warning-col {
+      background-color: #fdf6ec !important;
+    }
+    .upload-trigger { display: inline-block; }
+  </style>
+</head>
+<body>
+
+<div id="app" v-loading.fullscreen.lock="fullscreenLoading">
+  
+  <!-- 顶部导航 -->
+  <header class="top-header">
+    <div class="header-logo">
+      <el-icon :size="24" color="#409EFC"><Grid /></el-icon>
+      运费促销策略配置中台
+      <el-tag size="small" effect="dark" type="info" round>v2.1 </el-tag>
+    </div>
+    <div class="store-controls">
+      <span style="font-size: 13px; color: #86909c;">🏢 当前环境配置：</span>
+      <el-select v-model="currentStoreId" @change="handleStoreChange" style="width: 180px" placeholder="请选择配置">
+        <el-option v-for="(config, id) in storeConfigs" :key="id" :label="config.name" :value="id" />
+      </el-select>
+      <el-button type="primary" plain @click="createNewStore" :icon="Plus">新建配置</el-button>
+      <el-button type="primary" @click="saveConfig" :icon="Check">保存策略</el-button>
+      <el-divider direction="vertical"></el-divider>
+      
+      <!-- 新增：配置导入/导出 -->
+      <el-button type="success" plain @click="exportStoreConfig" :icon="Download">导出配置</el-button>
+      <el-button type="warning" plain @click="triggerImportConfig" :icon="Upload">导入配置</el-button>
+      <input type="file" ref="importConfigInput" style="display: none" accept=".json" @change="handleImportConfig" />
+
+      <el-dropdown @command="handleStoreCommand" trigger="click" style="margin-left:5px;">
+        <el-button :icon="More" circle style="background: transparent; color: white; border-color: #4c515b;"></el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="rename" :icon="Edit">重命名</el-dropdown-item>
+            <el-dropdown-item command="delete" :icon="Delete" style="color: #F56C6C;">删除配置</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+  </header>
+
+  <!-- 主体内容 -->
+  <main class="main-container">
+    
+    <!-- 模块1：数据源接入与全局映射 -->
+    <el-card>
+      <div class="section-title"><el-icon color="#409EFC"><DataLine /></el-icon> 数据源接入与字段映射</div>
+      <el-row :gutter="24" style="align-items: center;">
+        <el-col :span="5">
+          <el-upload
+            class="upload-trigger"
+            action=""
+            :auto-upload="false"
+            :show-file-list="false"
+            accept=".xlsx, .xls, .json"
+            :on-change="handleFileUpload">
+            <el-button type="primary" :icon="Upload">导入业务数据</el-button>
+          </el-upload>
+          <el-button @click="clearData" type="danger" plain :icon="Delete" style="margin-left: 10px;">清空</el-button>
+        </el-col>
+        <el-col :span="19">
+          <el-form :inline="true" size="default" style="margin-bottom: -18px;">
+            <el-form-item label="商品 SKU 映射：">
+              <el-select v-model="activeConfig.mapping.sku" placeholder="选择关联列" style="width: 140px;" clearable>
+                <el-option v-for="col in columns" :key="col" :label="col" :value="col" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="原售价 映射：">
+              <el-select v-model="activeConfig.mapping.price" placeholder="选择关联列" style="width: 140px;" clearable>
+                <el-option v-for="col in columns" :key="col" :label="col" :value="col" />
+              </el-select>
+            </el-form-item>
+            <el-divider direction="vertical" style="height: 2em; margin-right: 16px;"></el-divider>
+            
+            <!-- 修改：全局调整 (支持百分比/绝对值) -->
+            <el-form-item label="全局调整：">
+              <el-select v-model="globalAdjustType" style="width: 90px; margin-right: 8px;">
+                <el-option label="按 %" value="percent"></el-option>
+                <el-option label="按 ¥" value="absolute"></el-option>
+              </el-select>
+              <el-input-number v-model="globalAdjustValue" :step="1" style="width: 120px;" controls-position="right" /> 
+              <span style="margin: 0 10px;">{{ globalAdjustType === 'percent' ? '%' : '¥' }}</span>
+              <el-button type="default" @click="applyGlobalAdjust">应用</el-button>
+            </el-form-item>
+          </el-form>
+        </el-col>
+      </el-row>
+    </el-card>
+
+    <!-- 模块2：策略引擎 (分栏) -->
+    <el-row :gutter="16">
+      <!-- 运费模板配置 -->
+      <el-col :span="8">
+        <el-card>
+          <div class="action-bar">
+            <div class="section-title" style="margin-bottom:0;"><el-icon color="#67C23A"><Box /></el-icon> 基础运费模板矩阵</div>
+            <el-button type="primary" plain size="small" :icon="Plus" @click="addFreightTpl">新增模板</el-button>
+          </div>
+          <el-table :data="activeConfig.freight" border style="width: 100%" size="small" max-height="350">
+            <el-table-column label="模板唯一编号" min-width="120">
+              <template #default="scope">
+                <el-input v-model="scope.row.id" placeholder="如: TPL-01" size="small" />
+              </template>
+            </el-table-column>
+            <el-table-column label="模板运费 (¥)" width="110">
+              <template #default="scope">
+                <el-input-number v-model="scope.row.price" :precision="2" :step="1" size="small" style="width: 100%;" controls-position="right" />
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="60" align="center">
+              <template #default="scope">
+                <el-button type="danger" :icon="Delete" circle size="small" plain @click="removeFreightTpl(scope.$index)"></el-button>
+              </template>
+            </el-table-column>
+            <template #empty>
+              <el-empty description="暂无运费模板" :image-size="60"></el-empty>
+            </template>
+          </el-table>
+        </el-card>
+      </el-col>
+
+      <!-- 促销区间规则 -->
+      <el-col :span="16">
+        <el-card>
+          <div class="action-bar">
+            <div class="section-title" style="margin-bottom:0;"><el-icon color="#E6A23C"><Filter /></el-icon> 促销区间分发引擎</div>
+            <div style="display:flex; gap: 10px;">
+              <el-tag type="warning">逻辑: 原售价落在区间 → 价格分段调节 → 匹配运费模板 → 最终售价</el-tag>
+              <el-button type="primary" plain size="small" :icon="Plus" @click="addPromoRule">新增规则</el-button>
+            </div>
+          </div>
+          <el-table :data="activeConfig.rules" border style="width: 100%" size="small" max-height="350">
+            <el-table-column label="起始价 (≥ ¥)" width="100">
+              <template #default="scope">
+                <el-input-number v-model="scope.row.min" :precision="2" :step="1" size="small" style="width: 100%;" controls-position="right"/>
+              </template>
+            </el-table-column>
+            <el-table-column label="封顶价 (≤ ¥)" width="100">
+              <template #default="scope">
+                <el-input-number v-model="scope.row.max" :precision="2" :step="1" size="small" style="width: 100%;" controls-position="right"/>
+              </template>
+            </el-table-column>
+            
+            <!-- 新增：分段调节列 -->
+            <el-table-column label="区间调节 (+/-)" min-width="135">
+              <template #default="scope">
+                <div style="display:flex; gap: 4px;">
+                  <el-select v-model="scope.row.adjustType" size="small" style="width: 55px;">
+                    <el-option label="%" value="percent" />
+                    <el-option label="¥" value="absolute" />
+                  </el-select>
+                  <el-input-number v-model="scope.row.adjustValue" :precision="2" :step="1" size="small" style="flex:1;" controls-position="right"/>
+                </div>
+              </template>
+            </el-table-column>
+
+            <el-table-column label="绑定运费模板" min-width="130">
+              <template #default="scope">
+                <el-select v-model="scope.row.templateId" size="small" placeholder="请选择" style="width: 100%;">
+                  <el-option v-for="tpl in activeConfig.freight" :key="tpl.id" :label="`${tpl.id} (¥${tpl.price})`" :value="tpl.id" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="最高价倒推示例" width="110">
+              <template #default="scope">
+                <span style="color:#67C23A; font-weight:bold;">¥ {{ calculateExample(scope.row) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="60" align="center">
+              <template #default="scope">
+                <el-button type="danger" :icon="Delete" circle size="small" plain @click="removePromoRule(scope.$index)"></el-button>
+              </template>
+            </el-table-column>
+            <template #empty>
+              <el-empty description="暂无促销区间规则，请新建" :image-size="60"></el-empty>
+            </template>
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 模块3：结果预览与输出 -->
+    <el-card>
+      <div class="action-bar">
+        <div class="section-title" style="margin-bottom:0;">
+          <el-icon color="#909399"><Odometer /></el-icon> 数据处理与结果输出
+          <el-tag v-if="promoApplied" type="success" style="margin-left: 10px;" effect="dark">引擎已运行</el-tag>
+        </div>
+        <div>
+          <span style="font-size: 13px; color: #909399; margin-right: 16px;">总计：{{ rawData.length }} 条数据</span>
+          <el-button type="warning" @click="runEngine" :icon="Lightning" style="font-weight: bold;">执行策略引擎计算</el-button>
+          <el-button type="success" @click="exportExcel" :icon="Download" :disabled="rawData.length === 0">导出执行结果 (Excel)</el-button>
+        </div>
+      </div>
+
+      <el-table :data="paginatedData" border stripe style="width: 100%" max-height="500" v-loading="tableLoading">
+        <el-table-column type="index" label="序号" width="60" align="center" fixed="left"></el-table-column>
+        
+        <!-- 动态生成原始数据列 -->
+        <el-table-column v-for="col in columns" :key="col" :prop="col" :label="col" min-width="120" show-overflow-tooltip></el-table-column>
+
+        <!-- 计算结果列 (固定在右侧) -->
+        <el-table-column label="处理结果面板" align="center" fixed="right">
+          <el-table-column prop="_totalPrice" label="原总价 (参考)" width="120" class-name="warning-col">
+            <template #default="scope">
+              <span style="color: #E6A23C; font-weight: bold;">¥ {{ scope.row._totalPrice?.toFixed(2) || '0.00' }}</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="_salesPrice" label="新销售价" width="120" class-name="highlight-col">
+            <template #default="scope">
+              <span style="color: #67C23A; font-weight: bold;">¥ {{ scope.row._salesPrice?.toFixed(2) || '0.00' }}</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="_promoFreight" label="匹配运费" width="100">
+            <template #default="scope">¥ {{ scope.row._promoFreight?.toFixed(2) || '0.00' }}</template>
+          </el-table-column>
+          
+          <el-table-column prop="_promoTemplateId" label="命中模板" width="130">
+            <template #default="scope">
+              <el-tag v-if="scope.row._promoTemplateId" size="small">{{ scope.row._promoTemplateId }}</el-tag>
+              <span v-else style="color:#C0C4CC;">—</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="scope">
+              <el-tag v-if="scope.row._promoApplied" type="success" size="small">策略生效</el-tag>
+              <el-tag v-else type="info" size="small">未匹配</el-tag>
+            </template>
+          </el-table-column>
+        </el-table-column>
+        
+        <template #empty>
+          <el-empty description="待导入业务数据" :image-size="100"></el-empty>
+        </template>
+      </el-table>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[20, 50, 100, 200]"
+          background
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="rawData.length"
+        />
+      </div>
+    </el-card>
+
+  </main>
+</div>
+
+<script>
+  const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+  const { ElMessage, ElMessageBox } = ElementPlus;
+
+  const app = createApp({
+    setup() {
+      const fullscreenLoading = ref(false);
+      const tableLoading = ref(false);
+      
+      const rawData = ref([]);
+      const columns = ref([]);
+      
+      // 模块1：全局调整
+      const globalAdjustType = ref('percent'); // percent | absolute
+      const globalAdjustValue = ref(0);
+      const promoApplied = ref(false);
+
+      const currentPage = ref(1);
+      const pageSize = ref(50);
+
+      const STORE_KEY = 'SaaS_Freight_Engine_Configs';
+      const storeConfigs = ref({});
+      const currentStoreId = ref('');
+      const importConfigInput = ref(null); // DOM 引用
+
+      const activeConfig = computed(() => {
+        if(!currentStoreId.value || !storeConfigs.value[currentStoreId.value]) {
+          return { mapping: { sku: '', price: '' }, freight: [], rules: [] };
+        }
+        return storeConfigs.value[currentStoreId.value];
+      });
+
+      // 初始化本地存储
+      const initStoreConfigs = () => {
+        try {
+          const saved = localStorage.getItem(STORE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            
+            // 兼容老数据结构(补充 adjustType 和 adjustValue)
+            Object.values(parsed.configs).forEach(config => {
+              if (config.rules) {
+                config.rules.forEach(rule => {
+                  if (!rule.adjustType) rule.adjustType = 'percent';
+                  if (rule.adjustValue === undefined) rule.adjustValue = 0;
+                });
+              }
+            });
+
+            storeConfigs.value = parsed.configs;
+            currentStoreId.value = parsed.activeId;
+          } else {
+            createDefaultStore();
+          }
+        } catch (e) {
+          createDefaultStore();
+        }
+        if(!storeConfigs.value[currentStoreId.value]) {
+          currentStoreId.value = Object.keys(storeConfigs.value)[0];
+        }
+      };
+
+      const createDefaultStore = () => {
+        const id = 'store_default';
+        storeConfigs.value = {
+          [id]: { name: '通用主店铺配置', mapping: { sku: '', price: '' }, freight: [], rules: [] }
+        };
+        currentStoreId.value = id;
+      };
+
+      const saveConfig = () => {
+        localStorage.setItem(STORE_KEY, JSON.stringify({
+          activeId: currentStoreId.value,
+          configs: storeConfigs.value
+        }));
+        ElMessage.success({ message: '策略配置已成功持久化', duration: 2000 });
+      };
+
+      // 导出整个 Store Config 为 JSON 文件
+      const exportStoreConfig = () => {
+        const dataStr = JSON.stringify(storeConfigs.value, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `SaaS_策略配置备份_${new Date().getTime()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        ElMessage.success('系统策略配置已导出');
+      };
+
+      // 导入触发与读取
+      const triggerImportConfig = () => {
+        if (importConfigInput.value) {
+          importConfigInput.value.click();
+        }
+      };
+      
+      const handleImportConfig = (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const data = JSON.parse(ev.target.result);
+            if (typeof data !== 'object') throw new Error();
+            
+            // 简单校验并合并配置，带有老结构兼容
+            let importedCount = 0;
+            Object.keys(data).forEach(key => {
+              const config = data[key];
+              if (config && config.name && config.rules) {
+                config.rules.forEach(rule => {
+                  if (!rule.adjustType) rule.adjustType = 'percent';
+                  if (rule.adjustValue === undefined) rule.adjustValue = 0;
+                });
+                storeConfigs.value[key] = config;
+                importedCount++;
+              }
+            });
+            saveConfig();
+            if (importedCount > 0) {
+              ElMessage.success(`成功导入 ${importedCount} 套环境配置`);
+            } else {
+              ElMessage.warning('未能从文件中识别出有效配置');
+            }
+          } catch (err) {
+            ElMessage.error('无效的配置文件格式');
+          } finally {
+            e.target.value = null; // 重置 input 状态以便下次同文件触发
+          }
+        };
+        reader.readAsText(file);
+      };
+
+      const createNewStore = () => {
+        ElMessageBox.prompt('请输入新配置名称', '创建环境配置', {
+          confirmButtonText: '确定创建',
+          cancelButtonText: '取消',
+          inputPattern: /\S+/,
+          inputErrorMessage: '名称不能为空'
+        }).then(({ value }) => {
+          const id = 'store_' + Date.now();
+          storeConfigs.value[id] = { name: value, mapping: { sku: '', price: '' }, freight: [], rules: [] };
+          currentStoreId.value = id;
+          saveConfig();
+        }).catch(() => {});
+      };
+
+      const handleStoreCommand = (command) => {
+        if (command === 'rename') {
+          ElMessageBox.prompt('请输入新的配置名称', '重命名配置', {
+            inputValue: storeConfigs.value[currentStoreId.value].name,
+            confirmButtonText: '保存',
+            cancelButtonText: '取消',
+          }).then(({ value }) => {
+            if(value.trim()){
+              storeConfigs.value[currentStoreId.value].name = value.trim();
+              saveConfig();
+            }
+          }).catch(() => {});
+        } else if (command === 'delete') {
+          if (Object.keys(storeConfigs.value).length <= 1) {
+            return ElMessage.warning('系统需要至少保留一套基础环境配置。');
+          }
+          ElMessageBox.confirm('危险操作：确定要删除当前环境配置及其所有规则吗？', '系统警告', {
+            confirmButtonText: '强制删除',
+            cancelButtonText: '取消',
+            type: 'error',
+          }).then(() => {
+            delete storeConfigs.value[currentStoreId.value];
+            currentStoreId.value = Object.keys(storeConfigs.value)[0];
+            saveConfig();
+            ElMessage.success('配置已彻底删除');
+          }).catch(() => {});
+        }
+      };
+
+      const handleStoreChange = () => {
+        promoApplied.value = false;
+        saveConfig();
+        ElMessage.info(`工作区已切换至：${activeConfig.value.name}`);
+      };
+
+      // 基础模板操作
+      const addFreightTpl = () => {
+        activeConfig.value.freight.push({ id: `TPL-${activeConfig.value.freight.length + 1}`, price: 0 });
+      };
+      const removeFreightTpl = (index) => {
+        activeConfig.value.freight.splice(index, 1);
+      };
+
+      // 规则操作
+      const addPromoRule = () => {
+        activeConfig.value.rules.push({ 
+          min: 0, max: 0, templateId: '', adjustType: 'percent', adjustValue: 0 
+        });
+      };
+      const removePromoRule = (index) => {
+        activeConfig.value.rules.splice(index, 1);
+      };
+
+      // 最高价倒推示例(含区间调节)
+      const calculateExample = (rule) => {
+        if(rule.max <= 0 || !rule.templateId) return '—';
+        const tpl = activeConfig.value.freight.find(f => f.id === rule.templateId);
+        if(!tpl) return '—';
+        
+        let targetPrice = rule.max;
+        if (rule.adjustType === 'percent') {
+          targetPrice = targetPrice * (1 + (rule.adjustValue || 0) / 100);
+        } else {
+          targetPrice = targetPrice + (rule.adjustValue || 0);
+        }
+        
+        return Math.max(0, targetPrice - tpl.price).toFixed(2);
+      };
+
+      // 数据解析
+      const handleFileUpload = (file) => {
+        fullscreenLoading.value = true;
+        const rawFile = file.raw;
+        
+        if (rawFile.name.endsWith('.json')) {
+          const reader = new FileReader();
+          reader.onload = e => {
+            try {
+              const d = JSON.parse(e.target.result);
+              if (Array.isArray(d) && d.length) setupData(d);
+              else throw new Error("JSON数据为空或格式不对");
+            } catch (err) {
+              ElMessage.error('JSON 文件解析失败');
+            } finally {
+              fullscreenLoading.value = false;
+            }
+          };
+          reader.readAsText(rawFile);
+        } else {
+          const reader = new FileReader();
+          reader.onload = e => {
+            try {
+              const data = new Uint8Array(e.target.result);
+              const workbook = XLSX.read(data, { type: 'array' });
+              const firstSheetName = workbook.SheetNames[0];
+              const worksheet = workbook.Sheets[firstSheetName];
+              const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+              
+              if (json.length > 0) setupData(json);
+              else throw new Error("表格为空");
+            } catch (err) {
+              ElMessage.error('Excel 文件解析失败');
+            } finally {
+              fullscreenLoading.value = false;
+            }
+          };
+          reader.readAsArrayBuffer(rawFile);
+        }
+      };
+
+      const setupData = (data) => {
+        columns.value = Object.keys(data[0]);
+        rawData.value = data.map(item => ({...item})); 
+        currentPage.value = 1;
+        promoApplied.value = false;
+        
+        if (!columns.value.includes(activeConfig.value.mapping.sku)) activeConfig.value.mapping.sku = '';
+        if (!columns.value.includes(activeConfig.value.mapping.price)) activeConfig.value.mapping.price = '';
+        
+        ElMessage.success(`成功导入业务数据：共 ${data.length} 条记录`);
+      };
+
+      const clearData = () => {
+        ElMessageBox.confirm('将清空当前表格内所有源数据，确认操作？', '提示', { type: 'warning' })
+        .then(() => {
+          rawData.value = [];
+          columns.value = [];
+          promoApplied.value = false;
+        }).catch(() => {});
+      };
+
+      // 全局微调 (支持百分比和绝对值)
+      const applyGlobalAdjust = () => {
+        if (!rawData.value.length) return ElMessage.warning('请先导入业务数据');
+        const priceField = activeConfig.value.mapping.price;
+        if (!priceField) return ElMessage.error('错误：请先指定【原售价】对应的字段映射');
+        
+        const adjustVal = globalAdjustValue.value;
+        if (adjustVal !== 0) {
+          tableLoading.value = true;
+          setTimeout(() => {
+            rawData.value.forEach(row => {
+              const currentVal = parseFloat(row[priceField]) || 0;
+              if (globalAdjustType.value === 'percent') {
+                row[priceField] = (currentVal * (1 + adjustVal / 100)).toFixed(2);
+              } else {
+                row[priceField] = (currentVal + adjustVal).toFixed(2);
+              }
+            });
+            globalAdjustValue.value = 0;
+            promoApplied.value = false; 
+            tableLoading.value = false;
+            ElMessage.success('全局价格已调整完毕');
+          }, 300);
+        }
+      };
+
+      // 策略引擎核心逻辑 (含分段调节逻辑)
+      const runEngine = () => {
+        if (!rawData.value.length) return ElMessage.warning('引擎异常：没有可以处理的数据节点');
+        const priceField = activeConfig.value.mapping.price;
+        if (!priceField) return ElMessage.error('引擎异常：未指定核心运算字段【原售价】');
+        if (activeConfig.value.rules.length === 0) return ElMessage.warning('引擎提示：未配置任何促销区间策略');
+
+        tableLoading.value = true;
+        
+        const tplMap = {};
+        activeConfig.value.freight.forEach(t => { tplMap[t.id] = t.price; });
+
+        setTimeout(() => {
+          rawData.value.forEach(row => {
+            const originPrice = parseFloat(row[priceField]) || 0;
+            row._totalPrice = originPrice; // 参考源
+            
+            let matched = false;
+            for (let rule of activeConfig.value.rules) {
+              if (originPrice >= rule.min && originPrice <= rule.max && rule.templateId) {
+                // 1. 分段价格调节
+                let adjustedPrice = originPrice;
+                if (rule.adjustType === 'percent') {
+                  adjustedPrice = originPrice * (1 + (rule.adjustValue || 0) / 100);
+                } else {
+                  adjustedPrice = originPrice + (rule.adjustValue || 0);
+                }
+
+                // 2. 扣减运费
+                const freight = tplMap[rule.templateId] || 0;
+                row._salesPrice = Math.max(0, adjustedPrice - freight);
+                row._promoFreight = freight;
+                row._promoTemplateId = rule.templateId;
+                row._promoApplied = true;
+                matched = true;
+                break;
+              }
+            }
+            
+            if (!matched) {
+              row._salesPrice = originPrice;
+              row._promoFreight = 0;
+              row._promoTemplateId = '';
+              row._promoApplied = false;
+            }
+          });
+          
+          promoApplied.value = true;
+          tableLoading.value = false;
+          ElMessage.success('策略引擎执行完毕，已完成全部数据覆写与倒推运算');
+        }, 500);
+      };
+
+      const paginatedData = computed(() => {
+        const start = (currentPage.value - 1) * pageSize.value;
+        const end = start + pageSize.value;
+        return rawData.value.slice(start, end);
+      });
+
+      const exportExcel = () => {
+        if (!rawData.value.length) return;
+        const exportData = rawData.value.map(r => {
+          const out = { ...r };
+          delete out._totalPrice; delete out._salesPrice; delete out._promoFreight; delete out._promoTemplateId; delete out._promoApplied;
+          
+          out['策略_原总价参考'] = r._totalPrice;
+          out['策略_系统计算最终售价'] = r._salesPrice;
+          out['策略_匹配运费'] = r._promoFreight;
+          out['策略_命中模板ID'] = r._promoTemplateId || '未命中';
+          out['策略_状态'] = r._promoApplied ? '生效' : '原始';
+          return out;
+        });
+        
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '策略运算结果集');
+        XLSX.writeFile(wb, `策略引擎_输出报表_${new Date().getTime()}.xlsx`);
+      };
+
+      onMounted(() => {
+        initStoreConfigs();
+      });
+
+      return {
+        fullscreenLoading, tableLoading, rawData, columns, promoApplied,
+        globalAdjustType, globalAdjustValue,
+        currentPage, pageSize, paginatedData,
+        storeConfigs, currentStoreId, activeConfig, importConfigInput,
+        handleStoreChange, handleStoreCommand, createNewStore, saveConfig,
+        exportStoreConfig, triggerImportConfig, handleImportConfig,
+        addFreightTpl, removeFreightTpl, addPromoRule, removePromoRule, calculateExample,
+        handleFileUpload, clearData, applyGlobalAdjust, runEngine, exportExcel
+      };
+    }
+  });
+
+  for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component);
+  }
+
+  app.use(ElementPlus);
+  app.mount('#app');
+</script>
+
+</body>
+</html>

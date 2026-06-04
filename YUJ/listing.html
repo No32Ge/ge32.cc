@@ -1,0 +1,557 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuantCom · Deep-Dive Analytics Terminal</title>
+  
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
+  <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+
+  <style>
+    :root {
+      --bg-app: #f3f4f6;
+      --bg-panel: #ffffff;
+      --border: #d1d5db;
+      --border-light: #e5e7eb;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --finance-blue: #0f4c81;
+      --finance-blue-hover: #0a365c;
+      --positive-green: #059669;
+      --negative-red: #dc2626;
+      --dot-zero: #d1d5db; /* 零出单灰色 */
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+      --radius: 2px;
+      --transition: all 0.3s ease;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font-sans); background: var(--bg-app); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 13px; -webkit-font-smoothing: antialiased; }
+
+    /* Navbar */
+    .navbar { background: var(--finance-blue); color: #fff; height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; }
+    .brand { display: flex; align-items: baseline; gap: 12px; }
+    .brand h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; margin: 0; }
+    .brand span { font-size: 11px; color: #93c5fd; font-family: var(--font-mono); }
+    .btn { background: #fff; border: 1px solid #fff; color: var(--finance-blue); padding: 4px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn:hover { background: #e0e7ff; }
+
+    /* Workspace */
+    .workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+    /* Screener */
+    .screener { width: 260px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; box-shadow: var(--shadow); }
+    .panel-header { padding: 10px 16px; border-bottom: 1px solid var(--border); background: #f9fafb; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .screener-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+    .input-row { display: flex; gap: 6px; align-items: center; }
+    .input-row input, .input-row select { flex: 1; width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; font-size: 12px; font-family: var(--font-sans); outline: none; }
+    .input-row input:focus, .input-row select:focus { border-color: var(--finance-blue); }
+    .checkbox-list { display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto; border: 1px solid var(--border); padding: 8px; background: #fafafa; }
+    .checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; }
+    .btn-action { background: var(--finance-blue); color: #fff; border: none; padding: 8px; width: 100%; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .btn-action:hover { background: var(--finance-blue-hover); }
+
+    /* Dashboard */
+    .dashboard { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; background: var(--bg-app); }
+    #uploadZone { position: absolute; inset: 20px; background: #fff; border: 2px dashed var(--finance-blue); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; cursor: pointer; transition: 0.2s; }
+    #uploadZone:hover { background: #f0f4f8; }
+    #uploadZone h2 { color: var(--finance-blue); font-size: 24px; margin-bottom: 8px; }
+
+    /* Macro Bar */
+    .macro-bar { display: flex; flex-wrap: wrap; background: var(--bg-panel); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); }
+    .macro-group { display: flex; border-right: 1px solid var(--border-light); padding: 8px 16px; flex-direction: column; justify-content: center; flex: 1; min-width: 120px; }
+    .macro-group:last-child { border-right: none; }
+    .macro-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+    .macro-val { font-size: 15px; font-family: var(--font-mono); font-weight: 700; color: var(--text-main); }
+
+    .content-scroll { flex: 1; overflow-y: auto; padding: 16px; display: none; display: flex; flex-direction: column; gap: 16px; }
+
+    /* Charts Grid & Fullscreen Modifiers */
+    .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; flex-shrink: 0; }
+    .card { background: var(--bg-panel); border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; flex-direction: column; position: relative; transition: var(--transition); }
+    .card-title { padding: 10px 16px; border-bottom: 1px solid var(--border-light); font-size: 12px; font-weight: 700; color: var(--text-main); background: #fcfcfc; display: flex; justify-content: space-between; align-items: center; }
+    .chart-dom { height: 280px; width: 100%; padding: 8px; }
+    
+    .chart-actions { display: flex; gap: 8px; }
+    .chart-btn { background: #fff; border: 1px solid var(--border); padding: 2px 8px; font-size: 10px; border-radius: var(--radius); cursor: pointer; color: var(--finance-blue); font-weight: 700; }
+    .chart-btn:hover { background: #f0f4f8; }
+
+    /* Fullscreen Chart Class */
+    .card.is-fullscreen {
+      position: fixed; top: 44px; left: 0; width: 100vw; height: calc(100vh - 44px);
+      z-index: 9999; border: none; border-radius: 0;
+    }
+    .card.is-fullscreen .chart-dom { height: calc(100vh - 90px) !important; }
+
+    /* Tabulator Data Grid */
+    .grid-container { flex: 1; display: flex; flex-direction: column; min-height: 350px; background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow); }
+    .tabulator { border: none !important; font-size: 12px !important; font-family: var(--font-sans); }
+    .tabulator-header { background: #f9fafb !important; border-bottom: 1px solid var(--border) !important; color: var(--text-muted) !important; font-weight: 700 !important; text-transform: uppercase; font-size: 11px; }
+    .tabulator-row { border-bottom: 1px solid #f3f4f6 !important; }
+    .tabulator-row:hover { background-color: #f0f4f8 !important; }
+    .tabulator-row.tabulator-selected { background-color: #e0e7ff !important; }
+    .tabulator-cell { padding: 8px 12px !important; display: flex; align-items: center; }
+    .cell-mono { font-family: var(--font-mono) !important; font-weight: 500; }
+
+    /* Status Badges */
+    .badge { padding: 2px 6px; border-radius: 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .badge-high { background: #fee2e2; color: #b91c1c; }
+    .badge-med { background: #fef3c7; color: #b45309; }
+    .badge-low { background: #f3f4f6; color: #4b5563; }
+    .badge-success { background: #d1fae5; color: #047857; }
+
+    /* Tear Sheet */
+    .tear-sheet { width: 0; background: var(--bg-panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.2s ease-out; overflow: hidden; flex-shrink: 0; box-shadow: -4px 0 12px rgba(0,0,0,0.05); z-index: 20; }
+    .tear-sheet.open { width: 360px; }
+    .ts-header { padding: 16px; border-bottom: 1px solid var(--border); background: #f9fafb; display: flex; justify-content: space-between; align-items: flex-start; }
+    .ts-title { font-size: 16px; font-weight: 700; color: var(--finance-blue); font-family: var(--font-mono); margin-bottom: 4px; word-break: break-all; }
+    .ts-subtitle { font-size: 12px; color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .ts-close { cursor: pointer; font-size: 20px; color: var(--text-muted); line-height: 1; }
+    .ts-close:hover { color: var(--text-main); }
+    .ts-body { padding: 16px; overflow-y: auto; flex: 1; }
+    .sec-title { font-size: 11px; font-weight: 700; color: var(--finance-blue); text-transform: uppercase; margin: 16px 0 8px 0; border-bottom: 1px solid var(--border-light); padding-bottom: 4px; }
+    .kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .kv-item { display: flex; flex-direction: column; }
+    .kv-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+    .kv-val { font-size: 13px; font-family: var(--font-mono); font-weight: 600; color: var(--text-main); }
+    .btn-copy-huge { width: 100%; padding: 10px; background: var(--finance-blue); border: none; color: #fff; font-size: 12px; font-weight: 700; border-radius: var(--radius); cursor: pointer; transition: 0.15s; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-copy-huge:hover { background: var(--finance-blue-hover); }
+
+    .text-green { color: var(--positive-green) !important; }
+    .text-red { color: var(--negative-red) !important; }
+
+    #toast { position: fixed; top: 60px; right: 20px; background: #111827; color: white; padding: 10px 20px; border-radius: var(--radius); font-size: 12px; font-weight: 600; transform: translateX(150%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999; }
+    #toast.show { transform: translateX(0); }
+  </style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="brand">
+    <h1>QuantCom</h1>
+    <span>Deep-Dive Analytics Terminal</span>
+  </div>
+  <div>
+    <button class="btn" onclick="document.getElementById('fileInput').click()">📥 LOAD DATASET</button>
+    <input type="file" id="fileInput" style="display:none;" accept=".xlsx,.xls,.csv" onchange="handleFile(event)">
+  </div>
+</div>
+
+<div class="workspace">
+  <!-- Screener -->
+  <div class="screener">
+    <div class="panel-header">Portfolio Screener</div>
+    <div class="screener-body" id="screenerPanel" style="opacity: 0.4; pointer-events: none;">
+      <div class="form-group"><label>Ticker / Name</label><div class="input-row"><input type="text" id="f_search" placeholder="Search SKU..."></div></div>
+      <div class="form-group"><label>Sector</label><div class="checkbox-list" id="f_type"></div></div>
+      <div class="form-group">
+        <label>Has Orders (GMV > 0)</label>
+        <div class="input-row">
+          <select id="f_ordered">
+            <option value="">All Items</option><option value="YES">Ordered Only</option><option value="NO">Zero Orders Only</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Listing Quality (%)</label><div class="input-row"><input type="number" id="f_lq_min" placeholder="Min"><input type="number" id="f_lq_max" placeholder="Max"></div></div>
+      <div class="form-group"><label>Attributes</label><label class="checkbox-item"><input type="checkbox" id="f_priced_out"> Negative Price Spread</label></div>
+      <button class="btn-action" onclick="applyFilters()">Execute Screen</button>
+      <button class="btn-action" style="background: transparent; color: var(--text-main); border: 1px solid var(--border);" onclick="resetFilters()">Reset</button>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <h2>Drop Exact Excel Dataset Here</h2>
+      <p style="color: var(--text-muted); font-size: 13px;">Auto-parses percentages, strict typing enforced.</p>
+    </div>
+
+    <!-- Macro Bar -->
+    <div class="macro-bar" id="tickerBar" style="display:none;">
+      <div class="macro-group"><div class="macro-label">Total SKUs</div><div class="macro-val" id="k_sku">0</div></div>
+      <div class="macro-group"><div class="macro-label">Total Order Rate</div><div class="macro-val text-green" id="k_rate_all">0.0%</div></div>
+      <div class="macro-group" style="background: #f0fdf4;"><div class="macro-label">Exposed Order Rate</div><div class="macro-val text-green" id="k_rate_exp">0.0%</div></div>
+      <div class="macro-group"><div class="macro-label">Avg GMV (All)</div><div class="macro-val" id="k_avg_all">$0</div></div>
+      <div class="macro-group"><div class="macro-label">Avg GMV (Exposed)</div><div class="macro-val" id="k_avg_exp">$0</div></div>
+      <div class="macro-group" style="background: #eff6ff;"><div class="macro-label" style="color:var(--finance-blue);">Avg GMV (Ordered)</div><div class="macro-val" style="color:var(--finance-blue);" id="k_avg_ord">$0</div></div>
+      <div class="macro-group"><div class="macro-label">Max Single GMV</div><div class="macro-val text-red" id="k_max_gmv">$0</div></div>
+      <div class="macro-group"><div class="macro-label">Max Exposure</div><div class="macro-val" id="k_max_pv">0</div></div>
+    </div>
+
+    <div class="content-scroll" id="contentScroll" style="display:none;">
+      <!-- Charts -->
+      <div class="chart-grid">
+        <div class="card" id="card_sector">
+          <div class="card-title">
+            <span>Multi-Dimensional Sector Analysis</span>
+            <div class="chart-actions">
+              <span style="font-size:10px; color:#aaa; font-weight:normal; margin-right:5px;">* Toggle lines in legend</span>
+              <button class="chart-btn" onclick="toggleChartFullscreen('card_sector', 'chart_sector')">⛶ EXPAND</button>
+            </div>
+          </div>
+          <div id="chart_sector" class="chart-dom"></div>
+        </div>
+
+        <div class="card" id="card_scatter">
+          <div class="card-title">
+            <span>Risk Matrix (Quality vs Yield)</span>
+            <div class="chart-actions">
+              <button class="chart-btn" id="btnScatterMode" onclick="toggleScatterMode()">MODE: BUBBLE</button>
+              <button class="chart-btn" onclick="toggleChartFullscreen('card_scatter', 'chart_scatter')">⛶ EXPAND</button>
+            </div>
+          </div>
+          <div id="chart_scatter" class="chart-dom"></div>
+        </div>
+      </div>
+
+      <!-- Data Grid -->
+      <div class="card grid-container">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Execution Blotter (Institutional Grid)</span>
+          <div style="display:flex; align-items:center; gap: 12px;">
+            <span id="t_count" style="font-weight: normal; color: var(--text-muted);">0 Records</span>
+            <button class="chart-btn" style="background: var(--finance-blue); color: white;" onclick="exportSelectedData()">📥 EXCEL: EXPORT SELECTED</button>
+          </div>
+        </div>
+        <div id="dataGrid" style="flex:1;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tear Sheet -->
+  <div class="tear-sheet" id="tearSheet">
+    <div class="ts-header">
+      <div><div class="ts-title" id="ts_sku">SKU</div><div class="ts-subtitle" id="ts_name">Name</div></div>
+      <div class="ts-close" onclick="closeTearSheet()">×</div>
+    </div>
+    <div class="ts-body">
+      <button class="btn-copy-huge" id="btnCopySku">📋 COPY TICKER ID</button>
+      <div class="sec-title">Performance Yield</div>
+      <div class="kv-grid">
+        <div class="kv-item"><div class="kv-label">Has Orders?</div><div class="kv-val" id="ts_ordered">--</div></div>
+        <div class="kv-item"><div class="kv-label">Generated GMV</div><div class="kv-val text-green" id="ts_gmv">--</div></div>
+        <div class="kv-item"><div class="kv-label">Volume (Views)</div><div class="kv-val" id="ts_pv">--</div></div>
+        <div class="kv-item"><div class="kv-label">Conv Yield</div><div class="kv-val" id="ts_conv">--</div></div>
+      </div>
+      <div class="sec-title">Financials & Market</div>
+      <div class="kv-grid">
+        <div class="kv-item"><div class="kv-label">Walmart Price</div><div class="kv-val" id="ts_wp">--</div></div>
+        <div class="kv-item"><div class="kv-label">Comp Price</div><div class="kv-val" id="ts_cp">--</div></div>
+        <div class="kv-item"><div class="kv-label">Price Spread</div><div class="kv-val" id="ts_spread">--</div></div>
+        <div class="kv-item"><div class="kv-label">Total Issues</div><div class="kv-val text-red" id="ts_issues">--</div></div>
+      </div>
+      <div class="sec-title">Listing Quality Deep Dive</div>
+      <div class="kv-grid">
+        <div class="kv-item"><div class="kv-label">Total Quality</div><div class="kv-val" id="ts_lq">--</div></div>
+        <div class="kv-item"><div class="kv-label">Content Score</div><div class="kv-val" id="ts_scoreContent">--</div></div>
+        <div class="kv-item"><div class="kv-label">Review Score</div><div class="kv-val" id="ts_scoreReview">--</div></div>
+        <div class="kv-item"><div class="kv-label">Shipping Score</div><div class="kv-val" id="ts_scoreShip">--</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast">Action Successful</div>
+
+<script>
+// --- Core State ---
+let rawData = []; let fData = []; let charts = {};
+let table; 
+let currentSku = null;
+let scatterMode = 'bubble'; // 'bubble' | 'heat'
+
+// --- Utilities ---
+const $ = id => document.getElementById(id);
+const toast = msg => { const t = $('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); };
+const formatMoney = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n||0);
+const formatNum = n => new Intl.NumberFormat('en-US').format(n||0);
+
+const parsePct = v => { if (v==null||v===''||v==='--') return 0; const s = String(v).trim(); const n = parseFloat(s.replace(/,/g, '')); return isNaN(n)?0:n; };
+const parseNum = v => { if(v==null||v===''||v==='--') return 0; const s = String(v).trim(); if(s==='No Match') return 0; const n = parseFloat(s.replace(/[^0-9.-]/g, '')); return isNaN(n)?0:n; };
+
+// --- File Handling ---
+const uz = $('uploadZone');
+uz.ondragover = e => { e.preventDefault(); uz.style.borderColor = 'var(--finance-blue)'; uz.style.background = '#f0f4f8'; };
+uz.ondragleave = e => { e.preventDefault(); uz.style.borderColor = 'var(--finance-blue)'; uz.style.background = '#fff'; };
+uz.ondrop = e => { e.preventDefault(); handleFile({target:{files:[e.dataTransfer.files[0]]}}); };
+
+function handleFile(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+      const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:'', raw: false});
+      processData(raw);
+    } catch(err) { toast('Error parsing file.'); console.error(err); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function processData(raw) {
+  rawData = raw.map(r => {
+    const sku = String(r['SKU'] || r['Item Id'] || 'UNKNOWN').trim();
+    const name = String(r['Product Name'] || '--').trim();
+    const type = String(r['Product Type'] || 'Uncategorized').trim();
+    const priority = String(r['Priority'] || 'MEDIUM').trim().toUpperCase();
+    
+    const lq = parsePct(r['Listing Quality']);
+    const scoreContent = parsePct(r['Content & Discoverability']);
+    const scoreReview = parsePct(r['Ratings and Reviews']);
+    const scoreShip = parsePct(r['Shipping Score']);
+    const conv = parsePct(r['Conversion Rate']);
+    
+    const wp = parseNum(r['Walmart Price']);
+    const gmv = parseNum(r['GMV'] || r['Gmv']);
+    const pv = parseNum(r['Page Views']);
+    const issues = parseNum(r['Total Issues']);
+    
+    const isOrdered = gmv > 0;
+    const isExposed = pv > 0;
+
+    const cpStr = String(r['Competitive Price']||'');
+    let cp = parseNum(cpStr);
+    let spread = 0;
+    if(cpStr.includes('Less')) spread = parseNum(cpStr);
+    else if(cpStr.includes('More')) spread = -parseNum(cpStr);
+    else if(cp > 0 && wp > 0) spread = cp - wp;
+    
+    return { sku, name, type, priority, lq, scoreContent, scoreReview, scoreShip, conv, wp, cpStr, cp, spread, gmv, pv, issues, isOrdered, isExposed };
+  });
+
+  if(!rawData.length) { toast('No data found.'); return; }
+  
+  $('uploadZone').style.display = 'none'; $('tickerBar').style.display = 'flex';
+  $('contentScroll').style.display = 'flex'; $('screenerPanel').style.opacity = '1'; $('screenerPanel').style.pointerEvents = 'auto';
+  
+  initScreener(); initTabulator(); applyFilters(); toast('Dataset Parsed Successfully.');
+}
+
+function initScreener() {
+  const types = [...new Set(rawData.map(d=>d.type))].filter(Boolean).sort();
+  $('f_type').innerHTML = types.map(t => `<label class="checkbox-item"><input type="checkbox" value="${t}" checked> ${t}</label>`).join('');
+}
+
+function applyFilters() {
+  const term = $('f_search').value.toLowerCase();
+  const types = [...$('f_type').querySelectorAll('input:checked')].map(i=>i.value);
+  const ord = $('f_ordered').value;
+  const lqMin = $('f_lq_min').value; const lqMax = $('f_lq_max').value;
+  const onlyPricedOut = $('f_priced_out').checked;
+
+  fData = rawData.filter(d => {
+    if(term && !d.sku.toLowerCase().includes(term) && !d.name.toLowerCase().includes(term)) return false;
+    if(types.length && !types.includes(d.type)) return false;
+    if(ord === 'YES' && !d.isOrdered) return false;
+    if(ord === 'NO' && d.isOrdered) return false;
+    if(lqMin !== '' && d.lq < Number(lqMin)) return false;
+    if(lqMax !== '' && d.lq > Number(lqMax)) return false;
+    if(onlyPricedOut && d.spread >= 0) return false;
+    return true;
+  });
+  updateWorkspace();
+}
+
+function resetFilters() {
+  $('f_search').value = ''; $('f_ordered').value = '';
+  $('f_lq_min').value = ''; $('f_lq_max').value = ''; $('f_priced_out').checked = false;
+  $('f_type').querySelectorAll('input').forEach(i => i.checked = true);
+  applyFilters();
+}
+
+function updateWorkspace() {
+  const tTotal = fData.length;
+  const exposedData = fData.filter(d => d.isExposed);
+  const orderedData = fData.filter(d => d.isOrdered);
+  const totalGmv = fData.reduce((s,d)=>s+d.gmv, 0);
+
+  const rateAll = tTotal ? (orderedData.length / tTotal)*100 : 0;
+  const rateExp = exposedData.length ? (orderedData.length / exposedData.length)*100 : 0;
+  
+  const avgAll = tTotal ? totalGmv / tTotal : 0;
+  const avgExp = exposedData.length ? totalGmv / exposedData.length : 0;
+  const avgOrd = orderedData.length ? totalGmv / orderedData.length : 0;
+
+  const maxGmv = tTotal ? Math.max(...fData.map(d=>d.gmv)) : 0;
+  const maxPv = tTotal ? Math.max(...fData.map(d=>d.pv)) : 0;
+
+  $('k_sku').innerText = formatNum(tTotal);
+  $('k_rate_all').innerText = rateAll.toFixed(2) + '%';
+  $('k_rate_exp').innerText = rateExp.toFixed(2) + '%';
+  $('k_avg_all').innerText = formatMoney(avgAll);
+  $('k_avg_exp').innerText = formatMoney(avgExp);
+  $('k_avg_ord').innerText = formatMoney(avgOrd);
+  $('k_max_gmv').innerText = formatMoney(maxGmv);
+  $('k_max_pv').innerText = formatNum(maxPv);
+  $('t_count').innerText = `${tTotal} Records`;
+
+  updateGrid(); drawSectorChart(); drawScatterChart();
+}
+
+// --- Tabulator Integration with Checkbox & Export ---
+function initTabulator() {
+  table = new Tabulator("#dataGrid", {
+    layout: "fitColumns", responsiveLayout: "collapse",
+    selectable: true, // Enables row selection
+    height: "100%", placeholder: "No Data Available",
+    columns: [
+      { formatter: "rowSelection", titleFormatter: "rowSelection", hozAlign: "center", headerSort: false, width: 45 },
+      { title: "TICKER / SKU", field: "sku", width: 130, cssClass: "cell-mono" },
+      { title: "SECTOR", field: "type", width: 140 },
+      { title: "ORDERS?", field: "isOrdered", width: 90, hozAlign:"center", formatter: cell => cell.getValue() ? `<span class="badge badge-success">YES</span>` : `<span class="badge badge-low">NO</span>` },
+      { title: "VIEWS", field: "pv", hozAlign: "right", formatter: "money", formatterParams: { precision: 0, symbol: "" }, cssClass: "cell-mono" },
+      { title: "CONV %", field: "conv", hozAlign: "right", formatter: cell => cell.getValue().toFixed(2) + '%', cssClass: "cell-mono" },
+      { title: "GMV", field: "gmv", hozAlign: "right", formatter: "money", formatterParams: { symbol: "$" }, cssClass: "cell-mono", topCalc: "sum", topCalcFormatter: "money", topCalcFormatterParams: { symbol: "$" } },
+      { title: "SPREAD", field: "spread", hozAlign: "right", cssClass: "cell-mono", formatter: cell => { let v = cell.getValue(); return v === 0 ? '--' : (v > 0 ? `<span class="text-green">+${v.toFixed(2)}</span>` : `<span class="text-red">${v.toFixed(2)}</span>`); }},
+      { title: "LQ %", field: "lq", width: 80, hozAlign: "right", formatter: cell => cell.getValue().toFixed(0) + '%', cssClass: "cell-mono" },
+      { title: "PRIORITY", field: "priority", width: 100, hozAlign:"center", formatter: cell => { const v = cell.getValue(); const cls = v==='HIGH'?'badge-high':(v==='LOW'?'badge-low':'badge-med'); return `<span class="badge ${cls}">${v}</span>`; }}
+    ]
+  });
+  table.on("rowClick", function(e, row){ openTearSheet(row.getData()); });
+}
+function updateGrid() { if(table) table.setData(fData); }
+
+function exportSelectedData() {
+  let selected = table.getSelectedData();
+  let modeMsg = "Selected";
+  if (selected.length === 0) { selected = fData; modeMsg = "All Filtered"; }
+  if (selected.length === 0) return toast("No data to export.");
+  
+  const exportFormat = selected.map(d => ({
+    'SKU': d.sku, 'Product Name': d.name, 'Sector': d.type,
+    'Has Orders': d.isOrdered ? 'Yes' : 'No', 'Page Views': d.pv,
+    'Conversion %': d.conv, 'GMV': d.gmv, 'Walmart Price': d.wp,
+    'Price Spread': d.spread, 'Listing Quality %': d.lq, 'Issues': d.issues
+  }));
+  
+  const ws = XLSX.utils.json_to_sheet(exportFormat);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Blotter_Export");
+  XLSX.writeFile(wb, "QuantCom_Action_Blotter.xlsx");
+  toast(`Exported ${selected.length} ${modeMsg} rows to Excel.`);
+}
+
+// --- ECharts ---
+const chartTheme = { textStyle: { fontFamily: 'inherit', color: '#6b7280', fontSize: 10 }, grid: { top: 40, right: 30, bottom: 30, left: 50 }, tooltip: { backgroundColor: '#fff', borderColor: '#d1d5db', textStyle: { color: '#111827', fontSize: 11 }, padding: 10 } };
+function getChart(id) { if(!charts[id]) charts[id] = echarts.init($(id)); return charts[id]; }
+
+// Chart 1: Multi-Dimensional Sector Analysis
+function drawSectorChart() {
+  const chart = getChart('chart_sector');
+  const grouped = {};
+  fData.forEach(d => { 
+    if(!grouped[d.type]) grouped[d.type]={pv:0, gmv:0, skus:0, ordered:0, lqSum:0, issues:0}; 
+    grouped[d.type].pv += d.pv; grouped[d.type].gmv += d.gmv; 
+    grouped[d.type].lqSum += d.lq; grouped[d.type].issues += d.issues;
+    grouped[d.type].skus += 1; if(d.isOrdered) grouped[d.type].ordered += 1;
+  });
+  const cats = Object.keys(grouped).sort((a,b)=>grouped[b].pv - grouped[a].pv).slice(0,10);
+  
+  const opt = {
+    ...chartTheme, tooltip: { trigger: 'axis' }, 
+    legend: { 
+      data: ['Volume (PV)', 'GMV ($)', 'Order Rate %', 'Avg Quality %', 'Total Issues'], 
+      bottom: 0, textStyle: { fontSize: 10 },
+      selected: { 'Order Rate %': false, 'Avg Quality %': false, 'Total Issues': false } // Hidden by default, togglable by user
+    },
+    xAxis: { type: 'category', data: cats, axisLabel: { interval: 0, rotate: 15, width: 70, overflow: 'truncate' } },
+    yAxis: [ { type: 'value', name: 'Volume' }, { type: 'value', name: 'Secondary Scale', splitLine: { show: false } } ],
+    series: [
+      { name: 'Volume (PV)', type: 'bar', data: cats.map(c=>grouped[c].pv), itemStyle: { color: '#9ca3af' }, barMaxWidth: 30 },
+      { name: 'GMV ($)', type: 'line', yAxisIndex: 1, data: cats.map(c=>grouped[c].gmv), itemStyle: { color: '#059669' }, symbolSize: 6, lineStyle: { width: 3 } },
+      { name: 'Order Rate %', type: 'line', yAxisIndex: 1, data: cats.map(c=>(grouped[c].ordered/grouped[c].skus)*100), itemStyle: { color: '#0f4c81' }, symbolSize: 6, lineStyle: { width: 2, type: 'dashed' } },
+      { name: 'Avg Quality %', type: 'line', yAxisIndex: 1, data: cats.map(c=>(grouped[c].lqSum/grouped[c].skus)), itemStyle: { color: '#d97706' }, symbolSize: 6, lineStyle: { width: 2, type: 'dotted' } },
+      { name: 'Total Issues', type: 'line', yAxisIndex: 1, data: cats.map(c=>grouped[c].issues), itemStyle: { color: '#dc2626' }, symbolSize: 6, lineStyle: { width: 2 } }
+    ]
+  };
+  chart.setOption(opt, true);
+}
+
+// Chart 2: Scatter Toggle Logic
+function toggleScatterMode() {
+  scatterMode = scatterMode === 'bubble' ? 'heat' : 'bubble';
+  $('btnScatterMode').innerText = scatterMode === 'bubble' ? 'MODE: BUBBLE' : 'MODE: HEAT-DOT';
+  drawScatterChart();
+}
+
+function drawScatterChart() {
+  const chart = getChart('chart_scatter');
+  const maxGmv = Math.max(...fData.map(d=>d.gmv), 1);
+  const data = fData.filter(d=>d.isExposed).map(d => ({ name: d.sku, value: [d.lq, d.conv, d.gmv], raw: d }));
+  
+  // Heat Colors (Deep Blue for high GMV, Light Blue for low GMV, Grey for Zero)
+  const heatColors = ['#93c5fd', '#3b82f6', '#1d4ed8', '#1e3a8a'];
+  
+  const opt = {
+    ...chartTheme, tooltip: { formatter: p => `<strong>${p.data.name}</strong><br>Quality: ${p.data.value[0]}%<br>Yield: ${p.data.value[1]}%<br>GMV: ${formatMoney(p.data.value[2])}` },
+    xAxis: { type: 'value', name: 'Quality %', splitLine: { lineStyle: { type: 'dashed' } } },
+    yAxis: { type: 'value', name: 'Conv %', splitLine: { lineStyle: { color: '#e5e7eb' } } },
+    series: [{ 
+      type: 'scatter', 
+      symbolSize: p => {
+        if (scatterMode === 'heat') return 7; // Fixed small dot size
+        return p[2]===0 ? 4 : Math.max((p[2]/maxGmv)*60, 8); // Bubble size
+      }, 
+      itemStyle: { 
+        color: p => {
+          if (p.data.value[2] === 0) return scatterMode === 'heat' ? 'var(--dot-zero)' : 'rgba(220, 38, 38, 0.4)';
+          if (scatterMode === 'bubble') return 'rgba(5, 150, 105, 0.7)'; // Green bubble
+          // Heat Dot mode: Intensity calculation
+          const intensity = Math.min(3, Math.floor((p.data.value[2] / maxGmv) * 4));
+          return heatColors[intensity];
+        }
+      }, 
+      data: data 
+    }],
+    animationDurationUpdate: 800 // Smooth transition
+  };
+  chart.setOption(opt, true); 
+  chart.off('click'); chart.on('click', p => openTearSheet(p.data.raw));
+}
+
+// Chart Fullscreen Logic
+function toggleChartFullscreen(cardId, chartId) {
+  const card = document.getElementById(cardId);
+  const isFS = card.classList.contains('is-fullscreen');
+  
+  if (isFS) {
+    card.classList.remove('is-fullscreen');
+    card.querySelector('.chart-btn:last-child').innerText = '⛶ EXPAND';
+  } else {
+    card.classList.add('is-fullscreen');
+    card.querySelector('.chart-btn:last-child').innerText = '✖ CLOSE';
+  }
+  
+  if(charts[chartId]) {
+    setTimeout(() => charts[chartId].resize(), 300); // Wait for CSS transition
+  }
+}
+
+// --- Tear Sheet ---
+function openTearSheet(d) {
+  currentSku = d.sku; if(table) table.selectRow(d.sku);
+  $('tearSheet').classList.add('open');
+  $('ts_sku').innerText = d.sku; $('ts_name').innerText = d.name;
+  $('ts_ordered').innerHTML = d.isOrdered ? `<span class="badge badge-success" style="font-size:12px;">YES</span>` : `<span class="badge badge-low" style="font-size:12px;">NO</span>`;
+  $('ts_gmv').innerText = formatMoney(d.gmv); $('ts_pv').innerText = formatNum(d.pv); $('ts_conv').innerText = d.conv.toFixed(2) + '%';
+  $('ts_wp').innerText = formatMoney(d.wp); $('ts_cp').innerText = d.cpStr || '--';
+  $('ts_spread').innerHTML = d.spread === 0 ? '--' : (d.spread>0 ? `<span class="text-green">+${formatMoney(d.spread)}</span>` : `<span class="text-red">${formatMoney(d.spread)}</span>`);
+  $('ts_issues').innerText = d.issues;
+  $('ts_lq').innerText = d.lq.toFixed(2) + '%'; $('ts_scoreContent').innerText = d.scoreContent.toFixed(2) + '%';
+  $('ts_scoreReview').innerText = d.scoreReview.toFixed(2) + '%'; $('ts_scoreShip').innerText = d.scoreShip.toFixed(2) + '%';
+  $('btnCopySku').onclick = () => { navigator.clipboard.writeText(d.sku).then(() => toast(`COPIED: ${d.sku}`)); };
+}
+function closeTearSheet() { $('tearSheet').classList.remove('open'); currentSku = null; if(table) table.deselectRow(); }
+
+window.addEventListener('resize', () => { Object.values(charts).forEach(c => c.resize()); });
+</script>
+</body>
+</html>
