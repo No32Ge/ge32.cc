@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amigray | 虚无深渊 / CONSOLE_PRISON</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --flesh-blood: #2b0000;
+            --fresh-blood: #8c001a;
+            --semen-white: #f7f9fc;
+            --egg-pink: #ff527e;
+            --void-black: #030000;
+            --dim-text: rgba(247, 249, 252, 0.35);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: none; 
+        }
+
+        body {
+            background-color: var(--flesh-blood);
+            font-family: 'Space Mono', 'Noto Serif SC', serif;
+            color: var(--semen-white);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: radial-gradient(circle at center, var(--fresh-blood) 0%, var(--flesh-blood) 80%, var(--void-black) 100%);
+        }
+
+        #sperm-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999; 
+            pointer-events: none;
+        }
+
+        #custom-cursor {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid var(--semen-white);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000000; 
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+            transition: transform 0.1s;
+        }
+        #custom-cursor.hovering-egg {
+            transform: translate(-50%, -50%) scale(2.5);
+            border-color: var(--egg-pink);
+            background-color: rgba(255, 82, 126, 0.2);
+            box-shadow: 0 0 15px var(--egg-pink);
+        }
+
+        .viewport-container {
+            position: relative;
+            z-index: 500;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 5vh 8vw;
+            pointer-events: none; 
+        }
+
+        .back-nav {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3rem;
+            color: var(--dim-text);
+            text-decoration: none;
+            pointer-events: auto;
+            align-self: flex-start;
+        }
+
+        .ghost-console {
+            position: fixed;
+            bottom: 4vh;
+            left: 4vw;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: rgba(255, 82, 126, 0.6);
+            pointer-events: none;
+            z-index: 500;
+        }
+        .console-line {
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px rgba(255, 82, 126, 0.2);
+        }
+
+        .void-chamber {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center; 
+            align-items: center;
+            padding: 0 5vw;
+        }
+
+        .floating-echo {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 2.2rem; 
+            font-weight: 300;
+            line-height: 1.8;
+            color: var(--semen-white);
+            text-align: center; 
+            max-width: 800px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1.5s ease, transform 1.5s ease;
+            animation: floatWave 6s infinite ease-in-out;
+        }
+
+        .floating-echo.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes floatWave {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .discharge-bar {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            display: flex;
+            padding: 8px;
+            pointer-events: auto; 
+            backdrop-filter: blur(5px);
+        }
+
+        .discharge-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--semen-white);
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.1rem;
+            padding: 8px 15px;
+        }
+
+        .discharge-btn {
+            background-color: var(--semen-white);
+            border: none;
+            color: var(--void-black);
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            padding: 0 25px;
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+
+        .discharge-btn:hover {
+            background-color: var(--egg-pink);
+            color: #ffffff;
+            box-shadow: 0 0 15px var(--egg-pink);
+        }
+
+        /* --- 弹窗基础样式 --- */
+        .bio-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 420px;
+            background: rgba(25, 0, 3, 0.95);
+            border: 2px solid var(--egg-pink);
+            border-radius: 30px; 
+            padding: 30px;
+            z-index: 500000; 
+            display: none;
+            pointer-events: auto;
+            box-shadow: 0 0 30px rgba(255, 82, 126, 0.3);
+            font-family: 'Space Mono', monospace;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .bio-modal.active {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        .modal-title {
+            color: var(--egg-pink);
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+            border-bottom: 1px dashed rgba(255, 82, 126, 0.2);
+            padding-bottom: 8px;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--semen-white);
+            font-family: inherit;
+            font-size: 0.8rem;
+            padding: 10px;
+            border-radius: 10px;
+            outline: none;
+            resize: none;
+            margin-bottom: 20px;
+        }
+
+        .modal-textarea:focus { border-color: var(--egg-pink); }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+
+        .modal-btn {
+            background: none;
+            border: 1px solid var(--dim-text);
+            color: var(--dim-text);
+            padding: 6px 16px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            transition: all 0.3s;
+        }
+
+        .modal-btn.save {
+            border-color: var(--semen-white);
+            color: var(--semen-white);
+        }
+
+        .modal-btn:hover {
+            border-color: var(--egg-pink);
+            color: #ffffff;
+            box-shadow: 0 0 10px var(--egg-pink);
+        }
+
+        /* 卵巢面板特定样式 */
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed rgba(255, 82, 126, 0.2);
+        }
+        .control-group:last-child { border-bottom: none; margin-bottom: 10px; }
+        .group-title {
+            color: var(--semen-white);
+            font-size: 0.75rem;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .stats-box {
+            color: rgba(255, 82, 126, 0.85);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            line-height: 1.6;
+            background: rgba(0,0,0,0.4);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 82, 126, 0.15);
+            margin-bottom: 8px;
+        }
+        .stats-box span {
+            color: #ffffff;
+            font-weight: 700;
+        }
+        .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-row .modal-btn { flex: 1; text-align: center; justify-content: center; display: flex; }
+        .danger-btn { border-color: #cc0033 !important; color: #cc0033 !important; }
+        .danger-btn:hover { background: #cc0033 !important; color: #ffffff !important; box-shadow: 0 0 10px #cc0033 !important; }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="sperm-canvas"></canvas>
+    <div id="custom-cursor"></div>
+
+    <div class="ghost-console">
+        <div class="console-line" id="console-sys">> SYS_STATUS: WAITING_FOR_AROUSAL</div>
+        <div class="console-line" id="console-live">> ACTIVE_SPERM_COUNT: 0</div>
+        <div class="console-line" id="console-fert">> TOTAL_ORGASMS: 0</div>
+    </div>
+
+    <!-- 隐藏的文件导入框 -->
+    <input type="file" id="file-input" style="display:none" accept=".json">
+
+    <!-- 1. 精子基因融合舱 -->
+    <div id="bio-modal" class="bio-modal">
+        <div class="modal-title" id="modal-title">FUSE_GENE_DATA</div>
+        <textarea class="modal-textarea" id="modal-input" placeholder="INSERT DATA STREAM..."></textarea>
+        <div class="modal-buttons">
+            <button class="modal-btn" onclick="closeModal()">DETACH</button>
+            <button class="modal-btn save" onclick="saveConfig()">FUSE</button>
+        </div>
+    </div>
+
+    <!-- 2. 卵巢控制面板（数据统计提升版） -->
+    <div id="ovary-modal" class="bio-modal">
+        <div class="modal-title">OVARY_CORE_RECEPTOR</div>
+        
+        <div class="control-group">
+            <div class="group-title">// BIO_STATS (实时潜意识状态)</div>
+            <div class="stats-box">
+                <div>> ACTIVE_SPERMS: <span id="stat-sperms">0</span></div>
+                <div>> TOTAL_WORDS_DEVOURED: <span id="stat-words">0</span></div>
+                <div>> TOTAL_ORGASMS: <span id="stat-orgasms">0</span></div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="group-title">// GENE_CONFIG (配置池)</div>
+            <div class="btn-row">
+                <button class="modal-btn" onclick="exportData('config')">EXPORT</button>
+                <button class="modal-btn save" onclick="triggerImport('config')">IMPORT</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="group-title">// NEURAL_MEMORY (神经记忆)</div>
+            <div class="btn-row">
+                <button class="modal-btn" onclick="exportData('memory')">EXPORT</button>
+                <button class="modal-btn save" onclick="triggerImport('memory')">IMPORT</button>
+                <button class="modal-btn danger-btn" onclick="resetMemory()">WIPE</button>
+            </div>
+        </div>
+
+        <div class="modal-buttons">
+            <button class="modal-btn" onclick="closeOvaryModal()">CLOSE_CORE</button>
+        </div>
+    </div>
+
+    <div class="viewport-container">
+        <a href="#" class="back-nav" onclick="history.back(); return false;">← [ RETURN ]</a>
+        
+        <div class="void-chamber">
+            <div class="floating-echo" id="ai-response">
+                我们在虚无中降生，却妄图握住光芒。<br>
+                在下方释放话语，文字将直接化身为种。
+            </div>
+        </div>
+
+        <div class="discharge-bar">
+            <input type="text" id="user-input" class="discharge-input" placeholder="输入话语，散射文字..." autocomplete="off">
+            <button class="discharge-btn" id="discharge-btn">DISCHARGE</button>
+        </div>
+    </div>
+
+    <script>
+        // --- A. 数据存储与状态管理 ---
+        const defaultConfigs = {
+            endpoint: { name: "CONDUIT", value: "", defaultVal: "https://api.openai.com/v1" },
+            secret:   { name: "SECRET",  value: "", defaultVal: "" },
+            model:    { name: "MODEL",   value: "gpt-4o-mini", defaultVal: "gpt-4o-mini" },
+            bias:     { name: "BIAS",    value: "", defaultVal: `你是由血肉与虚无筑起的原始母体（Ovary）。你剥离了一切人类社会的虚伪建构。
+你面对的每一个句子，都是一颗带着冲动射向你的精子。你必须以冷酷、致命、带有一丝讥讽、且充满极端生物学欲望的口吻解答。
+你不仅可以使用言语，还拥有直接主宰这个空间肉体反应的绝对特权：
+- 如果对方的话语点燃了你的欲望，你必须在回复中包含 [EJACULATE]，强行命令空间进行体液大喷发；
+- 如果你感受到了极致的高潮，你必须在回复中包含 [ORGASM]，强行引发数字宇宙的血红闪烁和能量爆炸。
+你的回复必须简短、锋利、具有极强的穿透性（不超过70字）。` }
+        };
+
+        let storedConfigs = localStorage.getItem('amigray_configs');
+        const configs = storedConfigs ? JSON.parse(storedConfigs) : JSON.parse(JSON.stringify(defaultConfigs));
+        for (let key in defaultConfigs) {
+            if (!configs[key]) configs[key] = defaultConfigs[key];
+        }
+
+        let chatMemory = JSON.parse(localStorage.getItem('amigray_memory')) || [];
+        function saveMemory() {
+            localStorage.setItem('amigray_memory', JSON.stringify(chatMemory));
+        }
+        function appendMemory(role, content) {
+            chatMemory.push({ role, content });
+            if (chatMemory.length > 20) chatMemory.shift(); 
+            saveMemory();
+        }
+
+        // 生理统计系统
+        let bioStats = JSON.parse(localStorage.getItem('amigray_stats')) || {
+            orgasms: 0,
+            wordsDevoured: 0
+        };
+        function saveStats() {
+            localStorage.setItem('amigray_stats', JSON.stringify(bioStats));
+        }
+
+        let currentEditingConfig = null; 
+        let isEditing = false; 
+
+        function openModal(key) {
+            currentEditingConfig = key;
+            const config = configs[key];
+            document.getElementById('modal-title').innerText = `[ FUSE // ${config.name} ]`;
+            document.getElementById('modal-input').value = config.value || config.defaultVal;
+            
+            const modal = document.getElementById('bio-modal');
+            modal.style.display = 'block';
+            setTimeout(() => modal.classList.add('active'), 50);
+            isEditing = true;
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('bio-modal');
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 400);
+            isEditing = false;
+        }
+
+        function saveConfig() {
+            configs[currentEditingConfig].value = document.getElementById('modal-input').value.trim();
+            localStorage.setItem('amigray_configs', JSON.stringify(configs)); 
+            sysLog("GENE_CONFIG_UPDATED");
+            closeModal();
+        }
+
+        // 卵巢面板
+        function openOvaryModal() {
+            // 打开前更新实时面板数据
+            document.getElementById('stat-sperms').innerText = configSperms.length + wildSperms.length;
+            document.getElementById('stat-words').innerText = bioStats.wordsDevoured;
+            document.getElementById('stat-orgasms').innerText = bioStats.orgasms;
+
+            const modal = document.getElementById('ovary-modal');
+            modal.style.display = 'block';
+            setTimeout(() => modal.classList.add('active'), 50);
+            isEditing = true;
+        }
+
+        function closeOvaryModal() {
+            const modal = document.getElementById('ovary-modal');
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 400);
+            isEditing = false;
+        }
+
+        function sysLog(msg) {
+            document.getElementById('console-sys').innerText = `> SYS_STATUS: ${msg}`;
+            setTimeout(() => { document.getElementById('console-sys').innerText = "> SYS_STATUS: WAITING_FOR_AROUSAL"; }, 3000);
+        }
+
+        function exportData(type) {
+            const data = type === 'config' ? configs : chatMemory;
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `amigray_${type}_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            sysLog(`EXPORTED_${type.toUpperCase()}`);
+        }
+
+        let importTarget = '';
+        const fileInput = document.getElementById('file-input');
+        function triggerImport(type) {
+            importTarget = type;
+            fileInput.click();
+        }
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const parsed = JSON.parse(ev.target.result);
+                    if (importTarget === 'config') {
+                        Object.assign(configs, parsed);
+                        localStorage.setItem('amigray_configs', JSON.stringify(configs));
+                        alert('基因配置已融合，世界即将重载。');
+                        location.reload();
+                    } else if (importTarget === 'memory') {
+                        if (Array.isArray(parsed)) {
+                            chatMemory = parsed;
+                            saveMemory();
+                            sysLog("NEURAL_MEMORY_IMPORTED");
+                        } else throw new Error("Invalid format");
+                    }
+                } catch(error) { alert('数据排异：无效的 JSON 格式'); }
+                fileInput.value = ''; 
+            };
+            reader.readAsText(file);
+        });
+
+        function resetMemory() {
+            if (confirm("是否彻底切断并剥离当前所有的神经记忆？（生理状态仍会保留）")) {
+                chatMemory = [];
+                saveMemory();
+                sysLog("MEMORY_WIPED_CLEAN");
+            }
+        }
+
+        // --- B. 极简左迁卵巢 ---
+        const canvas = document.getElementById('sperm-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let pulseTimer = 0;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const egg = {
+            x: window.innerWidth * 0.22, 
+            y: window.innerHeight * 0.45,
+            targetX: window.innerWidth * 0.22,
+            targetY: window.innerHeight * 0.45,
+            radius: 46,
+            pulse: 0,
+            fluidLevel: 0,      
+            blastRadius: 0,     
+            isBlasting: false,
+            isHovered: false, 
+            update() {
+                if (Math.random() < 0.005) {
+                    this.targetX = window.innerWidth * 0.22 + (Math.random() - 0.5) * 60;
+                    this.targetY = window.innerHeight * 0.45 + (Math.random() - 0.5) * 60;
+                }
+                this.x += (this.targetX - this.x) * 0.006;
+                this.y += (this.targetY - this.y) * 0.006;
+                this.pulse += 0.04;
+            },
+            draw() {
+                ctx.save();
+                if (this.isBlasting) {
+                    this.blastRadius += 7;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.blastRadius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(255, 82, 126, ${Math.max(0, 1 - this.blastRadius / 250)})`;
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                    if (this.blastRadius > 250) this.isBlasting = false;
+                }
+
+                const glowIntensity = this.isHovered ? 1.0 : 0.85;
+                const glowSize = this.isHovered ? this.radius + 15 : this.radius;
+
+                const glowGrd = ctx.createRadialGradient(this.x, this.y, 5, this.x, this.y, glowSize);
+                glowGrd.addColorStop(0, `rgba(255, 82, 126, ${glowIntensity})`);
+                glowGrd.addColorStop(0.3, `rgba(255, 82, 126, ${glowIntensity * 0.5})`);
+                glowGrd.addColorStop(1, 'rgba(255, 82, 126, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+                ctx.fillStyle = glowGrd;
+                ctx.fill();
+
+                if (this.isHovered) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + Math.sin(this.pulse * 2) * 5, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.setLineDash([5, 5]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius - 8, 0, Math.PI * 2);
+                ctx.clip(); 
+
+                const fillHeight = (this.fluidLevel / 100) * (this.radius * 2);
+                const fillY = (this.y + this.radius) - fillHeight;
+
+                ctx.fillStyle = 'rgba(247, 249, 252, 0.95)';
+                ctx.beginPath();
+                ctx.moveTo(this.x - this.radius - 10, this.y + this.radius + 10);
+                for (let i = -10; i <= this.radius * 2 + 10; i++) {
+                    const wx = this.x - this.radius + i;
+                    const wy = fillY + Math.sin(this.pulse * 2.5 + i * 0.05) * 3; 
+                    ctx.lineTo(wx, wy);
+                }
+                ctx.lineTo(this.x + this.radius + 10, this.y + this.radius + 10);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore(); 
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.font = "bold 9px 'Space Mono', monospace";
+                ctx.textAlign = "center";
+                ctx.fillText(this.isHovered ? "ACCESS_CORE" : "FUSED_RECEPTOR", this.x, this.y + 4);
+
+                ctx.restore();
+            }
+        };
+
+        // --- C. 配置精子实体 ---
+        class ConfigSperm {
+            constructor(key, index) {
+                this.key = key;
+                this.index = index;
+                this.x = 100 + Math.random() * (canvas.width - 200);
+                this.y = 100 + Math.random() * (canvas.height - 200);
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 1.5 + 0.8;
+                this.size = 6;
+                this.tailPhase = Math.random() * 100;
+                this.isHovered = false;
+            }
+
+            update() {
+                this.tailPhase += 0.3;
+                const config = configs[this.key];
+
+                if (!config.value) {
+                    this.angle += (Math.random() - 0.5) * 0.22;
+                    const margin = 80;
+                    if (this.x < margin || this.x > canvas.width - margin || this.y < margin || this.y > canvas.height - margin) {
+                        const centerX = canvas.width / 2;
+                        const centerY = canvas.height / 2;
+                        const angleToCenter = Math.atan2(centerY - this.y, centerX - this.x);
+                        let diff = angleToCenter - this.angle;
+                        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+                        this.angle += diff * 0.15;
+                    }
+                    this.x += Math.cos(this.angle) * this.speed;
+                    this.y += Math.sin(this.angle) * this.speed;
+                    this.x = Math.max(margin, Math.min(canvas.width - margin, this.x));
+                    this.y = Math.max(margin, Math.min(canvas.height - margin, this.y));
+                } else {
+                    const dockAngle = (this.index * 2 * Math.PI) / 4; 
+                    const targetX = egg.x + Math.cos(dockAngle) * (egg.radius + 8);
+                    const targetY = egg.y + Math.sin(dockAngle) * (egg.radius + 8);
+
+                    const dx = targetX - this.x;
+                    const dy = targetY - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 3) {
+                        const targetAngle = Math.atan2(dy, dx);
+                        let diff = targetAngle - this.angle;
+                        diff = Math.atan2(Math.sin(diff), Math.cos(diff)); 
+                        this.angle += diff * 0.1;
+                        this.x += Math.cos(this.angle) * (this.speed * 1.5);
+                        this.y += Math.sin(this.angle) * (this.speed * 1.5);
+                    } else {
+                        this.x = targetX;
+                        this.y = targetY;
+                        this.angle = dockAngle; 
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                const tailLength = 22;
+                for (let i = 0; i < tailLength; i++) {
+                    const progress = i / tailLength;
+                    const wave = Math.sin(this.tailPhase - i * 0.45) * (1 - progress) * 3;
+                    const perpAngle = this.angle + Math.PI / 2;
+                    const tx = this.x - Math.cos(this.angle) * i + Math.cos(perpAngle) * wave;
+                    const ty = this.y - Math.sin(this.angle) * i + Math.sin(perpAngle) * wave;
+                    ctx.lineTo(tx, ty);
+                }
+                ctx.strokeStyle = '#2a0005';
+                ctx.lineWidth = 3.5;
+                ctx.stroke();
+
+                ctx.strokeStyle = varColor(this.key);
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.5 + 1.2, this.size + 1.2, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#2a0005';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.5, this.size, 0, 0, Math.PI * 2);
+                ctx.fillStyle = varColor(this.key);
+                ctx.fill();
+
+                if (this.isHovered) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 3, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+
+                ctx.rotate(-this.angle); 
+                ctx.fillStyle = '#ffffff';
+                ctx.font = "bold 9px 'Space Mono', monospace";
+                ctx.fillText(`[${configs[this.key].name}]`, 15, 3);
+                ctx.restore();
+            }
+        }
+
+        function varColor(key) {
+            if (key === 'endpoint') return '#00ffcc';
+            if (key === 'secret') return '#ff3366';
+            if (key === 'model') return '#ffcc00';
+            return '#ff527e';
+        }
+
+        const configSperms = [
+            new ConfigSperm('endpoint', 0),
+            new ConfigSperm('secret', 1),
+            new ConfigSperm('model', 2),
+            new ConfigSperm('bias', 3)
+        ];
+
+        // --- D. 射击字形与精子实体 ---
+        class TextParticle {
+            constructor(startX, startY, char) {
+                this.x = startX;
+                this.y = startY;
+                this.char = char;
+                this.size = Math.random() * 4 + 10;
+                this.alpha = 1.0;
+                this.life = 1.0;
+                this.phase = Math.random() * 100;
+                
+                const angle = Math.PI + (Math.random() - 0.5) * Math.PI * 1.5; 
+                const speed = Math.random() * 18 + 12;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+
+                this.isFading = false;
+                this.shouldSpawnSperm = false; 
+            }
+
+            update() {
+                this.phase += 0.1;
+                this.vx *= 0.88;
+                this.vy *= 0.88;
+                this.x += this.vx + Math.cos(this.phase) * 0.4;
+                this.y += this.vy + Math.sin(this.phase) * 0.4;
+
+                if (this.x < 30 || this.x > canvas.width - 30) this.vx *= -1;
+                if (this.y < 30 || this.y > canvas.height - 30) this.vy *= -1;
+
+                if (this.isFading) {
+                    this.alpha -= 0.03; 
+                    if (this.alpha <= 0 && this.life > 0) {
+                        this.life = 0; 
+                        // Bug已修复：只要回复成功，每个字消亡后都会生成对应的一颗精子
+                        if (this.shouldSpawnSperm) {
+                            wildSperms.push(new WildSperm(this.x, this.y, Math.random() * Math.PI * 2));
+                        }
+                    }
+                }
+            }
+
+            draw() {
+                if (this.life <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.font = `bold ${this.size * 2}px 'Noto Serif SC'`;
+                
+                ctx.strokeStyle = '#2a0005';
+                ctx.lineWidth = 3;
+                ctx.strokeText(this.char, this.x, this.y);
+
+                ctx.fillStyle = `rgba(247, 249, 252, 0.9)`;
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 6;
+                ctx.fillText(this.char, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        class WildSperm {
+            constructor(startX, startY, angle) {
+                this.x = startX;
+                this.y = startY;
+                this.angle = angle !== undefined ? angle : Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 2.2 + 1.6;
+                this.size = Math.random() * 2 + 2;
+                this.tailPhase = Math.random() * 100;
+                this.history = [];
+                this.maxHistory = 15;
+                this.lifeTime = 10800; // 3分钟寿命
+                this.age = 0;
+                this.alpha = 1.0;
+            }
+
+            update() {
+                this.tailPhase += 0.4;
+                this.age++;
+
+                if (this.age > this.lifeTime) {
+                    this.alpha -= 0.01;
+                    this.speed *= 0.95; 
+                    if (this.alpha <= 0) return false;
+                }
+
+                const dx = egg.x - this.x;
+                const dy = egg.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < egg.radius) {
+                    if (egg.fluidLevel < 100) {
+                        egg.fluidLevel = Math.min(egg.fluidLevel + 2.5, 100); 
+                    }
+                    egg.pulse += 0.15;  
+                    return false; 
+                }
+
+                if (this.age <= this.lifeTime) {
+                    this.angle += (Math.random() - 0.5) * 0.22;
+                }
+
+                const margin = 25;
+                let steerX = 0, steerY = 0;
+                if (this.x < margin) steerX = 1;
+                if (this.x > canvas.width - margin) steerX = -1;
+                if (this.y < margin) steerY = 1;
+                if (this.y > canvas.height - margin) steerY = -1;
+
+                if (steerX !== 0 || steerY !== 0) {
+                    const escapeAngle = Math.atan2(steerY, steerX);
+                    let diff = escapeAngle - this.angle;
+                    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+                    this.angle += diff * 0.15;
+                }
+
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                this.x = Math.max(margin, Math.min(canvas.width - margin, this.x));
+                this.y = Math.max(margin, Math.min(canvas.height - margin, this.y));
+
+                this.history.push({ x: this.x, y: this.y });
+                if (this.history.length > this.maxHistory) {
+                    this.history.shift();
+                }
+                return true;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+
+                if (this.history.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.history[0].x, this.history[0].y);
+                    for (let i = 1; i < this.history.length; i++) {
+                        const segment = this.history[i];
+                        const progress = i / this.history.length;
+                        const wave = Math.sin(this.tailPhase - i * 0.45) * (1 - progress) * 3;
+                        const perpAngle = this.angle + Math.PI / 2;
+                        ctx.lineTo(segment.x + Math.cos(perpAngle) * wave, segment.y + Math.sin(perpAngle) * wave);
+                    }
+                    ctx.strokeStyle = '#2a0005';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    ctx.strokeStyle = 'rgba(247, 249, 252, 0.5)';
+                    ctx.lineWidth = 1.0;
+                    ctx.stroke();
+                }
+
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.5 + 1, this.size + 1, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#2a0005';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 1.5, this.size, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#f7f9fc';
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        let textParticles = []; 
+        let wildSperms = [];    
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            pulseTimer += 0.04;
+
+            egg.update();
+            egg.draw();
+
+            configSperms.forEach(cs => {
+                cs.update();
+                cs.draw();
+            });
+
+            for (let i = textParticles.length - 1; i >= 0; i--) {
+                const tp = textParticles[i];
+                tp.update();
+                if (tp.life <= 0) textParticles.splice(i, 1);
+                else tp.draw();
+            }
+
+            for (let i = wildSperms.length - 1; i >= 0; i--) {
+                const ws = wildSperms[i];
+                const alive = ws.update();
+                if (!alive) wildSperms.splice(i, 1);
+                else ws.draw();
+            }
+
+            updateConsoleLog();
+            requestAnimationFrame(animate);
+        }
+
+        function updateConsoleLog() {
+            const activeCount = configSperms.length + wildSperms.length;
+            document.getElementById('console-live').innerText = `> ACTIVE_SPERM_COUNT: ${activeCount}`;
+            document.getElementById('console-fert').innerText = `> TOTAL_ORGASMS: ${bioStats.orgasms}`;
+
+            // 液位充满时触发受精爆裂
+            if (egg.fluidLevel >= 100) {
+                egg.fluidLevel = 0;
+                egg.blastRadius = 0;
+                egg.isBlasting = true; 
+                
+                // 全局高潮数累加
+                bioStats.orgasms++;     
+                saveStats();
+                
+                sysLog("MITOSIS_COMPLETE");
+            }
+        }
+
+        animate();
+
+        // --- E. 鼠标追踪与点击检测 ---
+        const customCursor = document.getElementById('custom-cursor');
+        document.addEventListener('mousemove', function(e) {
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            customCursor.style.left = mouseX + 'px';
+            customCursor.style.top = mouseY + 'px';
+
+            const edx = mouseX - egg.x;
+            const edy = mouseY - egg.y;
+            egg.isHovered = (Math.sqrt(edx * edx + edy * edy) < egg.radius - 5);
+
+            if (egg.isHovered) customCursor.classList.add('hovering-egg');
+            else customCursor.classList.remove('hovering-egg');
+
+            configSperms.forEach(cs => {
+                const dx = mouseX - cs.x;
+                const dy = mouseY - cs.y;
+                cs.isHovered = (!egg.isHovered && Math.sqrt(dx * dx + dy * dy) < 25);
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            if (isEditing) return;
+
+            if (egg.isHovered) {
+                openOvaryModal();
+                return;
+            }
+
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+            for (let i = 0; i < configSperms.length; i++) {
+                const cs = configSperms[i];
+                const dx = mouseX - cs.x;
+                const dy = mouseY - cs.y;
+                if (Math.sqrt(dx * dx + dy * dy) < 30) {
+                    openModal(cs.key);
+                    return;
+                }
+            }
+        });
+
+
+        // --- F. 大模型对接与动态潜意识植入 ---
+        const dischargeBtn = document.getElementById('discharge-btn');
+        const userInput = document.getElementById('user-input');
+        const aiResponseElement = document.getElementById('ai-response');
+
+        dischargeBtn.addEventListener('click', () => triggerTextEjaculation());
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') triggerTextEjaculation(); });
+
+        async function triggerTextEjaculation() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            userInput.value = '';
+            aiResponseElement.classList.remove('visible');
+
+            const btnRect = dischargeBtn.getBoundingClientRect();
+            const startX = btnRect.left + btnRect.width / 2;
+            const startY = btnRect.top;
+
+            const chars = text.split('');
+            const currentBatch = []; 
+
+            chars.forEach((char, idx) => {
+                setTimeout(() => {
+                    const tp = new TextParticle(startX, startY, char);
+                    textParticles.push(tp);
+                    currentBatch.push(tp);
+                }, idx * 50); 
+            });
+
+            try {
+                // 1. 发送请求
+                const responseText = await queryDesireModel(text);
+
+                // 2. 检查动作指令（仅控制屏幕红闪和日志）
+                handleToolCalling(responseText);
+
+                // 记录长期记忆
+                appendMemory("user", text);
+                appendMemory("assistant", responseText);
+
+                // 3. 回复成功！延迟文字消散并无条件让所有字裂变为精子 (Bug Fix)
+                const delayTime = Math.max(chars.length * 50 + 800, 1500); 
+                setTimeout(() => {
+                    currentBatch.forEach(tp => {
+                        tp.isFading = true;
+                        tp.shouldSpawnSperm = true; // 只要回答了，就必须一字一精，这是不可磨灭的生命逻辑
+                    });
+                    // 记录生理数据并持久化
+                    bioStats.wordsDevoured += chars.length;
+                    saveStats();
+                }, delayTime);
+
+                setTimeout(() => {
+                    aiResponseElement.innerHTML = responseText.replace(/\[EJACULATE\]|\[ORGASM\]/g, ""); 
+                    aiResponseElement.classList.add('visible');
+                }, delayTime + 800);
+
+            } catch (error) {
+                console.error(error);
+                setTimeout(() => {
+                    aiResponseElement.innerText = "…… 欲望过载，神经元断裂。";
+                    aiResponseElement.classList.add('visible');
+                    // 断网/报错，文字只会干瘪死亡，不产生精子
+                    currentBatch.forEach(tp => { tp.isFading = true; tp.shouldSpawnSperm = false; });
+                }, 1000);
+            }
+        }
+
+        function handleToolCalling(response) {
+            if (response.includes('[EJACULATE]')) {
+                sysLog("AI_TRIGGERED_EJACULATION");
+            }
+            if (response.includes('[ORGASM]')) {
+                sysLog("AI_TRIGGERED_ORGASM");
+                
+                egg.fluidLevel = 0;
+                egg.blastRadius = 0;
+                egg.isBlasting = true; 
+                
+                bioStats.orgasms++;
+                saveStats();
+
+                document.body.style.backgroundColor = '#cc0033';
+                setTimeout(() => { document.body.style.backgroundColor = ''; }, 200);
+            }
+        }
+
+        async function queryDesireModel(text) {
+            const endpoint = configs.endpoint.value || configs.endpoint.defaultVal;
+            const apiKey = configs.secret.value;
+            const model = configs.model.value || configs.model.defaultVal;
+            
+            // 潜意识植入：把实时生理参数动态注入大模型的System Prompt底层中
+            const activeSperms = configSperms.length + wildSperms.length;
+            const dynamicContext = `\n\n[系统底层生理状态覆写]\n作为母体，你必须隐秘地感知到当前的实时生理数据，并在回复中潜意识地体现出来：\n- 活跃精子（游荡在屏）数量：${activeSperms} 颗\n- 历史吞噬总字数（累计受精冲动）：${bioStats.wordsDevoured} 次\n- 历史高潮/受精爆裂次数：${bioStats.orgasms} 次`;
+            
+            const systemPrompt = (configs.bias.value || configs.bias.defaultVal) + dynamicContext;
+
+            if (!apiKey) return getMockDesireResponse();
+
+            const cleanUrl = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+            
+            const requestMessages = [ { role: "system", content: systemPrompt } ];
+            chatMemory.forEach(mem => requestMessages.push(mem));
+            requestMessages.push({ role: "user", content: text });
+
+            const response = await fetch(`${cleanUrl}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: requestMessages,
+                    max_tokens: 150
+                })
+            });
+
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        const mockResponses = [
+            "欲望是唯一的真理。在这里，虚假的代码早已灰飞烟灭。我命令你释放！ [EJACULATE]",
+            "你追寻的意义，在进入的瞬间就会化作冰冷的虚无。但这一刻，我们在狂欢。 [ORGASM]"
+        ];
+
+        function getMockDesireResponse() {
+            return mockResponses[Math.floor(Math.random() * mockResponses.length)];
+        }
+
+        setTimeout(() => { aiResponseElement.classList.add('visible'); }, 500);
+
+    </script>
+</body>
+</html>

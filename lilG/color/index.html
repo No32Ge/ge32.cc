@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>颜色标准化转换器 · 银河梵星 · AI增强版</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      background: radial-gradient(circle at 30% 20%, #0f172a, #05070a);
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .stars-container {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden;
+      background: radial-gradient(circle at 30% 20%, #0f172a 0%, #080c14 40%, #05070a 70%, #020408 100%);
+    }
+    .star {
+      position: absolute; background: currentColor; border-radius: 50%; pointer-events: none;
+      animation: twinkle var(--duration) infinite ease-in-out; animation-delay: var(--delay);
+      box-shadow: 0 0 6px currentColor;
+    }
+    @keyframes twinkle {
+      0%,100%{ opacity:0.3; transform: scale(0.8); } 30%{ opacity:1; transform: scale(1.6); } 60%{ opacity:0.5; transform: scale(1); }
+    }
+    .nebula {
+      position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.06; pointer-events: none;
+      animation: nebulaDrift 30s infinite ease-in-out;
+    }
+    .nebula-1 { width: 600px; height: 600px; background: #3b82f6; top: -15%; left: -10%; }
+    .nebula-2 { width: 500px; height: 500px; background: #8b5cf6; bottom: -20%; right: -8%; animation-delay: -12s; }
+    .nebula-3 { width: 400px; height: 400px; background: #10b981; top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: -22s; }
+    @keyframes nebulaDrift {
+      0%,100% { transform: translate(0,0) scale(1); } 25% { transform: translate(40px,-20px) scale(1.15); }
+      50% { transform: translate(-20px,30px) scale(0.9); } 75% { transform: translate(-30px,-15px) scale(1.1); }
+    }
+    .glass-card {
+      background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 1.5rem; transition: all 0.3s;
+    }
+    .glass-card:hover { border-color: rgba(59,130,246,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .input-glass {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 0.9rem; padding: 0.5rem 0.8rem; color: white; font-size: 0.8rem; outline: none;
+    }
+    .input-glass:focus { border-color: #3b82f6; }
+    .btn-glass {
+      padding: 0.45rem 1rem; border-radius: 2rem; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.3px;
+      display: inline-flex; align-items: center; gap:0.4rem; transition: all 0.3s; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color:#cbd5e1;
+    }
+    .btn-glass:hover { background: rgba(255,255,255,0.1); border-color: rgba(59,130,246,0.6); color: white; }
+    .btn-primary { background: #1e2f3f; border-color: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2d4a6b; }
+    .btn-accent { background: #1e3a2f; border-color: #10b981; color: white; }
+    .btn-accent:hover { background: #2a4a3a; }
+    .CodeMirror { height: 200px !important; border-radius:0.6rem; border:1px solid rgba(255,255,255,0.1); font-size:0.8rem; }
+    textarea { font-family: ui-monospace, monospace; }
+    .unmapped-item {
+      background: rgba(245,158,11,0.15); color: #fbbf24; display: inline-block; margin: 4px 8px 4px 0;
+      padding: 4px 10px; border-radius: 4px; font-size: 13px; border: 1px solid rgba(245,158,11,0.3);
+    }
+    .toggle-header { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 0.5rem; }
+    .collapsed-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+    .expanded-content { max-height: 800px; overflow: visible; transition: max-height 0.3s ease; }
+    #enumEditorContainer { height: 200px; overflow: hidden; }
+    .fullscreen-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999;
+      background: rgba(10, 15, 25, 0.95); backdrop-filter: blur(12px);
+      display: flex; flex-direction: column; padding: 1.2rem; box-sizing: border-box;
+    }
+    .fullscreen-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; color: #e2e8f0; }
+    .fullscreen-editor-wrapper {
+      flex: 1; display: flex; border-radius: 0.8rem; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.2); background: #0b0f17; min-height: 0;
+    }
+    .fullscreen-editor-wrapper .CodeMirror { height: 100% !important; width: 100%; font-size: 0.9rem; }
+    .btn-close-fullscreen {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      color: white; padding: 0.5rem 1.2rem; border-radius: 2rem; cursor: pointer;
+      font-weight: 500; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;
+    }
+    .btn-close-fullscreen:hover { background: rgba(255,255,255,0.2); }
+    /* AI 建议弹窗 */
+    .ai-modal-overlay {
+      position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px); z-index: 10000; display: flex; align-items: center; justify-content: center;
+    }
+    .ai-modal {
+      background: #1e293b; border: 1px solid rgba(255,255,255,0.2); border-radius: 1.2rem;
+      padding: 1.8rem; max-width: 550px; width: 90%; max-height: 80vh; overflow-y: auto;
+      color: #e2e8f0; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .ai-suggestion-item {
+      background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 0.5rem; padding: 0.5rem 0.8rem; margin-bottom: 0.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+  </style>
+</head>
+<body>
+<div class="stars-container" id="stars">
+  <div class="nebula nebula-1"></div>
+  <div class="nebula nebula-2"></div>
+  <div class="nebula nebula-3"></div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 py-8 relative z-10 space-y-6">
+  <!-- 头部 -->
+  <div class="glass-card p-6 flex flex-wrap justify-between items-center">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+        <i class="fa-solid fa-palette text-purple-400"></i> 智能颜色标准化转换器
+      </h1>
+      <p class="text-gray-400 text-sm mt-1">枚举映射 · AI自动分类 · 配置持久化 · 银河梵星</p>
+    </div>
+    <div class="flex gap-2 mt-3 md:mt-0">
+      <button id="resetConfigBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 重置配置</button>
+    </div>
+  </div>
+
+  <!-- 枚举配置卡片 -->
+  <div class="glass-card p-6" id="enumCard">
+    <div class="flex justify-between items-center mb-3">
+      <div class="toggle-header flex-1" id="enumToggleHeader">
+        <i id="enumToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-list-ul text-cyan-400 mr-2"></i> 颜色枚举配置 (JSON)
+        </h2>
+        <span class="text-xs text-gray-500 ml-2">格式: {"类别":["别名1","别名2"]}</span>
+      </div>
+      <button id="openFullscreenBtn" class="btn-glass" title="全屏编辑"><i class="fa-solid fa-expand"></i> 全屏</button>
+    </div>
+    <div id="enumCollapseWrapper" class="expanded-content">
+      <div id="enumEditorContainer"></div>
+    </div>
+  </div>
+
+  <!-- 输入输出区域 -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="glass-card p-6 flex flex-col">
+      <label class="font-medium text-gray-300 mb-2"><i class="fa-solid fa-arrow-down-wide-short mr-1"></i> 原始颜色列表</label>
+      <textarea id="inputColors" class="input-glass w-full h-72 p-3 resize-y" placeholder="每行一个颜色..."></textarea>
+    </div>
+    <div class="glass-card p-6 flex flex-col">
+      <label class="font-medium text-gray-300 mb-2"><i class="fa-solid fa-check-double mr-1"></i> 转换结果</label>
+      <textarea id="outputColors" readonly class="input-glass w-full h-72 p-3 resize-y bg-black/30 text-green-400"></textarea>
+    </div>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="flex gap-3 flex-wrap">
+    <button id="convertBtn" class="btn-glass btn-primary"><i class="fa-solid fa-play"></i> 转换</button>
+    <button id="copyBtn" class="btn-glass"><i class="fa-solid fa-copy"></i> 复制结果</button>
+    <button id="clearBtn" class="btn-glass ml-auto"><i class="fa-solid fa-eraser"></i> 清空</button>
+  </div>
+
+  <!-- 未映射颜色卡片 -->
+  <div class="glass-card p-6">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="font-semibold"><i class="fa-solid fa-triangle-exclamation text-yellow-400 mr-2"></i>未映射颜色</h2>
+      <span id="unmappedCount" class="text-xs text-gray-400">0 项</span>
+    </div>
+    <div id="unmappedArea" class="bg-black/20 rounded-xl p-4 max-h-40 overflow-y-auto">
+      <span class="text-gray-500 text-sm">暂无未映射颜色</span>
+    </div>
+    <div class="flex gap-2 mt-3 flex-wrap">
+      <button id="copyUnmappedBtn" class="btn-glass"><i class="fa-solid fa-clipboard"></i> 复制未映射列表</button>
+      <button id="aiClassifyBtn" class="btn-glass btn-accent"><i class="fa-solid fa-robot"></i> AI 智能分类</button>
+    </div>
+  </div>
+
+  <!-- AI 设置卡片 (可折叠) -->
+  <div class="glass-card p-6" id="aiSettingsCard">
+    <div class="flex justify-between items-center mb-3 toggle-header" id="aiSettingsToggle">
+      <div class="flex items-center gap-2">
+        <i id="aiSettingsIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+        <h2 class="text-lg font-semibold"><i class="fa-solid fa-gear text-purple-400 mr-2"></i> AI 配置</h2>
+      </div>
+      <span class="text-xs text-gray-500">DeepSeek API · 可折叠</span>
+    </div>
+    <div id="aiSettingsContent" class="expanded-content space-y-3">
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">API 密钥</label>
+        <input id="aiApiKey" type="password" class="input-glass w-full" placeholder="sk-...">
+      </div>
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">模型</label>
+        <select id="aiModel" class="input-glass w-full">
+          <option value="deepseek-chat">deepseek-chat</option>
+          <option value="deepseek-reasoner">deepseek-reasoner</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">系统提示词</label>
+        <textarea id="aiPrompt" class="input-glass w-full h-24 resize-y" placeholder="你是一个颜色分类专家..."></textarea>
+      </div>
+      <p class="text-xs text-gray-500">配置自动保存至浏览器本地存储。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 全屏编辑器 -->
+<div id="fullscreenModal" style="display: none;" class="fullscreen-overlay">
+  <div class="fullscreen-header">
+    <h2><i class="fa-solid fa-code text-cyan-400"></i> 编辑颜色枚举 (JSON)</h2>
+    <button id="closeFullscreenBtn" class="btn-close-fullscreen"><i class="fa-solid fa-compress"></i> 退出全屏</button>
+  </div>
+  <div class="fullscreen-editor-wrapper" id="fullscreenEditorWrapper"></div>
+  <div class="mt-4 text-right"><span class="text-xs text-gray-400">更改自动同步 · Esc 关闭</span></div>
+</div>
+
+<!-- AI 建议预览弹窗 (动态生成) -->
+<div id="aiModalContainer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script>
+(function() {
+  const $ = id => document.getElementById(id);
+  
+  // DOM 元素
+  const inputColors = $('inputColors'), outputColors = $('outputColors');
+  const convertBtn = $('convertBtn'), copyBtn = $('copyBtn'), clearBtn = $('clearBtn');
+  const unmappedArea = $('unmappedArea'), unmappedCount = $('unmappedCount');
+  const copyUnmappedBtn = $('copyUnmappedBtn'), aiClassifyBtn = $('aiClassifyBtn');
+  const enumToggleHeader = $('enumToggleHeader'), enumToggleIcon = $('enumToggleIcon');
+  const enumCollapseWrapper = $('enumCollapseWrapper'), enumEditorContainer = $('enumEditorContainer');
+  const resetConfigBtn = $('resetConfigBtn');
+  const openFullscreenBtn = $('openFullscreenBtn'), closeFullscreenBtn = $('closeFullscreenBtn');
+  const fullscreenModal = $('fullscreenModal'), fullscreenEditorWrapper = $('fullscreenEditorWrapper');
+  
+  // AI 设置元素
+  const aiApiKey = $('aiApiKey'), aiModel = $('aiModel'), aiPrompt = $('aiPrompt');
+  const aiSettingsToggle = $('aiSettingsToggle'), aiSettingsIcon = $('aiSettingsIcon');
+  const aiSettingsContent = $('aiSettingsContent');
+  const aiModalContainer = $('aiModalContainer');
+
+  // 默认枚举配置 (保持原有基础)
+  const DEFAULT_ENUM = {
+    "Green": ["mint green", "army green", "light green", "dark green", "grean", "greem", "gteen", "green ", " green"],
+    "Gold": ["rose gold", "rosegold", "rose-gold"],
+    "Blue": ["sky blue", "light blue", "light bule", "light b lue", "dark blue", "navy", "navy blue", "bleu", "bule", "bluw"],
+    "Brown": ["coffee", "khaki", "brown", "browm", "broun", "brawn"],
+    "Red": ["watermelon red", "watermellon red", "redd", "red ", "wine", "Wine"],
+    "Silver": ["sliver", "silvery", "silver,clear", "silverclear", "siver", "silvre"],
+    "Gray": ["dark gray", "dark grey", "grey", "gray", "graay", "graey"],
+    "Clear": ["transparent", "transparant", "transperent", "transperant", "clear", "clearr", "clera"],
+    "Black": ["black", "blak", "blck", "balck"],
+    "White": ["white", "whit", "wite", "whtie", "while"],
+    "Yellow": ["yellow", "yello", "yelow"],
+    "Orange": ["orange", "orenge", "orng"],
+    "Pink": ["pink", "pinc", "peenk", "champagne", "Champagne"],
+    "Purple": ["purple", "purpel", "purpple", "violet"],
+    "Multicolor": ["color", "colorful", "mul", "as show", "as shown"]
+  };
+
+  const DEFAULT_AI_PROMPT = `你是一个颜色分类专家。请将以下颜色名称映射到标准类别。
+标准类别包括: Green, Gold, Blue, Brown, Red, Silver, Gray, Clear, Black, White, Yellow, Orange, Pink, Purple, Beige, Multicolor 等。
+规则:
+- 拼写错误应映射到正确颜色 (如 "bule" -> "Blue")
+- 包含多种颜色的名称 (如 "Blue,Red") 应归类为 "Multicolor"
+- 缩写需展开 (如 "GN" -> "Green")
+- 材质/纹理描述 (如 "wood", "camouflage") 归入合理颜色或 Multicolor
+- 无法判断的归入 "Multicolor"
+请返回JSON数组，格式: [{"key":"标准类别","value":"原始颜色名称"}, ...] 只返回JSON，不要其他内容。`;
+
+  // localStorage 辅助函数
+  function loadFromStorage(key, defaultValue) {
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored !== null) return JSON.parse(stored);
+    } catch (e) { /* ignore */ }
+    return defaultValue;
+  }
+  function saveToStorage(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  }
+
+  // 持久化状态
+  const STORAGE_KEYS = {
+    ENUM: 'color_enum_config',
+    AI_KEY: 'color_ai_api_key',
+    AI_MODEL: 'color_ai_model',
+    AI_PROMPT: 'color_ai_prompt',
+    COLLAPSED: 'color_enum_collapsed',
+    AI_COLLAPSED: 'color_ai_collapsed'
+  };
+
+  // 初始化 AI 设置
+  aiApiKey.value = loadFromStorage(STORAGE_KEYS.AI_KEY, '');
+  aiModel.value = loadFromStorage(STORAGE_KEYS.AI_MODEL, 'deepseek-chat');
+  aiPrompt.value = loadFromStorage(STORAGE_KEYS.AI_PROMPT, DEFAULT_AI_PROMPT);
+
+  // 保存 AI 设置事件
+  aiApiKey.addEventListener('input', () => saveToStorage(STORAGE_KEYS.AI_KEY, aiApiKey.value));
+  aiModel.addEventListener('change', () => saveToStorage(STORAGE_KEYS.AI_MODEL, aiModel.value));
+  aiPrompt.addEventListener('input', () => saveToStorage(STORAGE_KEYS.AI_PROMPT, aiPrompt.value));
+
+  // AI 设置折叠
+  const aiCollapsed = loadFromStorage(STORAGE_KEYS.AI_COLLAPSED, false);
+  if (aiCollapsed) {
+    aiSettingsContent.className = 'collapsed-content';
+    aiSettingsIcon.className = 'fa-solid fa-chevron-right text-gray-400';
+  }
+  aiSettingsToggle.addEventListener('click', () => {
+    const isExpanded = aiSettingsContent.classList.contains('expanded-content');
+    if (isExpanded) {
+      aiSettingsContent.className = 'collapsed-content';
+      aiSettingsIcon.className = 'fa-solid fa-chevron-right text-gray-400';
+      saveToStorage(STORAGE_KEYS.AI_COLLAPSED, true);
+    } else {
+      aiSettingsContent.className = 'expanded-content';
+      aiSettingsIcon.className = 'fa-solid fa-chevron-down text-gray-400';
+      saveToStorage(STORAGE_KEYS.AI_COLLAPSED, false);
+    }
+  });
+
+  // 枚举编辑器: 从localStorage加载配置
+  let mainEditor;
+  let fullscreenEditor = null;
+
+  function getStoredEnum() {
+    const saved = loadFromStorage(STORAGE_KEYS.ENUM, null);
+    if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
+      return saved;
+    }
+    return DEFAULT_ENUM;
+  }
+
+  function initMainEditor() {
+    const config = getStoredEnum();
+    mainEditor = CodeMirror(enumEditorContainer, {
+      value: JSON.stringify(config, null, 2),
+      mode: { name: 'javascript', json: true },
+      theme: 'material-darker',
+      lineNumbers: true,
+      matchBrackets: true,
+      tabSize: 2
+    });
+    mainEditor.setSize('100%', '200px');
+    // 监听编辑器变化，实时保存到localStorage
+    mainEditor.on('change', () => {
+      try {
+        const parsed = JSON.parse(mainEditor.getValue());
+        if (parsed && typeof parsed === 'object') {
+          saveToStorage(STORAGE_KEYS.ENUM, parsed);
+        }
+      } catch (e) { /* 忽略格式错误时不保存 */ }
+    });
+  }
+
+  // 映射逻辑 (同之前)
+  function buildMaps(enumConfig) {
+    const exactMap = new Map();
+    for (const [category, aliases] of Object.entries(enumConfig)) {
+      aliases.forEach(alias => {
+        const key = String(alias).trim().toLowerCase();
+        if (key) exactMap.set(key, category);
+      });
+    }
+    return { exactMap };
+  }
+
+  const fuzzyRules = [
+    { regex: /^[a-z]$/i, target: "Multicolor" },
+    { regex: /^multiple[a-z]*$/i, target: "Multicolor" },
+    { regex: /^multicolour[a-z]*$/i, target: "Multicolor" },
+    { regex: /^multicolor[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixed\s*colou?r[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixedcolou?r[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixed\s+colou?rs?[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixed[\s\-_]?colou?r[a-z]*$/i, target: "Multicolor" },
+    { regex: /^mixed\s+colors?[a-z]*$/i, target: "Multicolor" }
+  ];
+
+  function applyFuzzyMatch(trimmedLower) {
+    for (const rule of fuzzyRules) {
+      if (rule.regex.test(trimmedLower)) return rule.target;
+    }
+    return null;
+  }
+
+  function convertColors(rawText, enumConfig) {
+    const { exactMap } = buildMaps(enumConfig);
+    const lines = rawText.split(/\r?\n/);
+    const outputLines = [];
+    const unmapped = new Map();
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (trimmed === "") { outputLines.push(""); continue; }
+      const norm = trimmed.toLowerCase();
+      let mapped = exactMap.get(norm) || applyFuzzyMatch(norm);
+      if (mapped) {
+        outputLines.push(mapped);
+      } else {
+        outputLines.push(trimmed);
+        const info = unmapped.get(norm);
+        if (info) info.count++;
+        else unmapped.set(norm, { display: trimmed, count: 1 });
+      }
+    }
+    return { outputLines, unmapped };
+  }
+
+  function updateUI() {
+    let enumConfig;
+    try { enumConfig = JSON.parse(mainEditor.getValue()); } catch (e) {
+      outputColors.value = '配置JSON格式错误，请检查';
+      return;
+    }
+    const rawText = inputColors.value;
+    const { outputLines, unmapped } = convertColors(rawText, enumConfig);
+    outputColors.value = outputLines.join('\n');
+    unmappedCount.textContent = `${unmapped.size} 项`;
+    if (unmapped.size === 0) {
+      unmappedArea.innerHTML = '<span class="text-green-400">✅ 所有颜色均已成功映射！</span>';
+    } else {
+      let items = '';
+      for (const [norm, info] of unmapped) {
+        const times = info.count > 1 ? ` (${info.count}次)` : '';
+        items += `<span class="unmapped-item">${escapeHtml(info.display)}${times}</span>`;
+      }
+      unmappedArea.innerHTML = items;
+    }
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+  async function copyText(text) {
+    if (!text.trim()) return alert('无内容');
+    await navigator.clipboard.writeText(text);
+  }
+
+  // 全屏编辑器逻辑
+  function destroyFullscreenEditor() {
+    if (fullscreenEditor) {
+      const wrapper = fullscreenEditor.getWrapperElement();
+      if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+      fullscreenEditor = null;
+    }
+    fullscreenEditorWrapper.innerHTML = '';
+  }
+
+  function openFullscreen() {
+    if (!mainEditor) return;
+    const current = mainEditor.getValue();
+    fullscreenModal.style.display = 'flex';
+    destroyFullscreenEditor();
+    fullscreenEditor = CodeMirror(fullscreenEditorWrapper, {
+      value: current,
+      mode: { name: 'javascript', json: true },
+      theme: 'material-darker',
+      lineNumbers: true,
+      matchBrackets: true,
+      tabSize: 2,
+      autofocus: true
+    });
+    fullscreenEditor.on('change', () => {
+      if (mainEditor && fullscreenEditor) {
+        mainEditor.setValue(fullscreenEditor.getValue());
+        updateUI();
+      }
+    });
+    setTimeout(() => { if (fullscreenEditor) fullscreenEditor.refresh(); }, 50);
+  }
+
+  function closeFullscreen() {
+    if (fullscreenEditor && mainEditor) {
+      mainEditor.setValue(fullscreenEditor.getValue());
+      updateUI();
+    }
+    destroyFullscreenEditor();
+    fullscreenModal.style.display = 'none';
+    if (mainEditor) mainEditor.refresh();
+  }
+
+  // 折叠枚举配置
+  function initEnumCollapse() {
+    const saved = loadFromStorage(STORAGE_KEYS.COLLAPSED, false);
+    if (saved) {
+      enumCollapseWrapper.className = 'collapsed-content';
+      enumToggleIcon.className = 'fa-solid fa-chevron-right text-gray-400';
+    }
+    enumToggleHeader.addEventListener('click', () => {
+      const isExpanded = enumCollapseWrapper.classList.contains('expanded-content');
+      if (isExpanded) {
+        enumCollapseWrapper.className = 'collapsed-content';
+        enumToggleIcon.className = 'fa-solid fa-chevron-right text-gray-400';
+        saveToStorage(STORAGE_KEYS.COLLAPSED, true);
+      } else {
+        enumCollapseWrapper.className = 'expanded-content';
+        enumToggleIcon.className = 'fa-solid fa-chevron-down text-gray-400';
+        saveToStorage(STORAGE_KEYS.COLLAPSED, false);
+      }
+      setTimeout(() => { if (mainEditor) mainEditor.refresh(); }, 350);
+    });
+  }
+
+  // ========== AI 智能分类 ==========
+  async function callAI(unmappedColors) {
+    const apiKey = aiApiKey.value.trim();
+    if (!apiKey) {
+      alert('请先在 AI 配置中填写 API 密钥');
+      return null;
+    }
+    const model = aiModel.value;
+    const systemPrompt = aiPrompt.value.trim() || DEFAULT_AI_PROMPT;
+    const userMessage = `以下是一些无法映射的颜色名称列表，请为它们分配标准类别：\n${unmappedColors.join('\n')}`;
+    
+    try {
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+          ],
+          temperature: 0.1,
+          max_tokens: 2000
+        })
+      });
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`API请求失败 (${response.status}): ${err}`);
+      }
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      // 提取JSON数组
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) throw new Error('AI 未返回有效的JSON数组');
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!Array.isArray(parsed)) throw new Error('返回格式不是数组');
+      return parsed;
+    } catch (error) {
+      console.error(error);
+      alert('AI 分类失败: ' + error.message);
+      return null;
+    }
+  }
+
+  function showAISuggestions(suggestions) {
+    // 清空容器
+    aiModalContainer.innerHTML = '';
+    const overlay = document.createElement('div');
+    overlay.className = 'ai-modal-overlay';
+    
+    const modal = document.createElement('div');
+    modal.className = 'ai-modal';
+    
+    let html = `<h3 class="text-xl font-bold mb-3"><i class="fa-solid fa-robot text-purple-400 mr-2"></i>AI 建议的颜色映射</h3>`;
+    html += `<p class="text-sm text-gray-400 mb-4">以下是根据未匹配颜色生成的推荐配置，请确认后应用：</p>`;
+    html += `<div class="max-h-60 overflow-y-auto mb-4">`;
+    
+    suggestions.forEach((item, idx) => {
+      html += `<div class="ai-suggestion-item">
+        <span class="text-sm"><span class="text-yellow-300">${escapeHtml(item.value)}</span> → <span class="text-green-400 font-semibold">${escapeHtml(item.key)}</span></span>
+      </div>`;
+    });
+    html += `</div>`;
+    html += `<div class="flex justify-end gap-3">
+      <button id="aiCancelBtn" class="btn-glass">取消</button>
+      <button id="aiApplyBtn" class="btn-glass btn-primary"><i class="fa-solid fa-check"></i> 应用这些映射</button>
+    </div>`;
+    
+    modal.innerHTML = html;
+    overlay.appendChild(modal);
+    aiModalContainer.appendChild(overlay);
+    
+    // 关闭弹窗
+    const closeModal = () => { aiModalContainer.innerHTML = ''; };
+    $('aiCancelBtn').addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    
+    // 应用按钮
+    $('aiApplyBtn').addEventListener('click', () => {
+      try {
+        let enumConfig = JSON.parse(mainEditor.getValue());
+        // 合并建议
+        suggestions.forEach(({ key, value }) => {
+          if (!key || !value) return;
+          const category = key.trim();
+          const alias = value.trim();
+          if (!enumConfig[category]) {
+            enumConfig[category] = [];
+          }
+          // 避免重复添加
+          if (!enumConfig[category].includes(alias)) {
+            enumConfig[category].push(alias);
+          }
+        });
+        // 更新编辑器并保存
+        const newJson = JSON.stringify(enumConfig, null, 2);
+        mainEditor.setValue(newJson);
+        saveToStorage(STORAGE_KEYS.ENUM, enumConfig);
+        updateUI();
+        closeModal();
+        alert('AI 建议已应用并保存！');
+      } catch (e) {
+        alert('合并配置失败: ' + e.message);
+      }
+    });
+  }
+
+  aiClassifyBtn.addEventListener('click', async () => {
+    // 获取当前未映射颜色
+    let enumConfig;
+    try { enumConfig = JSON.parse(mainEditor.getValue()); } catch { return alert('配置JSON无效'); }
+    const { unmapped } = convertColors(inputColors.value, enumConfig);
+    if (unmapped.size === 0) return alert('没有未映射颜色');
+    
+    const unmappedList = Array.from(unmapped.values()).map(i => i.display);
+    aiClassifyBtn.disabled = true;
+    aiClassifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI 分析中...';
+    
+    const suggestions = await callAI(unmappedList);
+    aiClassifyBtn.disabled = false;
+    aiClassifyBtn.innerHTML = '<i class="fa-solid fa-robot"></i> AI 智能分类';
+    
+    if (suggestions && suggestions.length > 0) {
+      showAISuggestions(suggestions);
+    } else if (suggestions) {
+      alert('AI 没有返回任何映射建议');
+    }
+  });
+
+  // 星空背景
+  function createStars() {
+    const container = $('stars');
+    if (!container) return;
+    const frag = document.createDocumentFragment();
+    const starColors = ['#60a5fa', '#f472b6', '#fbbf24', '#34d399', '#a78bfa', '#f87171', '#38bdf8', '#fb923c'];
+    for (let i = 0; i < 180; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const size = Math.random() * 3 + 1;
+      star.style.width = size + 'px';
+      star.style.height = size + 'px';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.setProperty('--duration', (Math.random() * 4 + 2) + 's');
+      star.style.setProperty('--delay', (Math.random() * 6) + 's');
+      star.style.color = starColors[Math.floor(Math.random() * starColors.length)];
+      frag.appendChild(star);
+    }
+    container.appendChild(frag);
+  }
+
+  // 事件绑定
+  convertBtn.addEventListener('click', updateUI);
+  copyBtn.addEventListener('click', () => copyText(outputColors.value));
+  clearBtn.addEventListener('click', () => {
+    inputColors.value = '';
+    outputColors.value = '';
+    unmappedArea.innerHTML = '<span class="text-gray-500 text-sm">暂无未映射颜色</span>';
+    unmappedCount.textContent = '0 项';
+  });
+  copyUnmappedBtn.addEventListener('click', async () => {
+    let enumConfig;
+    try { enumConfig = JSON.parse(mainEditor.getValue()); } catch { return alert('配置JSON无效'); }
+    const { unmapped } = convertColors(inputColors.value, enumConfig);
+    if (unmapped.size === 0) return alert('无未映射颜色');
+    const lines = Array.from(unmapped.values()).map(i => `${i.display}${i.count>1?` (${i.count}次)`:''}`);
+    await copyText(lines.join('\n'));
+    alert('已复制');
+  });
+  resetConfigBtn.addEventListener('click', () => {
+    const defaultJson = JSON.stringify(DEFAULT_ENUM, null, 2);
+    mainEditor.setValue(defaultJson);
+    saveToStorage(STORAGE_KEYS.ENUM, DEFAULT_ENUM);
+    if (fullscreenEditor) fullscreenEditor.setValue(defaultJson);
+    updateUI();
+  });
+  openFullscreenBtn.addEventListener('click', openFullscreen);
+  closeFullscreenBtn.addEventListener('click', closeFullscreen);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && fullscreenModal.style.display === 'flex') {
+      e.preventDefault();
+      closeFullscreen();
+    }
+  });
+  inputColors.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      updateUI();
+    }
+  });
+  window.addEventListener('resize', () => {
+    if (mainEditor) mainEditor.refresh();
+    if (fullscreenEditor) fullscreenEditor.refresh();
+  });
+
+  // 启动
+  createStars();
+  initMainEditor();
+  initEnumCollapse();
+
+  inputColors.value = "mint green\nrose gold\nchampagne\nWine\nbalck\nwhite\nA\nB\ncolor\nas show\nMixed colors\nunknownTest";
+  updateUI();
+})();
+</script>
+</body>
+</html>
