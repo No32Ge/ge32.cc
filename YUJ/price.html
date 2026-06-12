@@ -86,6 +86,42 @@
         .formula-fullscreen .expanded-content { flex:1 !important; max-height: none !important; }
         .formula-fullscreen #formulaEditorContainer { height: 100% !important; }
         .formula-fullscreen .CodeMirror { height: 100% !important; }
+
+        /* 导出选项弹窗样式 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
+            z-index: 50; display: flex; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: rgba(16, 22, 35, 0.95); border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 16px; padding: 2rem; max-width: 480px; width: 90%;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+        .export-option-btn {
+            display: flex; align-items: center; padding: 1rem; margin-bottom: 0.75rem;
+            background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 10px; cursor: pointer; transition: all 0.3s; color: #e2e8f0;
+            text-align: left; width: 100%;
+        }
+        .export-option-btn:hover {
+            background: rgba(59, 130, 246, 0.2); border-color: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        .export-option-btn i { font-size: 1.5rem; margin-right: 1rem; color: #3b82f6; }
+        
+        /* 汇率显示与修改区域 */
+        .rate-display {
+            background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: center;
+            justify-content: space-between; margin-bottom: 1rem;
+        }
+        .rate-input {
+            background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #3b82f6; padding: 0.3rem 0.6rem; border-radius: 6px; width: 80px;
+            text-align: center; font-family: 'Fira Code', monospace; font-size: 0.9rem;
+        }
+        .rate-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -93,6 +129,36 @@
     <!-- 星空背景 Canvas -->
     <div class="stars-container">
         <canvas id="starCanvas"></canvas>
+    </div>
+
+    <!-- 导出选项弹窗（隐藏） -->
+    <div id="exportModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center">
+                <i class="fa-solid fa-file-export text-blue-400 mr-3"></i> 选择导出内容
+            </h3>
+            <p class="text-gray-400 text-sm mb-4">请选择要导出的数据范围：</p>
+            
+            <button id="exportAllBtn" class="export-option-btn">
+                <i class="fa-solid fa-table-list"></i>
+                <div>
+                    <div class="font-semibold text-white">导出全部内容</div>
+                    <div class="text-xs text-gray-400">包含原始字段 + 计算结果（共 <span id="allFieldCount">0</span> 个字段）</div>
+                </div>
+            </button>
+            
+            <button id="exportComputedBtn" class="export-option-btn">
+                <i class="fa-solid fa-filter-circle-dollar"></i>
+                <div>
+                    <div class="font-semibold text-white">仅导出生成内容</div>
+                    <div class="text-xs text-gray-400">仅包含计算结果：actualWeight, shippingCNY, totalCNY, finalUsdPrice（4 个字段）</div>
+                </div>
+            </button>
+            
+            <button id="exportCancelBtn" class="w-full py-2.5 mt-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors text-sm">
+                <i class="fa-solid fa-xmark mr-2"></i> 取消导出
+            </button>
+        </div>
     </div>
 
     <div class="max-w-5xl mx-auto relative z-10">
@@ -127,10 +193,10 @@
                     <div class="bg-purple-950/20 p-4 rounded-lg border border-purple-900/30">
                         <h3 class="text-white font-semibold mb-2 flex items-center">
                             <span class="w-6 h-6 rounded bg-purple-600 flex justify-center items-center text-xs mr-2">2</span>
-                            成本与基础汇率计算
+                            成本与汇率计算
                         </h3>
-                        <p class="mb-2">总成本为 SKU人民币价 + 档位对应运费。按 <strong>7.2</strong> 汇率转换为基础美元。</p>
-                        <code class="block bg-black/50 p-2 rounded text-purple-300 code-font text-xs">TotalCNY = SKU Price + ShippingRate(Bucket)<br>USDBase = TotalCNY / 7.2</code>
+                        <p class="mb-2">总成本为 SKU人民币价 + 档位对应运费。按 <strong id="displayRate" class="text-purple-300">7.2</strong> 汇率转换为基础美元。</p>
+                        <code class="block bg-black/50 p-2 rounded text-purple-300 code-font text-xs">TotalCNY = SKU Price + ShippingRate(Bucket)<br>USDBase = TotalCNY / exchangeRate</code>
                     </div>
 
                     <div class="bg-emerald-950/20 p-4 rounded-lg border border-emerald-900/30">
@@ -150,6 +216,22 @@
                     <i class="fa-solid fa-terminal text-2xl mr-3"></i>
                     <h2 class="text-xl font-bold tracking-wider uppercase">数据处理中枢</h2>
                 </div>
+
+                <!-- 汇率显示与修改 -->
+                <div class="rate-display">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-dollar-sign text-blue-400"></i>
+                        <span class="text-gray-300 text-sm">美元汇率 (USD/CNY)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="exchangeRateInput" class="rate-input" value="7.2" step="0.01" min="0.01" max="999">
+                        <span class="text-xs text-gray-500">可修改</span>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mb-4">
+                    <i class="fa-solid fa-info-circle mr-1"></i> 
+                    也可在浏览器控制台输入 <code class="text-blue-300">setExchangeRate(新汇率)</code> 修改汇率
+                </p>
 
                 <div class="mb-6">
                     <label for="excelFile" class="upload-zone block p-8 rounded-xl text-center cursor-pointer group">
@@ -283,9 +365,80 @@
                 terminal.scrollTop = terminal.scrollHeight;
             }
 
+            // ───────── 汇率管理（可动态修改，状态持久化） ─────────
+            const STORAGE_KEY_RATE = 'ge32_exchange_rate';
+            const DEFAULT_EXCHANGE_RATE = 7.2;
+            let currentExchangeRate = DEFAULT_EXCHANGE_RATE;
+
+            // 从 localStorage 加载上次使用的汇率
+            function loadSavedRate() {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY_RATE);
+                    if (saved) {
+                        const parsed = parseFloat(saved);
+                        if (!isNaN(parsed) && parsed > 0) {
+                            currentExchangeRate = parsed;
+                            return;
+                        }
+                    }
+                } catch (e) {}
+                currentExchangeRate = DEFAULT_EXCHANGE_RATE;
+            }
+
+            // 保存汇率到 localStorage
+            function saveRate(rate) {
+                try {
+                    localStorage.setItem(STORAGE_KEY_RATE, rate.toString());
+                } catch (e) {}
+            }
+
+            // 设置汇率（可被控制台调用）
+            function setExchangeRate(newRate) {
+                const rate = parseFloat(newRate);
+                if (isNaN(rate) || rate <= 0) {
+                    logToTerminal(`无效汇率值: ${newRate}，请输入正数`, 'error');
+                    console.error(`无效汇率值: ${newRate}，请输入正数`);
+                    return false;
+                }
+                currentExchangeRate = rate;
+                saveRate(rate);
+                // 更新 UI
+                document.getElementById('exchangeRateInput').value = rate;
+                document.getElementById('displayRate').textContent = rate;
+                logToTerminal(`汇率已更新为: ${rate}`, 'success');
+                console.log(`✅ 汇率已更新为: ${rate}`);
+                return true;
+            }
+
+            // 获取当前汇率
+            function getExchangeRate() {
+                return currentExchangeRate;
+            }
+
+            // 暴露到全局作用域，方便控制台调用
+            window.setExchangeRate = setExchangeRate;
+            window.getExchangeRate = getExchangeRate;
+
+            // 初始化汇率
+            loadSavedRate();
+
+            // UI 绑定
+            const rateInput = document.getElementById('exchangeRateInput');
+            rateInput.value = currentExchangeRate;
+            document.getElementById('displayRate').textContent = currentExchangeRate;
+
+            rateInput.addEventListener('change', () => {
+                const newVal = parseFloat(rateInput.value);
+                if (!isNaN(newVal) && newVal > 0) {
+                    setExchangeRate(newVal);
+                } else {
+                    rateInput.value = currentExchangeRate;
+                    logToTerminal('请输入有效的正数汇率', 'warning');
+                }
+            });
+
             // ───────── 运费表管理（动态刷新） ─────────
             let shippingRates = new Map();
-            const EXCHANGE_RATE = 7.2;
 
             // 刷新运费 Map（从 window.map 重新构建）
             function refreshShippingRates() {
@@ -296,7 +449,6 @@
                         shippingRates.set(Number(weight), Number(cost));
                     });
                 } else if (rawMap instanceof Map) {
-                    // 如果已经是 Map 实例，直接复制
                     shippingRates = new Map(rawMap);
                 }
                 console.log(`[运费刷新] 当前档位数量：${shippingRates.size}`);
@@ -305,27 +457,27 @@
 
             // ★ 核心：监听 window.map 的变化，一旦被赋值就自动刷新运费表
             (function setupMapWatcher() {
-                let _map = window.map; // 初始值
+                let _map = window.map;
                 Object.defineProperty(window, 'map', {
                     get() {
                         return _map;
                     },
                     set(value) {
                         _map = value;
-                        refreshShippingRates();      // 自动刷新
+                        refreshShippingRates();
                         logToTerminal('检测到 window.map 已更新，运费表自动同步', 'warning');
                     },
                     configurable: true
                 });
             })();
 
-            // 页面加载时立即刷新一次（使用默认值或 map.js 赋予的值）
+            // 页面加载时立即刷新一次
             refreshShippingRates();
 
             // ───────── 默认公式 ─────────
             const DEFAULT_FORMULA_CODE = `function compute(row, shippingRates, exchangeRate) {
     // ========== 利润率配置（可按需修改） ==========
-    // 注意：原逻辑是 “售价 = 成本 ÷ 因子”，因子越小售价越高。
+    // 注意：原逻辑是 "售价 = 成本 ÷ 因子"，因子越小售价越高。
     // 例如 0.4 表示成本 $10 时售价 $25，相当于 2.5 倍利润。
     const PROFIT_FACTOR_LOW  = 0.5;   // 当基准美元价 ≤ $5 时使用
     const PROFIT_FACTOR_MID  = 0.52;   // 当基准美元价 ≤ $15 时使用
@@ -372,7 +524,7 @@
             const STORAGE_KEY_FORMULA = 'ge32_formula_code';
             const STORAGE_KEY_COLLAPSED = 'ge32_formula_collapsed';
 
-            // 从 localStorage 读取上周保存的公式，若无则用默认值
+            // 从 localStorage 读取保存的公式
             function loadSavedFormula() {
                 try {
                     const saved = localStorage.getItem(STORAGE_KEY_FORMULA);
@@ -462,6 +614,99 @@
                 logToTerminal('计算公式已重置为默认');
             });
 
+            // ───────── 导出弹窗管理 ─────────
+            const exportModal = document.getElementById('exportModal');
+            const allFieldCountSpan = document.getElementById('allFieldCount');
+            let pendingExportData = null; // 暂存待导出的数据
+
+            // 计算所有字段数量（原始 + 计算）
+            function getAllFieldCount(dataList) {
+                if (!dataList || dataList.length === 0) return 0;
+                const allKeys = new Set();
+                dataList.forEach(item => {
+                    if (item._raw) Object.keys(item._raw).forEach(k => allKeys.add(k));
+                    if (item._computed) Object.keys(item._computed).forEach(k => allKeys.add(k));
+                });
+                return allKeys.size;
+            }
+
+            // 执行导出全部内容
+            function doExportAll() {
+                if (!pendingExportData) return;
+                const exportData = pendingExportData.map(item => {
+                    const row = { ...item._raw };
+                    if (item._computed) Object.assign(row, item._computed);
+                    return row;
+                });
+                downloadExcel(exportData);
+            }
+
+            // 执行仅导出生成内容
+            function doExportComputed() {
+                if (!pendingExportData) return;
+                const exportData = pendingExportData.map(item => {
+                    if (item._computed) {
+                        return { ...item._computed };
+                    }
+                    return {};
+                });
+                downloadExcel(exportData);
+            }
+
+            // 下载 Excel 文件
+            function downloadExcel(data) {
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Result');
+                XLSX.writeFile(wb, `GE32_Priced_${Date.now()}.xlsx`);
+                logToTerminal("文件已自动下载", "success");
+            }
+
+            // 显示导出弹窗
+            function showExportModal(dataList) {
+                pendingExportData = dataList;
+                allFieldCountSpan.textContent = getAllFieldCount(dataList);
+                exportModal.style.display = 'flex';
+            }
+
+            // 隐藏导出弹窗
+            function hideExportModal() {
+                exportModal.style.display = 'none';
+                pendingExportData = null;
+            }
+
+            // 导出按钮事件
+            document.getElementById('exportAllBtn').addEventListener('click', () => {
+                doExportAll();
+                hideExportModal();
+            });
+
+            document.getElementById('exportComputedBtn').addEventListener('click', () => {
+                doExportComputed();
+                hideExportModal();
+            });
+
+            document.getElementById('exportCancelBtn').addEventListener('click', () => {
+                hideExportModal();
+                logToTerminal('已取消导出', 'warning');
+            });
+
+            // 点击弹窗背景也可关闭
+            exportModal.addEventListener('click', (e) => {
+                if (e.target === exportModal) {
+                    hideExportModal();
+                    logToTerminal('已取消导出', 'warning');
+                }
+            });
+
+            // ESC 键关闭弹窗
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && exportModal.style.display === 'flex') {
+                    hideExportModal();
+                    logToTerminal('已取消导出 (ESC)', 'warning');
+                }
+            });
+
             // ───────── 文件处理 ─────────
             const btn = document.getElementById('processBtn');
             const fileInput = document.getElementById('excelFile');
@@ -497,18 +742,21 @@
                         }));
                         logToTerminal(`数据加载成功，${dataList.length} 行`, "success");
                         
-                        // ★ 计算前再次确保运费表是最新的（配合自动刷新双重保险）
+                        // 计算前再次确保运费表是最新的
                         refreshShippingRates();
+                        
+                        // 使用当前汇率
+                        const rate = getExchangeRate();
+                        logToTerminal(`当前使用汇率: ${rate}`, 'info');
                         
                         let computeFn;
                         try {
                             const code = formulaEditor.getValue();
-                            // 使用 new Function 动态编译用户公式
                             computeFn = new Function('row', 'shippingRates', 'exchangeRate',
                                 code + '; return compute(row, shippingRates, exchangeRate);'
                             );
-                            // 预测试，防止公式存在语法错误
-                            computeFn({ skuPrice:1, weight:1, volWeight:0 }, shippingRates, EXCHANGE_RATE);
+                            // 预测试
+                            computeFn({ skuPrice:1, weight:1, volWeight:0 }, shippingRates, rate);
                         } catch (err) {
                             logToTerminal(`公式错误: ${err.message}`, "error");
                             btn.disabled = false;
@@ -519,7 +767,7 @@
                         let ok = 0, fail = 0;
                         dataList.forEach(item => {
                             try {
-                                item._computed = computeFn(item, shippingRates, EXCHANGE_RATE);
+                                item._computed = computeFn(item, shippingRates, rate);
                                 ok++;
                             } catch (e) {
                                 fail++;
@@ -528,17 +776,9 @@
                         });
                         logToTerminal(`计算完成: ${ok} 成功, ${fail} 失败`, "success");
                         
-                        // 导出
-                        const exportData = dataList.map(item => {
-                            const row = { ...item._raw };
-                            if (item._computed) Object.assign(row, item._computed);
-                            return row;
-                        });
-                        const ws = XLSX.utils.json_to_sheet(exportData);
-                        const wb = XLSX.utils.book_new();
-                        XLSX.utils.book_append_sheet(wb, ws, 'Result');
-                        XLSX.writeFile(wb, `GE32_Priced_${Date.now()}.xlsx`);
-                        logToTerminal("文件已自动下载", "success");
+                        // ★ 显示导出选项弹窗，而不是直接导出
+                        showExportModal(dataList);
+                        
                         btn.disabled = false;
                         btn.innerHTML = '<i class="fa-solid fa-rocket mr-2"></i> 启动计算序列';
                     };
@@ -554,6 +794,19 @@
             initFormulaEditor();
             initFormulaCollapse();
             initFullscreen();
+
+            // ───────── 控制台友好提示 ─────────
+            console.log(`
+╔══════════════════════════════════════════╗
+║   🛰️  Ge32 上架公式系统已就绪           ║
+╠══════════════════════════════════════════╣
+║  可用控制台命令：                       ║
+║  📌 setExchangeRate(汇率)  - 修改汇率   ║
+║  📌 getExchangeRate()      - 查看汇率   ║
+║  示例：setExchangeRate(7.35)            ║
+║  当前汇率：${currentExchangeRate}                          ║
+╚══════════════════════════════════════════╝
+            `);
         })();
     </script>
     <!-- 外部 map.js 可以动态更新 window.map，更新会自动触发运费表刷新 -->
