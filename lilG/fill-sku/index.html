@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>变体组生成器 · 回调引擎 · 颜色AI融合版（修复导出列完整版）</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js">
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            background: radial-gradient(circle at 30% 20%, #0f172a, #05070a);
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .stars-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            background: radial-gradient(circle at 30% 20%, #0f172a 0%, #080c14 40%, #05070a 70%, #020408 100%);
+        }
+        .nebula {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.06;
+            pointer-events: none;
+            animation: nebulaDrift 30s infinite ease-in-out;
+        }
+        .nebula-1 {
+            width: 700px;
+            height: 700px;
+            background: #3b82f6;
+            top: -20%;
+            left: -15%;
+        }
+        .nebula-2 {
+            width: 600px;
+            height: 600px;
+            background: #8b5cf6;
+            bottom: -25%;
+            right: -10%;
+            animation-delay: -15s;
+        }
+        .nebula-3 {
+            width: 500px;
+            height: 500px;
+            background: #10b981;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -25s;
+        }
+        @keyframes nebulaDrift {
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(50px, -30px) scale(1.2);
+            }
+            50% {
+                transform: translate(-20px, 40px) scale(0.9);
+            }
+            75% {
+                transform: translate(-40px, -20px) scale(1.15);
+            }
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: twinkle var(--duration) infinite ease-in-out;
+            animation-delay: var(--delay);
+        }
+        @keyframes twinkle {
+            0%,
+            100% {
+                opacity: 0.2;
+                transform: scale(0.8);
+            }
+            30% {
+                opacity: 0.8;
+                transform: scale(1.4);
+            }
+            60% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+            85% {
+                opacity: 0.6;
+                transform: scale(1.2);
+            }
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.5rem;
+            transition: all 0.3s;
+        }
+        .glass-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .input-glass {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 0.9rem;
+            padding: 0.5rem 0.8rem;
+            color: white;
+            font-size: 0.8rem;
+            outline: none;
+        }
+        .input-glass:focus {
+            border-color: #3b82f6;
+        }
+        .input-glass option {
+            background: #1e293b;
+            color: white;
+        }
+        .btn-glass {
+            padding: 0.45rem 1rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            letter-spacing: 0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.04);
+            color: #cbd5e1;
+        }
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(59, 130, 246, 0.6);
+            color: white;
+        }
+        .btn-primary {
+            background: #1e2f3f;
+            border-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2d4a6b;
+        }
+        .btn-accent {
+            background: #1e3a2f;
+            border-color: #10b981;
+            color: white;
+        }
+        .btn-accent:hover {
+            background: #2a4a3a;
+        }
+        .CodeMirror {
+            height: auto !important;
+            min-height: 100px;
+            border-radius: 0.6rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+        }
+        .log-area {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 0.8rem;
+            padding: 0.8rem;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+        .log-entry {
+            margin: 2px 0;
+            color: #94a3b8;
+        }
+        .log-entry.error {
+            color: #f87171;
+        }
+        .log-entry.success {
+            color: #34d399;
+        }
+        .log-entry.warning {
+            color: #fbbf24;
+        }
+        .checkbox-glass {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            cursor: pointer;
+        }
+        .checkbox-glass input[type="checkbox"] {
+            appearance: none;
+            width: 1rem;
+            height: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 0.25rem;
+            background: rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+        .checkbox-glass input[type="checkbox"]:checked {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+        .checkbox-glass input[type="checkbox"]:checked::after {
+            content: "✓";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 0.7rem;
+        }
+        .toggle-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .collapsed-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .expanded-content {
+            max-height: 600px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .expanded-content-mapping {
+            max-height: 200px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .expanded-content-color-enum {
+            max-height: 350px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .fullscreen-card {
+            position: fixed !important;
+            inset: 1.5rem !important;
+            z-index: 100 !important;
+            background: rgba(8, 12, 20, 0.96) !important;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            border: 1px solid rgba(59, 130, 246, 0.4) !important;
+            border-radius: 1.5rem !important;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.8) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            transition: all 0.3s ease;
+        }
+        .fullscreen-card .expanded-content,
+        .fullscreen-card .expanded-content-mapping,
+        .fullscreen-card .expanded-content-color-enum {
+            flex: 1 !important;
+            max-height: none !important;
+            overflow: hidden !important;
+        }
+        .fullscreen-card .CodeMirror {
+            height: 100% !important;
+        }
+        .fullscreen-card #codeEditorContainer,
+        .fullscreen-card #mappingEditorContainer,
+        .fullscreen-card #colorEnumEditorContainer {
+            height: 100% !important;
+        }
+        .fullscreen-card #codeEditorContainer .CodeMirror,
+        .fullscreen-card #mappingEditorContainer .CodeMirror,
+        .fullscreen-card #colorEnumEditorContainer .CodeMirror {
+            height: 100% !important;
+            min-height: 200px;
+        }
+        #mappingEditorContainer {
+            height: 100px !important;
+            overflow: hidden;
+        }
+        #mappingEditorContainer .CodeMirror {
+            height: 100px !important;
+            min-height: 100px;
+        }
+        #colorEnumEditorContainer {
+            height: 220px !important;
+            overflow: hidden;
+        }
+        #colorEnumEditorContainer .CodeMirror {
+            height: 220px !important;
+            min-height: 150px;
+        }
+        #codeEditorContainer {
+            height: 420px;
+            overflow: hidden;
+        }
+        #codeEditorContainer .CodeMirror {
+            height: 420px !important;
+            min-height: 100px;
+        }
+        .ai-suggestion-item {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.8rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .ai-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ai-modal {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1.2rem;
+            padding: 1.8rem;
+            max-width: 550px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: #e2e8f0;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+        .unmapped-tag {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            display: inline-block;
+            margin: 3px 6px 3px 0;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="stars-container" id="stars">
+        <div class="nebula nebula-1"></div>
+        <div class="nebula nebula-2"></div>
+        <div class="nebula nebula-3"></div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8 relative z-10 space-y-6">
+        <!-- 头部 -->
+        <div class="glass-card p-6 flex flex-wrap justify-between items-center">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                    <i class="fa-solid fa-layer-group text-blue-400"></i> 变体组生成器 · 回调引擎
+                </h1>
+                <p class="text-gray-400 text-sm mt-1">映射 & 函数独立编辑 · 导出列自动识别 · 颜色AI标准化 · 全生成列完整版</p>
+            </div>
+            <div class="flex gap-2 mt-3 md:mt-0">
+                <button id="saveConfigBtn" class="btn-glass btn-primary"><i class="fa-solid fa-floppy-disk"></i> 保存方案</button>
+                <button id="exportConfigBtn" class="btn-glass"><i class="fa-solid fa-download"></i> 导出方案</button>
+                <button id="importConfigBtn" class="btn-glass" onclick="document.getElementById('importConfigFile').click()"><i class="fa-solid fa-upload"></i> 导入</button>
+                <input type="file" id="importConfigFile" accept=".json" class="hidden">
+            </div>
+        </div>
+
+        <!-- 文件上传 & 核心列 -->
+        <div class="glass-card p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div><label class="text-xs font-bold uppercase text-gray-400">📂 上传 Excel</label><input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="input-glass w-full mt-1"></div>
+            <div><label class="text-xs font-bold uppercase text-gray-400">📄 工作表</label><select id="sheetSelect" disabled class="input-glass w-full mt-1"><option>— 请先上传 —</option></select></div>
+            <div class="flex items-end"><button id="loadSheetBtn" class="btn-glass w-full"><i class="fa-solid fa-arrows-rotate"></i> 加载</button></div>
+            <div><label class="text-xs font-bold uppercase text-gray-400">🔑 SKU列</label><select id="skuColSelect" disabled class="input-glass w-full mt-1"></select></div>
+            <div><label class="text-xs font-bold uppercase text-gray-400">🔗 父SKU列</label><select id="parentColSelect" disabled class="input-glass w-full mt-1"></select></div>
+            <div class="text-xs text-gray-500 flex items-end">其余映射在下方编辑</div>
+        </div>
+
+        <!-- 映射配置 (可折叠 + 全屏) -->
+        <div class="glass-card p-6" id="mappingCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="mappingToggleHeader">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i id="mappingToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+                    <i class="fa-solid fa-map-pin text-cyan-400 mr-2"></i> 列映射 (JSON)
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="mappingFullscreenBtn" class="btn-glass" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetMappingBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                </div>
+            </div>
+            <div id="mappingCollapseWrapper" class="expanded-content-mapping">
+                <div id="mappingEditorContainer"></div>
+            </div>
+        </div>
+
+        <!-- 🆕 颜色枚举配置 (可折叠 + 全屏) -->
+        <div class="glass-card p-6" id="colorEnumCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="colorEnumToggleHeader">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i id="colorEnumToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+                    <i class="fa-solid fa-palette text-purple-400 mr-2"></i> 颜色枚举配置 (JSON)
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="colorEnumFullscreenBtn" class="btn-glass" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetColorEnumBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                    <button id="aiClassifyBtn" class="btn-glass btn-accent"><i class="fa-solid fa-robot"></i> AI 智能分类</button>
+                </div>
+            </div>
+            <div id="colorEnumCollapseWrapper" class="expanded-content-color-enum">
+                <div id="colorEnumEditorContainer"></div>
+                <div id="colorUnmappedMini" class="mt-2 text-xs text-gray-400 hidden"></div>
+            </div>
+            <div class="mt-3 border-t border-white/10 pt-3">
+                <div class="toggle-header text-xs text-gray-400" id="aiSettingsToggle">
+                    <i id="aiSettingsIcon" class="fa-solid fa-chevron-right text-gray-500"></i>
+                    <span>🤖 AI 配置 (DeepSeek API)</span>
+                </div>
+                <div id="aiSettingsContent" class="collapsed-content space-y-2 mt-2">
+                    <input id="aiApiKey" type="password" class="input-glass w-full" placeholder="API密钥 sk-...">
+                    <select id="aiModel" class="input-glass w-full">
+                        <option value="deepseek-chat">deepseek-chat</option>
+                        <option value="deepseek-reasoner">deepseek-reasoner</option>
+                    </select>
+                    <textarea id="aiPrompt" class="input-glass w-full h-20 resize-y text-xs" placeholder="系统提示词..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 处理函数 (可折叠 + 全屏) -->
+        <div class="glass-card p-6" id="codeCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="codeToggleHeader">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i id="codeToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+                    <i class="fa-solid fa-code text-purple-400 mr-2"></i> 处理函数
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="codeFullscreenBtn" class="btn-glass" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetCodeBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                </div>
+            </div>
+            <div id="codeCollapseWrapper" class="expanded-content">
+                <div id="codeEditorContainer"></div>
+            </div>
+        </div>
+
+        <!-- 操作栏 -->
+        <div class="flex flex-wrap gap-3 items-center justify-between">
+            <div class="flex gap-2">
+                <button id="runProcessBtn" class="btn-glass btn-primary"><i class="fa-solid fa-play"></i> 执行处理</button>
+                <button id="exportResultBtn" class="btn-glass"><i class="fa-solid fa-file-export"></i> 导出结果</button>
+            </div>
+            <div class="flex items-center gap-4">
+                <label class="checkbox-glass"><input type="checkbox" id="exportFullCheckbox" /> <span>导出全部列</span></label>
+                <label class="checkbox-glass"><input type="checkbox" id="exportNewColsCheckbox" checked /> <span>导出生成列</span></label>
+                <span class="text-sm text-gray-400" id="dataStatus">⚡ 就绪</span>
+            </div>
+        </div>
+
+        <!-- 运行日志 -->
+        <div class="glass-card p-6">
+            <h2 class="font-semibold mb-3"><i class="fa-solid fa-terminal mr-2"></i>运行日志</h2>
+            <div id="logArea" class="log-area">等待操作...</div>
+        </div>
+
+        <!-- 方案列表 -->
+        <div class="glass-card p-6">
+            <h3 class="font-semibold mb-3"><i class="fa-solid fa-folder-open mr-2"></i>已保存方案</h3>
+            <div id="configListContainer" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    <!-- AI建议弹窗容器 -->
+    <div id="aiModalContainer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js">
+    </script>
+    <script>
+        (function() {
+            let workbook = null,
+                currentSheetName = '',
+                rawDataRows = [],
+                allColumns = [];
+            let processedData = [];
+            let codeEditor = null,
+                mappingEditor = null,
+                colorEnumEditor = null;
+
+            const $ = id => document.getElementById(id);
+            const fileInput = $('fileInput'),
+                sheetSelect = $('sheetSelect'),
+                loadSheetBtn = $('loadSheetBtn');
+            const skuColSelect = $('skuColSelect'),
+                parentColSelect = $('parentColSelect');
+            const mappingContainer = $('mappingEditorContainer');
+            const codeContainer = $('codeEditorContainer');
+            const colorEnumContainer = $('colorEnumEditorContainer');
+            const mappingCard = $('mappingCard');
+            const codeCard = $('codeCard');
+            const colorEnumCard = $('colorEnumCard');
+            const mappingToggleHeader = $('mappingToggleHeader');
+            const mappingToggleIcon = $('mappingToggleIcon');
+            const mappingCollapseWrapper = $('mappingCollapseWrapper');
+            const mappingFullscreenBtn = $('mappingFullscreenBtn');
+            const colorEnumToggleHeader = $('colorEnumToggleHeader');
+            const colorEnumToggleIcon = $('colorEnumToggleIcon');
+            const colorEnumCollapseWrapper = $('colorEnumCollapseWrapper');
+            const colorEnumFullscreenBtn = $('colorEnumFullscreenBtn');
+            const codeToggleHeader = $('codeToggleHeader');
+            const codeToggleIcon = $('codeToggleIcon');
+            const codeCollapseWrapper = $('codeCollapseWrapper');
+            const codeFullscreenBtn = $('codeFullscreenBtn');
+            const runProcessBtn = $('runProcessBtn'),
+                exportBtn = $('exportResultBtn');
+            const exportFullCheck = $('exportFullCheckbox'),
+                exportNewCheck = $('exportNewColsCheckbox');
+            const dataStatus = $('dataStatus'),
+                logArea = $('logArea');
+            const saveConfigBtn = $('saveConfigBtn'),
+                exportConfigBtn = $('exportConfigBtn');
+            const importConfigFile = $('importConfigFile');
+            const resetMappingBtn = $('resetMappingBtn'),
+                resetCodeBtn = $('resetCodeBtn');
+            const resetColorEnumBtn = $('resetColorEnumBtn');
+            const configListContainer = $('configListContainer');
+            const aiClassifyBtn = $('aiClassifyBtn');
+            const aiApiKey = $('aiApiKey'),
+                aiModel = $('aiModel'),
+                aiPrompt = $('aiPrompt');
+            const aiSettingsToggle = $('aiSettingsToggle'),
+                aiSettingsIcon = $('aiSettingsIcon');
+            const aiSettingsContent = $('aiSettingsContent');
+            const aiModalContainer = $('aiModalContainer');
+            const colorUnmappedMini = $('colorUnmappedMini');
+
+            // ──────────── localStorage keys ────────────
+            const LK_COLOR_ENUM = 'color_enum_config_fusion';
+            const LK_AI_KEY = 'color_ai_api_key_fusion';
+            const LK_AI_MODEL = 'color_ai_model_fusion';
+            const LK_AI_PROMPT = 'color_ai_prompt_fusion';
+            const LK_COLOR_COLLAPSED = 'color_enum_collapsed_fusion';
+            const LK_AI_COLLAPSED = 'color_ai_collapsed_fusion';
+            const LK_MAPPING_COLLAPSED = 'mapping_editor_collapsed_fusion';
+            const LK_CODE_COLLAPSED = 'code_editor_collapsed_fusion';
+            const LK_CONFIGS = 'variant_gen_configs_fusion_v3';
+
+            // ──────────── 默认颜色枚举 ────────────
+            const DEFAULT_COLOR_ENUM = {
+                "Green": ["mint green", "army green", "light green", "dark green", "grean", "greem", "gteen",
+                    "green ", " green"
+                ],
+                "Gold": ["rose gold", "rosegold", "rose-gold"],
+                "Blue": ["sky blue", "light blue", "light bule", "light b lue", "dark blue", "navy", "navy blue",
+                    "bleu", "bule", "bluw"
+                ],
+                "Brown": ["coffee", "khaki", "brown", "browm", "broun", "brawn"],
+                "Red": ["watermelon red", "watermellon red", "redd", "red ", "wine", "Wine"],
+                "Silver": ["sliver", "silvery", "silver,clear", "silverclear", "siver", "silvre"],
+                "Gray": ["dark gray", "dark grey", "grey", "gray", "graay", "graey"],
+                "Clear": ["transparent", "transparant", "transperent", "transperant", "clear", "clearr", "clera"],
+                "Black": ["black", "blak", "blck", "balck"],
+                "White": ["white", "whit", "wite", "whtie", "while"],
+                "Yellow": ["yellow", "yello", "yelow"],
+                "Orange": ["orange", "orenge", "orng"],
+                "Pink": ["pink", "pinc", "peenk", "champagne", "Champagne"],
+                "Purple": ["purple", "purpel", "purpple", "violet"],
+                "Multicolor": ["color", "colorful", "mul", "as show", "as shown"]
+            };
+            const DEFAULT_AI_PROMPT =
+                `你是一个颜色分类专家。请将以下颜色名称映射到标准类别。\n标准类别包括: Green, Gold, Blue, Brown, Red, Silver, Gray, Clear, Black, White, Yellow, Orange, Pink, Purple, Beige, Multicolor 等。\n规则:\n- 拼写错误应映射到正确颜色 (如 "bule" -> "Blue")\n- 包含多种颜色的名称 (如 "Blue,Red") 应归类为 "Multicolor"\n- 缩写需展开 (如 "GN" -> "Green")\n- 材质/纹理描述 (如 "wood", "camouflage") 归入合理颜色或 Multicolor\n- 无法判断的归入 "Multicolor"\n请返回JSON数组，格式: [{"key":"标准类别","value":"原始颜色名称"}, ...] 只返回JSON，不要其他内容。`;
+
+            // ──────────── 默认映射和代码（完整版本，包含所有生成列）───────────
+            const DEFAULT_MAPPING = JSON.stringify({
+                weight: '重量(g)',
+                length: '长',
+                width: '宽',
+                height: '高',
+                material: '面料成分',
+                color: '颜色'
+            }, null, 2);
+
+            const DEFAULT_CODE = [
+                '// ═══════════════════════════════════════════════════════════════',
+                '// 变体组生成器 · 处理函数说明书（自动列识别 + 材质提取 + 颜色标准化）',
+                '// ═══════════════════════════════════════════════════════════════',
+                '// ',
+                '// 📥 可用参数：',
+                '//    rows        - 原始数据数组',
+                '//    columns     - 列映射对象（如 { weight:"重量(g)", color:"颜色" }）',
+                '//    skuCol      - SKU 列名',
+                '//    parentCol   - 父SKU 列名',
+                '//',
+                '// 📤 返回值：对象数组，每个对象代表一行。',
+                '//    新增字段会被自动识别并包含在"导出生成列"中。',
+                '// ═══════════════════════════════════════════════════════════════',
+                'return (function(rows, columns, skuCol, parentCol) {',
+                '    ',
+                '    // ─────────────────── 0. 工具函数 ───────────────────',
+                '    const toNum = v => isNaN(parseFloat(v)) ? NaN : parseFloat(v);',
+                '    ',
+                '    function extractFirstMaterial(raw) {',
+                '        if (!raw || typeof raw !== "string") return "";',
+                '        let trimmed = raw.trim();',
+                '        if (trimmed === "") return "";',
+                '        let splitBySeparators = (text) => {',
+                '            let normalized = text.replace(/，/g, ",").replace(/﹢/g, "+").replace(/＆/g, "&");',
+                '            let parts = normalized.split(/\\s*[,+&\\/|]\\s*|\\s+and\\s+|\\s*\\+\\s*/);',
+                '            let filtered = parts.filter(p => p.trim().length > 0);',
+                '            return filtered.length ? filtered : [text];',
+                '        };',
+                '        let segments = splitBySeparators(trimmed);',
+                '        let firstSegment = segments[0] ? segments[0].trim() : trimmed;',
+                '        let cleaned = firstSegment.replace(/\\d+(?:\\.\\d+)?%/g, "");',
+                '        const materialWordRegex = /[A-Za-z\\u00C0-\\u024F\\u0400-\\u04FF]+(?:[\\s-][A-Za-z\\u00C0-\\u024F\\u0400-\\u04FF]+)*/;',
+                '        let match = cleaned.match(materialWordRegex);',
+                '        if (match && match[0]) {',
+                '            cleaned = match[0].trim();',
+                '        } else {',
+                '            let onlyAlpha = cleaned.replace(/[^\\p{L}\\s-]/gu, "").trim();',
+                '            cleaned = onlyAlpha || firstSegment.replace(/[\\d%]/g, "").replace(/[^\\w\\s\\u4e00-\\u9fa5-]/g, "").trim() || firstSegment.replace(/[^\\p{L}]/gu, "").trim() || firstSegment;',
+                '        }',
+                '        cleaned = cleaned.replace(/\\s+/g, " ").trim();',
+                '        return cleaned || "未识别";',
+                '    }',
+                '    ',
+                '    // ─────────── 🆕 颜色标准化 ───────────',
+                '    let colorExactMap = new Map();',
+                '    const colorFuzzyRules = [',
+                '        { regex: /^[a-z]$/i, target: "Multicolor" },',
+                '        { regex: /^multiple[a-z]*$/i, target: "Multicolor" },',
+                '        { regex: /^multicolour[a-z]*$/i, target: "Multicolor" },',
+                '        { regex: /^multicolor[a-z]*$/i, target: "Multicolor" },',
+                '        { regex: /^mixed\\s*colou?r[a-z]*$/i, target: "Multicolor" },',
+                '        { regex: /^mixedcolou?r[a-z]*$/i, target: "Multicolor" },',
+                '        { regex: /^mixed\\s+colou?rs?[a-z]*$/i, target: "Multicolor" },',
+                '        { regex: /^mixed[\\s\\-_]?colou?r[a-z]*$/i, target: "Multicolor" },',
+                '        { regex: /^mixed\\s+colors?[a-z]*$/i, target: "Multicolor" }',
+                '    ];',
+                '    try {',
+                '        const colorEnumConfig = JSON.parse(localStorage.getItem("color_enum_config_fusion") || "{}");',
+                '        for (const [category, aliases] of Object.entries(colorEnumConfig)) {',
+                '            if (Array.isArray(aliases)) {',
+                '                aliases.forEach(alias => {',
+                '                    const key = String(alias).trim().toLowerCase();',
+                '                    if (key) colorExactMap.set(key, category);',
+                '                });',
+                '            }',
+                '        }',
+                '    } catch(e) { /* 颜色配置读取失败，使用空映射 */ }',
+                '    ',
+                '    function normalizeColor(raw) {',
+                '        if (!raw || typeof raw !== "string") return "";',
+                '        const trimmed = raw.trim();',
+                '        if (trimmed === "") return "";',
+                '        const norm = trimmed.toLowerCase();',
+                '        const mapped = colorExactMap.get(norm);',
+                '        if (mapped) return mapped;',
+                '        for (const rule of colorFuzzyRules) {',
+                '            if (rule.regex.test(norm)) return rule.target;',
+                '        }',
+                '        return trimmed;',
+                '    }',
+                '    // ─────────── 颜色标准化结束 ───────────',
+                '    ',
+                '    // ─────────────────── 1. 常量定义 ───────────────────',
+                '    const GRAM_TO_LB = 0.00220462;',
+                '    const CM_TO_INCH = 0.393701;',
+                '    ',
+                '    // ─────────────────── 2. 数据分组 ───────────────────',
+                '    const parentMap = new Map();',
+                '    const groupInfo = new Map();',
+                '    const tempRows = [];',
+                '    ',
+                '    for (let i = 0; i < rows.length; i++) {',
+                '        const r = rows[i];',
+                '        const sku = String(r[skuCol] || "").trim();',
+                '        const parent = String(r[parentCol] || "").trim();',
+                '        ',
+                '        let groupId = parent ? (parentMap.has(parent) ? parentMap.get(parent) : sku) : sku;',
+                '        if (parent && !parentMap.has(parent)) parentMap.set(parent, groupId);',
+                '        ',
+                '        const weightVal = r[columns.weight] !== undefined ? r[columns.weight] : "";',
+                '        const net = toNum(weightVal) ? (toNum(weightVal) * GRAM_TO_LB).toFixed(2) : "";',
+                '        const lengthVal = r[columns.length] !== undefined ? r[columns.length] : "";',
+                '        const l = toNum(lengthVal) ? (toNum(lengthVal) * CM_TO_INCH).toFixed(2) : "";',
+                '        const widthVal = r[columns.width] !== undefined ? r[columns.width] : "";',
+                '        const w = toNum(widthVal) ? (toNum(widthVal) * CM_TO_INCH).toFixed(2) : "";',
+                '        const heightVal = r[columns.height] !== undefined ? r[columns.height] : "";',
+                '        const h = toNum(heightVal) ? (toNum(heightVal) * CM_TO_INCH).toFixed(2) : "";',
+                '        ',
+                '        let materialClass = "";',
+                '        if (columns.material) {',
+                '            const materialRaw = String(r[columns.material] || "").trim();',
+                '            materialClass = materialRaw ? extractFirstMaterial(materialRaw) : "";',
+                '        }',
+                '        ',
+                '        let colorClass = "";',
+                '        if (columns.color) {',
+                '            const colorRaw = String(r[columns.color] || "").trim();',
+                '            colorClass = colorRaw ? normalizeColor(colorRaw) : "";',
+                '        }',
+                '        ',
+                '        tempRows.push({',
+                '            ...r,',
+                '            _groupId: groupId,',
+                '            _net: net,',
+                '            _l: l,',
+                '            _w: w,',
+                '            _h: h,',
+                '            _materialClass: materialClass,',
+                '            _colorClass: colorClass',
+                '        });',
+                '        ',
+                '        if (!groupInfo.has(groupId)) groupInfo.set(groupId, { indices: [] });',
+                '        groupInfo.get(groupId).indices.push(i);',
+                '    }',
+                '    ',
+                '    // ─────────────────── 3. 确定主变体 ───────────────────',
+                '    for (let [gid, info] of groupInfo) {',
+                '        const idxs = info.indices;',
+                '        if (idxs.length === 1) {',
+                '            info.primaryIdx = 0;',
+                '        } else {',
+                '            info.primaryIdx = 1 + Math.floor(Math.random() * (idxs.length - 1));',
+                '        }',
+                '    }',
+                '    ',
+                '    // ─────────────────── 4. 构建最终结果（包含所有生成列）───────────────────',
+                '    return tempRows.map((t, i) => {',
+                '        const info = groupInfo.get(t._groupId);',
+                '        const pos = info.indices.indexOf(i);',
+                '        return {',
+                '            ...t,',
+                '            "Variant Group ID": t._groupId,',
+                '            "Is Primary Variant": (pos === info.primaryIdx) ? "Yes" : "No",',
+                '            netContentStatement: t._net,',
+                '            assembledProductLength: t._l,',
+                '            assembledProductWidth: t._w,',
+                '            assembledProductHeight: t._h,',
+                '            "Material Classification": t._materialClass,',
+                '            "Color Classification": t._colorClass',
+                '        };',
+                '    });',
+                '})(rows, columns, skuCol, parentCol);',
+                '// ═══════════════════════════════════════════════════════════════'
+            ].join('\n');
+
+            let currentConfig = {
+                name: '默认方案',
+                mapping: DEFAULT_MAPPING,
+                code: DEFAULT_CODE,
+                colorEnum: JSON.stringify(DEFAULT_COLOR_ENUM, null, 2),
+                skuColumn: '',
+                parentSkuColumn: ''
+            };
+
+            const esc = s => String(s || '').replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[
+                m]));
+
+            // ──────────── localStorage 辅助 ────────────
+            function lsGet(key, def) { try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(
+                    v) : def; } catch { return def; } }
+
+            function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+            // ──────────── 颜色枚举持久化 ────────────
+            function getStoredColorEnum() { return lsGet(LK_COLOR_ENUM, DEFAULT_COLOR_ENUM); }
+
+            function saveColorEnumFromEditor() {
+                if (!colorEnumEditor) return;
+                try {
+                    const parsed = JSON.parse(colorEnumEditor.getValue());
+                    if (parsed && typeof parsed === 'object') lsSet(LK_COLOR_ENUM, parsed);
+                } catch {}
+            }
+
+            // ──────────── AI配置持久化 ────────────
+            function loadAISettings() {
+                aiApiKey.value = lsGet(LK_AI_KEY, '');
+                aiModel.value = lsGet(LK_AI_MODEL, 'deepseek-chat');
+                aiPrompt.value = lsGet(LK_AI_PROMPT, DEFAULT_AI_PROMPT);
+            }
+
+            function saveAISettings() {
+                lsSet(LK_AI_KEY, aiApiKey.value);
+                lsSet(LK_AI_MODEL, aiModel.value);
+                lsSet(LK_AI_PROMPT, aiPrompt.value);
+            }
+            aiApiKey.addEventListener('input', saveAISettings);
+            aiModel.addEventListener('change', saveAISettings);
+            aiPrompt.addEventListener('input', saveAISettings);
+
+            // ──────────── 日志 ────────────
+            function log(msg, type = 'info') {
+                const entry = document.createElement('div');
+                entry.className =
+                    `log-entry ${type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : ''}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+                logArea.appendChild(entry);
+                logArea.scrollTop = logArea.scrollHeight;
+            }
+
+            // ──────────── 配置管理 ────────────
+            function loadConfigs() { return lsGet(LK_CONFIGS, []); }
+
+            function saveConfigs(configs) { lsSet(LK_CONFIGS, configs);
+                renderConfigList(); }
+
+            function getCurrentFullConfig() {
+                return {
+                    name: currentConfig.name || '未命名',
+                    skuColumn: skuColSelect.value,
+                    parentSkuColumn: parentColSelect.value,
+                    mapping: mappingEditor ? mappingEditor.getValue() : currentConfig.mapping,
+                    code: codeEditor ? codeEditor.getValue() : currentConfig.code,
+                    colorEnum: colorEnumEditor ? colorEnumEditor.getValue() : currentConfig.colorEnum
+                };
+            }
+
+            function applyConfig(cfg) {
+                if (cfg.skuColumn && allColumns.includes(cfg.skuColumn)) skuColSelect.value = cfg.skuColumn;
+                if (cfg.parentSkuColumn && allColumns.includes(cfg.parentSkuColumn)) parentColSelect.value = cfg
+                    .parentSkuColumn;
+                if (mappingEditor && cfg.mapping) mappingEditor.setValue(cfg.mapping);
+                if (codeEditor && cfg.code) codeEditor.setValue(cfg.code);
+                if (colorEnumEditor && cfg.colorEnum) {
+                    colorEnumEditor.setValue(cfg.colorEnum);
+                    saveColorEnumFromEditor();
+                }
+                currentConfig.name = cfg.name || '未命名';
+            }
+
+            function renderConfigList() {
+                const configs = loadConfigs();
+                if (!configs.length) { configListContainer.innerHTML =
+                    '<span class="text-gray-500 text-sm">暂无方案</span>'; return; }
+                configListContainer.innerHTML = configs.map((c, i) => `
+                    <div class="bg-white/5 border border-white/10 rounded-full px-4 py-2 flex items-center gap-2 text-sm">
+                        <span>📋 ${esc(c.name)}</span>
+                        <button class="text-blue-400 hover:text-blue-300" data-apply="${i}">应用</button>
+                        <button class="text-red-400 hover:text-red-300" data-delete="${i}">删除</button>
+                    </div>`).join('');
+                configListContainer.querySelectorAll('[data-apply]').forEach(b => b.addEventListener('click', e => {
+                    applyConfig(loadConfigs()[e.target.dataset.apply]);
+                    log('方案已应用', 'success');
+                }));
+                configListContainer.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', e => {
+                    const cfgs = loadConfigs();
+                    cfgs.splice(e.target.dataset.delete, 1);
+                    saveConfigs(cfgs);
+                }));
+            }
+
+            // ──────────── 颜色扫描（用于AI分类和未映射提示）───────────
+            function getColorColumnName() {
+                try {
+                    const mapping = JSON.parse(mappingEditor.getValue());
+                    return mapping.color || null;
+                } catch { return null; }
+            }
+
+            function scanColorValues() {
+                if (!rawDataRows.length) return [];
+                const colorCol = getColorColumnName();
+                if (!colorCol || !allColumns.includes(colorCol)) return [];
+                const unique = new Set();
+                rawDataRows.forEach(r => {
+                    const v = String(r[colorCol] || '').trim();
+                    if (v) unique.add(v);
+                });
+                return Array.from(unique);
+            }
+
+            function findUnmappedColors() {
+                const allColors = scanColorValues();
+                if (!allColors.length) return [];
+                let enumConfig;
+                try { enumConfig = JSON.parse(colorEnumEditor.getValue()); } catch { return allColors.map(c => ({
+                    display: c,
+                    count: 1
+                })); }
+                const exactMap = new Map();
+                for (const [cat, aliases] of Object.entries(enumConfig)) {
+                    if (Array.isArray(aliases)) {
+                        aliases.forEach(a => { const k = String(a).trim().toLowerCase(); if (k) exactMap.set(k,
+                                cat); });
+                    }
+                }
+                const fuzzyRules = [
+                    { regex: /^[a-z]$/i },
+                    { regex: /^multiple[a-z]*$/i },
+                    { regex: /^multicolou?r[a-z]*$/i },
+                    { regex: /^mixed\s*colou?r[a-z]*$/i },
+                    { regex: /^mixedcolou?r[a-z]*$/i },
+                    { regex: /^mixed\s+colou?rs?[a-z]*$/i },
+                    { regex: /^mixed[\s\-_]?colou?r[a-z]*$/i },
+                    { regex: /^mixed\s+colors?[a-z]*$/i }
+                ];
+                const unmapped = [];
+                allColors.forEach(c => {
+                    const norm = c.toLowerCase();
+                    if (exactMap.has(norm)) return;
+                    let fuzzyMatch = false;
+                    for (const rule of fuzzyRules) { if (rule.regex.test(norm)) { fuzzyMatch = true; break; } }
+                    if (!fuzzyMatch) unmapped.push({ display: c, count: 1 });
+                });
+                return unmapped;
+            }
+
+            function updateColorUnmappedMini() {
+                const unmapped = findUnmappedColors();
+                if (unmapped.length === 0) {
+                    colorUnmappedMini.classList.add('hidden');
+                } else {
+                    colorUnmappedMini.classList.remove('hidden');
+                    const tags = unmapped.slice(0, 15).map(u =>
+                        `<span class="unmapped-tag">${esc(u.display)}</span>`).join('');
+                    const more = unmapped.length > 15 ? ` ...及另外${unmapped.length - 15}项` : '';
+                    colorUnmappedMini.innerHTML =
+                        `<i class="fa-solid fa-triangle-exclamation text-yellow-400"></i> 数据中存在 <b>${unmapped.length}</b> 个未映射颜色：${tags}${more}`;
+                }
+            }
+
+            // ──────────── 执行处理 ────────────
+            function runProcess() {
+                if (!rawDataRows.length) { log('请先加载数据', 'error'); return; }
+                const skuCol = skuColSelect.value,
+                    parentCol = parentColSelect.value;
+                if (!skuCol || !parentCol) { log('请选择SKU列和父SKU列', 'error'); return; }
+
+                let columns;
+                try {
+                    columns = JSON.parse(mappingEditor.getValue());
+                } catch (e) {
+                    log('映射配置JSON格式错误', 'error');
+                    return;
+                }
+                columns.sku = skuCol;
+                columns.parentSku = parentCol;
+
+                // 确保颜色枚举已保存到localStorage（处理函数从localStorage读取）
+                saveColorEnumFromEditor();
+
+                try {
+                    const userCode = codeEditor.getValue();
+                    const fn = new Function('rows', 'columns', 'skuCol', 'parentCol', userCode);
+                    const result = fn(rawDataRows, columns, skuCol, parentCol);
+                    if (!Array.isArray(result)) throw new Error('函数必须返回数组');
+                    processedData = result;
+                    const newCols = Object.keys(processedData[0]).filter(col => !allColumns.includes(col) && !col
+                        .startsWith('_'));
+                    log(`✅ 处理完成，共 ${processedData.length} 行，新增 ${newCols.length} 列: ${newCols.join(', ')}`,
+                        'success');
+                    dataStatus.textContent = `✅ 已处理 ${processedData.length} 行，新增 ${newCols.length} 列`;
+                    updateColorUnmappedMini();
+                } catch (e) {
+                    log(`❌ 执行错误: ${e.message}`, 'error');
+                    console.error(e);
+                }
+            }
+
+            // ──────────── 导出 ────────────
+            function exportData() {
+                if (!processedData.length) { log('无数据可导出', 'error'); return; }
+                const allCols = Object.keys(processedData[0]);
+                const newCols = allCols.filter(col => !allColumns.includes(col) && !col.startsWith('_'));
+                const skuCol = skuColSelect.value;
+                let exportCols = [];
+
+                if (exportFullCheck.checked) {
+                    exportCols = allCols.filter(col => !col.startsWith('_'));
+                } else {
+                    if (exportNewCheck.checked) {
+                        exportCols = [skuCol, ...newCols.filter(c => c !== skuCol)];
+                    } else {
+                        exportCols = [skuCol];
+                    }
+                }
+                exportCols = exportCols.filter(col => allCols.includes(col));
+
+                const exportRows = processedData.map(row => {
+                    const obj = {};
+                    exportCols.forEach(c => obj[c] = row[c] ?? '');
+                    return obj;
+                });
+
+                try {
+                    const ws = XLSX.utils.json_to_sheet(exportRows);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "结果");
+                    XLSX.writeFile(wb, `variant_result_${Date.now()}.xlsx`);
+                    log(`📎 导出成功（${exportCols.length} 列: ${exportCols.join(', ')}）`, 'success');
+                } catch (e) {
+                    log('导出失败', 'error');
+                }
+            }
+
+            // ──────────── 加载数据 ────────────
+            function loadSheet() {
+                if (!workbook || !currentSheetName) return;
+                try {
+                    const sheet = workbook.Sheets[currentSheetName];
+                    const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                    if (!json.length) { log('工作表为空', 'error'); return; }
+                    rawDataRows = json;
+                    allColumns = Object.keys(json[0]);
+                    const opts = allColumns.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+                    skuColSelect.innerHTML = parentColSelect.innerHTML =
+                        `<option value="">-- 选择列 --</option>${opts}`;
+                    skuColSelect.disabled = parentColSelect.disabled = false;
+
+                    const find = (keys) => allColumns.find(c => keys.some(k => c.toLowerCase().includes(k)));
+                    const matchedSku = find(['sku', '商品编码', '子sku']) || '';
+                    const matchedParent = find(['父', 'parent', '父sku']) || '';
+                    skuColSelect.value = matchedSku;
+                    parentColSelect.value = matchedParent;
+
+                    log(`📊 已加载工作表 "${currentSheetName}"，共 ${rawDataRows.length} 行，${allColumns.length} 列`,
+                        'info');
+                    if (matchedSku) log(`🔑 自动匹配SKU列: "${matchedSku}"`, 'success');
+                    else log('⚠️ 未找到SKU列，请手动选择', 'warning');
+                    if (matchedParent) log(`🔗 自动匹配父SKU列: "${matchedParent}"`, 'success');
+                    else log('⚠️ 未找到父SKU列，请手动选择', 'warning');
+
+                    try {
+                        const mapping = JSON.parse(mappingEditor.getValue());
+                        Object.entries(mapping).forEach(([key, colName]) => {
+                            if (allColumns.includes(colName)) {
+                                log(`📌 映射列 "${colName}" (${key}) 存在`, 'info');
+                            } else {
+                                log(`❌ 映射列 "${colName}" (${key}) 不存在于表格中`, 'error');
+                            }
+                        });
+                    } catch {}
+
+                    dataStatus.textContent = `✅ 已加载 ${rawDataRows.length} 行`;
+                    updateColorUnmappedMini();
+                } catch (e) {
+                    log('加载工作表失败', 'error');
+                }
+            }
+
+            function handleFile(file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                        sheetSelect.innerHTML = workbook.SheetNames.map(n => `<option>${n}</option>`).join('');
+                        sheetSelect.disabled = false;
+                        currentSheetName = workbook.SheetNames[0];
+                        sheetSelect.value = currentSheetName;
+                        loadSheet();
+                        log(`📁 文件 "${file.name}" 已加载`, 'info');
+                    } catch (ex) { log('文件解析失败', 'error'); }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            // ──────────── 折叠功能 ────────────
+            function initCollapse(toggleHeader, iconEl, wrapperEl, expandedClass, storageKey) {
+                const saved = lsGet(storageKey, false);
+                applyCollapse(wrapperEl, iconEl, expandedClass, saved, false);
+                toggleHeader.addEventListener('click', () => {
+                    const isNowExpanded = wrapperEl.classList.contains(expandedClass);
+                    const newCollapsed = isNowExpanded;
+                    applyCollapse(wrapperEl, iconEl, expandedClass, newCollapsed, true);
+                    lsSet(storageKey, newCollapsed);
+                });
+            }
+
+            function applyCollapse(wrapperEl, iconEl, expandedClass, collapsed, animate) {
+                if (collapsed) {
+                    wrapperEl.className = 'collapsed-content';
+                    iconEl.className = 'fa-solid fa-chevron-right text-gray-400';
+                } else {
+                    wrapperEl.className = expandedClass;
+                    iconEl.className = 'fa-solid fa-chevron-down text-gray-400';
+                }
+                if (animate) {
+                    setTimeout(() => {
+                        if (mappingEditor && wrapperEl === mappingCollapseWrapper) mappingEditor.refresh();
+                        if (codeEditor && wrapperEl === codeCollapseWrapper) codeEditor.refresh();
+                        if (colorEnumEditor && wrapperEl === colorEnumCollapseWrapper) colorEnumEditor
+                            .refresh();
+                    }, 350);
+                }
+            }
+
+            // ──────────── 全屏功能 ────────────
+            function toggleFullscreen(cardEl, editorInstance, btnEl) {
+                const isFullscreen = cardEl.classList.contains('fullscreen-card');
+                if (isFullscreen) {
+                    cardEl.classList.remove('fullscreen-card');
+                    btnEl.innerHTML = '<i class="fa-solid fa-expand"></i>';
+                    if (editorInstance) {
+                        setTimeout(() => {
+                            editorInstance.refresh();
+                            editorInstance.setSize('100%', 'auto');
+                        }, 100);
+                    }
+                } else {
+                    cardEl.classList.add('fullscreen-card');
+                    btnEl.innerHTML = '<i class="fa-solid fa-compress"></i>';
+                    if (editorInstance) {
+                        setTimeout(() => {
+                            editorInstance.refresh();
+                            editorInstance.setSize('100%', '100%');
+                        }, 100);
+                    }
+                }
+            }
+
+            // ──────────── AI分类 ────────────
+            async function callAI(unmappedColors) {
+                const apiKey = aiApiKey.value.trim();
+                if (!apiKey) { alert('请先在颜色枚举配置中填写AI API密钥'); return null; }
+                const model = aiModel.value;
+                const systemPrompt = aiPrompt.value.trim() || DEFAULT_AI_PROMPT;
+                const userMessage = `以下是一些无法映射的颜色名称列表，请为它们分配标准类别：\n${unmappedColors.join('\n')}`;
+                try {
+                    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [{ role: 'system', content: systemPrompt }, { role: 'user',
+                                content: userMessage }
+                            ],
+                            temperature: 0.1,
+                            max_tokens: 2000
+                        })
+                    });
+                    if (!response.ok) { const err = await response.text(); throw new Error(
+                            `API请求失败 (${response.status}): ${err}`); }
+                    const data = await response.json();
+                    const content = data.choices[0].message.content;
+                    const jsonMatch = content.match(/\[[\s\S]*\]/);
+                    if (!jsonMatch) throw new Error('AI 未返回有效的JSON数组');
+                    const parsed = JSON.parse(jsonMatch[0]);
+                    if (!Array.isArray(parsed)) throw new Error('返回格式不是数组');
+                    return parsed;
+                } catch (error) {
+                    console.error(error);
+                    alert('AI 分类失败: ' + error.message);
+                    return null;
+                }
+            }
+
+            function showAISuggestions(suggestions) {
+                aiModalContainer.innerHTML = '';
+                const overlay = document.createElement('div');
+                overlay.className = 'ai-modal-overlay';
+                const modal = document.createElement('div');
+                modal.className = 'ai-modal';
+                let html =
+                    `<h3 class="text-xl font-bold mb-3"><i class="fa-solid fa-robot text-purple-400 mr-2"></i>AI 建议的颜色映射</h3>`;
+                html +=
+                    `<p class="text-sm text-gray-400 mb-4">以下是根据未匹配颜色生成的推荐配置，请确认后应用：</p>`;
+                html += `<div class="max-h-60 overflow-y-auto mb-4">`;
+                suggestions.forEach(item => {
+                    html +=
+                        `<div class="ai-suggestion-item"><span class="text-sm"><span class="text-yellow-300">${esc(item.value)}</span> → <span class="text-green-400 font-semibold">${esc(item.key)}</span></span></div>`;
+                });
+                html += `</div>`;
+                html +=
+                    `<div class="flex justify-end gap-3"><button id="aiCancelBtn" class="btn-glass">取消</button><button id="aiApplyBtn" class="btn-glass btn-primary"><i class="fa-solid fa-check"></i> 应用这些映射</button></div>`;
+                modal.innerHTML = html;
+                overlay.appendChild(modal);
+                aiModalContainer.appendChild(overlay);
+
+                const closeModal = () => { aiModalContainer.innerHTML = ''; };
+                $('aiCancelBtn').addEventListener('click', closeModal);
+                overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+                $('aiApplyBtn').addEventListener('click', () => {
+                    try {
+                        let enumConfig = JSON.parse(colorEnumEditor.getValue());
+                        suggestions.forEach(({ key, value }) => {
+                            if (!key || !value) return;
+                            const category = key.trim();
+                            const alias = value.trim();
+                            if (!enumConfig[category]) enumConfig[category] = [];
+                            if (!enumConfig[category].includes(alias)) enumConfig[category].push(
+                                alias);
+                        });
+                        const newJson = JSON.stringify(enumConfig, null, 2);
+                        colorEnumEditor.setValue(newJson);
+                        saveColorEnumFromEditor();
+                        updateColorUnmappedMini();
+                        closeModal();
+                        log('✅ AI建议已应用并保存到颜色枚举配置', 'success');
+                    } catch (e) { alert('合并配置失败: ' + e.message); }
+                });
+            }
+
+            aiClassifyBtn.addEventListener('click', async () => {
+                saveColorEnumFromEditor();
+                const unmapped = findUnmappedColors();
+                if (unmapped.length === 0) {
+                    alert('没有未映射颜色！所有数据中的颜色值都已在枚举配置中。');
+                    return;
+                }
+                const unmappedList = unmapped.map(u => u.display);
+                aiClassifyBtn.disabled = true;
+                aiClassifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI 分析中...';
+                const suggestions = await callAI(unmappedList);
+                aiClassifyBtn.disabled = false;
+                aiClassifyBtn.innerHTML = '<i class="fa-solid fa-robot"></i> AI 智能分类';
+                if (suggestions && suggestions.length > 0) {
+                    showAISuggestions(suggestions);
+                } else if (suggestions) {
+                    alert('AI 没有返回任何映射建议');
+                }
+            });
+
+            // ──────────── 星空 ────────────
+            function createStars() {
+                const c = $('stars');
+                if (!c) return;
+                const frag = document.createDocumentFragment();
+                const starColors = ['#60a5fa', '#f472b6', '#fbbf24', '#34d399', '#a78bfa', '#f87171', '#38bdf8',
+                    '#fb923c'
+                ];
+                for (let i = 0; i < 150; i++) {
+                    const s = document.createElement('div');
+                    s.className = 'star';
+                    const size = Math.random() * 2.5 + 1;
+                    s.style.width = s.style.height = size + 'px';
+                    s.style.left = Math.random() * 100 + '%';
+                    s.style.top = Math.random() * 100 + '%';
+                    s.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+                    s.style.setProperty('--delay', Math.random() * 5 + 's');
+                    s.style.color = starColors[Math.floor(Math.random() * starColors.length)];
+                    frag.appendChild(s);
+                }
+                c.appendChild(frag);
+            }
+
+            // ──────────── 初始化编辑器 ────────────
+            function initEditors() {
+                mappingEditor = CodeMirror(mappingContainer, {
+                    value: currentConfig.mapping,
+                    mode: { name: 'javascript', json: true },
+                    theme: 'material-darker',
+                    lineNumbers: true,
+                    matchBrackets: true,
+                    tabSize: 2
+                });
+                mappingEditor.setSize('100%', '100px');
+
+                colorEnumEditor = CodeMirror(colorEnumContainer, {
+                    value: JSON.stringify(getStoredColorEnum(), null, 2),
+                    mode: { name: 'javascript', json: true },
+                    theme: 'material-darker',
+                    lineNumbers: true,
+                    matchBrackets: true,
+                    tabSize: 2
+                });
+                colorEnumEditor.setSize('100%', '220px');
+                colorEnumEditor.on('change', () => {
+                    saveColorEnumFromEditor();
+                    updateColorUnmappedMini();
+                });
+
+                codeEditor = CodeMirror(codeContainer, {
+                    value: currentConfig.code,
+                    mode: 'javascript',
+                    theme: 'material-darker',
+                    lineNumbers: true,
+                    matchBrackets: true,
+                    tabSize: 2,
+                    indentUnit: 2,
+                    viewportMargin: Infinity
+                });
+                codeEditor.setSize('100%', '420px');
+            }
+
+            // ──────────── 事件绑定 ────────────
+            fileInput.addEventListener('change', e => e.target.files[0] && handleFile(e.target.files[0]));
+            loadSheetBtn.addEventListener('click', () => { if (workbook) { currentSheetName = sheetSelect.value;
+                    loadSheet(); } });
+            runProcessBtn.addEventListener('click', runProcess);
+            exportBtn.addEventListener('click', exportData);
+            saveConfigBtn.addEventListener('click', () => {
+                const name = prompt('方案名称：', currentConfig.name || '新方案');
+                if (!name) return;
+                const cfgs = loadConfigs();
+                const newCfg = getCurrentFullConfig();
+                newCfg.name = name;
+                const exist = cfgs.findIndex(c => c.name === name);
+                if (exist >= 0) cfgs[exist] = newCfg;
+                else cfgs.push(newCfg);
+                saveConfigs(cfgs);
+                currentConfig.name = name;
+                log('方案已保存', 'success');
+            });
+            exportConfigBtn.addEventListener('click', () => {
+                const blob = new Blob([JSON.stringify(loadConfigs(), null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'variant_configs.json';
+                a.click();
+            });
+            importConfigFile.addEventListener('change', e => {
+                const f = e.target.files[0];
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = ev => {
+                    try {
+                        const cfgs = JSON.parse(ev.target.result);
+                        saveConfigs(cfgs);
+                        log(`导入 ${cfgs.length} 个方案`, 'success');
+                    } catch { log('无效JSON文件', 'error'); }
+                    importConfigFile.value = '';
+                };
+                r.readAsText(f);
+            });
+            resetMappingBtn.addEventListener('click', () => { mappingEditor.setValue(DEFAULT_MAPPING); });
+            resetCodeBtn.addEventListener('click', () => { codeEditor.setValue(DEFAULT_CODE); });
+            resetColorEnumBtn.addEventListener('click', () => {
+                const defaultJson = JSON.stringify(DEFAULT_COLOR_ENUM, null, 2);
+                colorEnumEditor.setValue(defaultJson);
+                saveColorEnumFromEditor();
+                updateColorUnmappedMini();
+                log('颜色枚举已重置为默认', 'info');
+            });
+            document.body.addEventListener('dragover', e => e.preventDefault());
+            document.body.addEventListener('drop', e => {
+                e.preventDefault();
+                if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+            });
+
+            // ──────────── 全屏按钮事件 ────────────
+            mappingFullscreenBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFullscreen(mappingCard, mappingEditor, mappingFullscreenBtn);
+            });
+            colorEnumFullscreenBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFullscreen(colorEnumCard, colorEnumEditor, colorEnumFullscreenBtn);
+            });
+            codeFullscreenBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFullscreen(codeCard, codeEditor, codeFullscreenBtn);
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (mappingCard.classList.contains('fullscreen-card')) toggleFullscreen(mappingCard,
+                        mappingEditor, mappingFullscreenBtn);
+                    if (colorEnumCard.classList.contains('fullscreen-card')) toggleFullscreen(colorEnumCard,
+                        colorEnumEditor, colorEnumFullscreenBtn);
+                    if (codeCard.classList.contains('fullscreen-card')) toggleFullscreen(codeCard, codeEditor,
+                        codeFullscreenBtn);
+                }
+            });
+
+            // ──────────── AI设置折叠 ────────────
+            const aiCollapsedSaved = lsGet(LK_AI_COLLAPSED, true);
+            if (aiCollapsedSaved) {
+                aiSettingsContent.className = 'collapsed-content';
+                aiSettingsIcon.className = 'fa-solid fa-chevron-right text-gray-500';
+            } else {
+                aiSettingsContent.className = 'expanded-content';
+                aiSettingsIcon.className = 'fa-solid fa-chevron-down text-gray-500';
+            }
+            aiSettingsToggle.addEventListener('click', () => {
+                const isExpanded = aiSettingsContent.classList.contains('expanded-content');
+                if (isExpanded) {
+                    aiSettingsContent.className = 'collapsed-content';
+                    aiSettingsIcon.className = 'fa-solid fa-chevron-right text-gray-500';
+                    lsSet(LK_AI_COLLAPSED, true);
+                } else {
+                    aiSettingsContent.className = 'expanded-content';
+                    aiSettingsIcon.className = 'fa-solid fa-chevron-down text-gray-500';
+                    lsSet(LK_AI_COLLAPSED, false);
+                }
+            });
+
+            // ──────────── 启动 ────────────
+            createStars();
+            initEditors();
+            loadAISettings();
+            initCollapse(mappingToggleHeader, mappingToggleIcon, mappingCollapseWrapper, 'expanded-content-mapping',
+                LK_MAPPING_COLLAPSED);
+            initCollapse(colorEnumToggleHeader, colorEnumToggleIcon, colorEnumCollapseWrapper,
+                'expanded-content-color-enum', LK_COLOR_COLLAPSED);
+            initCollapse(codeToggleHeader, codeToggleIcon, codeCollapseWrapper, 'expanded-content', LK_CODE_COLLAPSED);
+            renderConfigList();
+            updateColorUnmappedMini();
+            log('🚀 系统就绪，请上传Excel文件（颜色枚举已加载，AI分类可用，生成列完整输出）');
+        })();
+    </script>
+</body>
+</html>
