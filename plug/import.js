@@ -12,6 +12,6 @@
 })();
 
 // 加载您自己的脚本
-injectScript('../plug/imgFilter.js').then(() => {
+injectScript('https://ge32.cc/plug/imgFilter.js').then(() => {
     console.log('脚本已执行');
 }).catch(err => console.error(err));
