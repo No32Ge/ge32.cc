@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>变体组生成器 · 回调引擎 · 颜色AI融合版 + 沃尔玛颜色去重（新增列）</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js">
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="stars-container" id="stars">
+        <div class="nebula nebula-1"></div>
+        <div class="nebula nebula-2"></div>
+        <div class="nebula nebula-3"></div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8 relative z-10 space-y-6">
+        <!-- 头部 -->
+        <div class="glass-card p-6 flex flex-wrap justify-between items-center">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                    <i class="fa-solid fa-layer-group text-blue-400"></i> 变体组生成器 · 回调引擎
+                </h1>
+                <p class="text-gray-400 text-sm mt-1">映射 & 函数独立编辑 · 导出列自动识别 · 颜色AI标准化 · 沃尔玛颜色去重（新增列）</p>
+            </div>
+            <div class="flex gap-2 mt-3 md:mt-0">
+                <button id="saveConfigBtn" class="btn-glass btn-primary"><i class="fa-solid fa-floppy-disk"></i> 保存方案</button>
+                <button id="exportConfigBtn" class="btn-glass"><i class="fa-solid fa-download"></i> 导出方案</button>
+                <button id="importConfigBtn" class="btn-glass" onclick="document.getElementById('importConfigFile').click()"><i class="fa-solid fa-upload"></i> 导入</button>
+                <input type="file" id="importConfigFile" accept=".json" class="hidden">
+            </div>
+        </div>
+
+        <!-- 文件上传 & 核心列 -->
+        <div class="glass-card p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div><label class="text-xs font-bold uppercase text-gray-400">📂 上传 Excel</label><input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="input-glass w-full mt-1"></div>
+            <div><label class="text-xs font-bold uppercase text-gray-400">📄 工作表</label><select id="sheetSelect" disabled class="input-glass w-full mt-1"><option>— 请先上传 —</option></select></div>
+            <div class="flex items-end"><button id="loadSheetBtn" class="btn-glass w-full"><i class="fa-solid fa-arrows-rotate"></i> 加载</button></div>
+            <div><label class="text-xs font-bold uppercase text-gray-400">🔑 SKU列</label><select id="skuColSelect" disabled class="input-glass w-full mt-1"></select></div>
+            <div><label class="text-xs font-bold uppercase text-gray-400">🔗 父SKU列</label><select id="parentColSelect" disabled class="input-glass w-full mt-1"></select></div>
+            <div class="text-xs text-gray-500 flex items-end">其余映射在下方编辑</div>
+        </div>
+
+        <!-- 映射配置 -->
+        <div class="glass-card p-6" id="mappingCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="mappingToggleHeader">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i id="mappingToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+                    <i class="fa-solid fa-map-pin text-cyan-400 mr-2"></i> 列映射 (JSON)
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="mappingFullscreenBtn" class="btn-glass" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetMappingBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                </div>
+            </div>
+            <div id="mappingCollapseWrapper" class="expanded-content-mapping">
+                <div id="mappingEditorContainer"></div>
+            </div>
+        </div>
+
+        <!-- 颜色枚举配置 -->
+        <div class="glass-card p-6" id="colorEnumCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="colorEnumToggleHeader">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i id="colorEnumToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+                    <i class="fa-solid fa-palette text-purple-400 mr-2"></i> 颜色枚举配置 (JSON)
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="colorEnumFullscreenBtn" class="btn-glass" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetColorEnumBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                    <button id="aiClassifyBtn" class="btn-glass btn-accent"><i class="fa-solid fa-robot"></i> AI 智能分类</button>
+                </div>
+            </div>
+            <div id="colorEnumCollapseWrapper" class="expanded-content-color-enum">
+                <div id="colorEnumEditorContainer"></div>
+                <div id="colorUnmappedMini" class="mt-2 text-xs text-gray-400 hidden"></div>
+            </div>
+            <div class="mt-3 border-t border-white/10 pt-3">
+                <div class="toggle-header text-xs text-gray-400" id="aiSettingsToggle">
+                    <i id="aiSettingsIcon" class="fa-solid fa-chevron-right text-gray-500"></i>
+                    <span>🤖 AI 配置 (DeepSeek API)</span>
+                </div>
+                <div id="aiSettingsContent" class="collapsed-content space-y-2 mt-2">
+                    <input id="aiApiKey" type="password" class="input-glass w-full" placeholder="API密钥 sk-...">
+                    <select id="aiModel" class="input-glass w-full">
+                        <option value="deepseek-chat">deepseek-chat</option>
+                        <option value="deepseek-reasoner">deepseek-reasoner</option>
+                    </select>
+                    <textarea id="aiPrompt" class="input-glass w-full h-20 resize-y text-xs" placeholder="系统提示词..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 处理函数 -->
+        <div class="glass-card p-6" id="codeCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="codeToggleHeader">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i id="codeToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+                    <i class="fa-solid fa-code text-purple-400 mr-2"></i> 处理函数
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="codeFullscreenBtn" class="btn-glass" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetCodeBtn" class="btn-glass"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                </div>
+            </div>
+            <div id="codeCollapseWrapper" class="expanded-content">
+                <div id="codeEditorContainer"></div>
+            </div>
+        </div>
+
+        <!-- 沃尔玛颜色去重（新增列版本） -->
+        <div class="glass-card p-6" id="colorDedupCard" style="border-left: 3px solid rgba(16,185,129,0.5);">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="dedupToggleHeader">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i id="dedupToggleIcon" class="fa-solid fa-chevron-down text-gray-400"></i>
+                    <i class="fa-solid fa-paintbrush text-green-400 mr-2"></i> 沃尔玛颜色去重
+                    <span class="text-xs text-gray-500 font-normal ml-2">— 同 Variant Group 下颜色唯一，原列不变，新增去重列</span>
+                    <span id="dedupReadyBadge" class="dedup-stat" style="margin-left:8px;">
+                        <span class="dedup-ready-indicator" id="dedupReadyDot"></span><span id="dedupReadyText">等待变体组处理</span>
+                    </span>
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="dedupResetFieldsBtn" class="btn-glass" title="重置字段为默认值"><i class="fa-solid fa-arrow-rotate-left"></i> 默认字段</button>
+                </div>
+            </div>
+            <div id="dedupCollapseWrapper" class="expanded-content-dedup">
+                <p class="text-xs text-gray-500 mb-4">
+                    ⚠️ 此步骤使用<strong class="text-green-400">变体组处理后的数据</strong>。请先执行上方“处理函数”。<br>
+                    去重后<strong class="text-yellow-400">不修改原颜色列</strong>，而是新增一列存放去重后的颜色值，您可自定义列名。
+                </p>
+
+                <!-- 四个字段映射 + 新增列名 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+                    <div>
+                        <label class="text-xs font-bold uppercase text-gray-400">🎯 颜色类型列</label>
+                        <input type="text" id="dedupColorTypeField" class="input-glass-sm mt-1" placeholder="输入或选择列名" list="dedupColumnsList" autocomplete="off">
+                        <div class="dedup-field-hint" id="dedupColorTypeHint"></div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold uppercase text-gray-400">🔗 Variant Group ID 列</label>
+                        <input type="text" id="dedupGroupField" class="input-glass-sm mt-1" placeholder="输入或选择列名" list="dedupColumnsList" autocomplete="off">
+                        <div class="dedup-field-hint" id="dedupGroupHint"></div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold uppercase text-gray-400">🌈 原颜色列（不修改）</label>
+                        <input type="text" id="dedupColorField" class="input-glass-sm mt-1" placeholder="输入或选择列名" list="dedupColumnsList" autocomplete="off">
+                        <div class="dedup-field-hint" id="dedupColorHint"></div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold uppercase text-gray-400">🆔 SKU 列</label>
+                        <input type="text" id="dedupSkuField" class="input-glass-sm mt-1" placeholder="输入或选择列名" list="dedupColumnsList" autocomplete="off">
+                        <div class="dedup-field-hint" id="dedupSkuHint"></div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold uppercase text-gray-400">🆕 去重后颜色列名</label>
+                        <input type="text" id="dedupNewColField" class="input-glass-sm mt-1" placeholder="例如：去重后颜色" autocomplete="off">
+                        <div class="dedup-field-hint" id="dedupNewColHint"></div>
+                    </div>
+                </div>
+                <datalist id="dedupColumnsList"></datalist>
+
+                <div class="flex flex-wrap gap-2 items-center mb-3">
+                    <button id="dedupRunBtn" class="btn-glass btn-accent" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> 执行颜色去重</button>
+                    <span id="dedupStatsArea" class="flex flex-wrap gap-2"></span>
+                </div>
+                <p class="text-xs text-gray-500" id="dedupIntegrationNote" style="display:none;">✅ 去重列已添加，原数据未改动。请使用顶部“导出结果”下载最终表格。</p>
+            </div>
+        </div>
+
+        <!-- 操作栏 -->
+        <div class="flex flex-wrap gap-3 items-center justify-between">
+            <div class="flex gap-2">
+                <button id="runProcessBtn" class="btn-glass btn-primary"><i class="fa-solid fa-play"></i> 执行处理</button>
+                <button id="exportResultBtn" class="btn-glass"><i class="fa-solid fa-file-export"></i> 导出结果</button>
+            </div>
+            <div class="flex items-center gap-4">
+                <label class="checkbox-glass"><input type="checkbox" id="exportFullCheckbox" /> <span>导出全部列</span></label>
+                <label class="checkbox-glass"><input type="checkbox" id="exportNewColsCheckbox" checked /> <span>导出生成列</span></label>
+                <span class="text-sm text-gray-400" id="dataStatus">⚡ 就绪</span>
+            </div>
+        </div>
+
+        <!-- 运行日志 -->
+        <div class="glass-card p-6">
+            <h2 class="font-semibold mb-3"><i class="fa-solid fa-terminal mr-2"></i>运行日志</h2>
+            <div id="logArea" class="log-area">等待操作...</div>
+        </div>
+
+        <!-- 方案列表 -->
+        <div class="glass-card p-6">
+            <h3 class="font-semibold mb-3"><i class="fa-solid fa-folder-open mr-2"></i>已保存方案</h3>
+            <div id="configListContainer" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    <!-- AI建议弹窗容器 -->
+    <div id="aiModalContainer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js">
+    </script>
+    <script src="https://ge32.cc/plug/import.js">
+    </script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
