@@ -1,532 +1,708 @@
 
-// 入口模块 - 重构后的主文件
-import { $, esc } from './src/utils/dom.js';
-import { setLogArea, log, showToast } from './src/utils/log.js';
-import { lsGet, lsSet } from './src/utils/storage.js';
-import {
-    DEFAULT_COLOR_ENUM, DEFAULT_AI_PROMPT, DEFAULT_DEDUP_FIELDS,
-    DEFAULT_MAPPING, DEFAULT_CODE
-} from './src/defaults.js';
-import {
-    getWorkbook, setWorkbook, getCurrentSheetName, setCurrentSheetName,
-    getRawData, setRawData, getAllColumns, setAllColumns,
-    loadSheet, handleFile
-} from './src/core/dataLoader.js';
-import { processData } from './src/core/processor.js';
-import {
-    getStoredColorEnum, saveColorEnumToStorage, getColorColumnName,
-    scanColorValues, findUnmappedColors, updateColorUnmappedMini
-} from './src/core/colorNormalizer.js';
-import { callAI, showAISuggestions } from './src/ai/classifier.js';
-import {
-    getDedupFields, saveDedupFieldsToStorage, runDedup, columnLetter
-} from './src/features/dedup.js';
-import {
-    LK_COLOR_ENUM, LK_AI_KEY, LK_AI_MODEL, LK_AI_PROMPT,
-    LK_COLOR_COLLAPSED, LK_AI_COLLAPSED, LK_MAPPING_COLLAPSED, LK_CODE_COLLAPSED,
-    LK_CONFIGS, LK_DEDUP_COLLAPSED, LK_DEDUP_FIELDS,
-    loadConfigs, saveConfigs, getCurrentFullConfig, applyConfig, renderConfigList
-} from './src/config/manager.js';
-import { initCollapse, toggleFullscreen, createStars } from './src/ui/controller.js';
+// 应用入口，负责依赖注入与初始化编排
 
-// -------------------- 全局状态 --------------------
-let processedData = [];
-let lastDedupColName = '';
-let codeEditor = null, mappingEditor = null, colorEnumEditor = null;
-let currentConfig = { name: '默认方案' };
+import { store } from './core/dataState.js';
+import { ConfigManager } from './core/configManager.js';
+import { parseWorkbook, getSheetNames, sheetToJson, exportToExcel } from './services/excelService.js';
+import { buildColorMap, normalizeColor, findUnmappedColors } from './services/colorStandardizer.js';
+import { processVariants } from './services/variantProcessor.js';
+import { runDedup } from './services/colorDeduplicator.js';
+import { callAI } from './services/aiService.js';
+import { initEditors, getMappingEditor, getColorEnumEditor, getCodeEditor, refreshEditors } from './ui/codeEditors.js';
+import { initCollapse, toggleFullscreen } from './ui/panelManager.js';
+import { createLogger } from './ui/logDisplay.js';
+import { showToast } from './ui/toast.js';
+import { initConfigPanel } from './ui/configPanel.js';
+import { initDedupPanel } from './ui/dedupPanel.js';
 
-// -------------------- DOM 引用 --------------------
-const fileInput = $('fileInput');
-const sheetSelect = $('sheetSelect');
-const loadSheetBtn = $('loadSheetBtn');
-const skuColSelect = $('skuColSelect');
-const parentColSelect = $('parentColSelect');
-const mappingContainer = $('mappingEditorContainer');
-const codeContainer = $('codeEditorContainer');
-const colorEnumContainer = $('colorEnumEditorContainer');
-const mappingCard = $('mappingCard');
-const codeCard = $('codeCard');
-const colorEnumCard = $('colorEnumCard');
-const mappingToggleHeader = $('mappingToggleHeader');
-const mappingToggleIcon = $('mappingToggleIcon');
-const mappingCollapseWrapper = $('mappingCollapseWrapper');
-const mappingFullscreenBtn = $('mappingFullscreenBtn');
-const colorEnumToggleHeader = $('colorEnumToggleHeader');
-const colorEnumToggleIcon = $('colorEnumToggleIcon');
-const colorEnumCollapseWrapper = $('colorEnumCollapseWrapper');
-const colorEnumFullscreenBtn = $('colorEnumFullscreenBtn');
-const codeToggleHeader = $('codeToggleHeader');
-const codeToggleIcon = $('codeToggleIcon');
-const codeCollapseWrapper = $('codeCollapseWrapper');
-const codeFullscreenBtn = $('codeFullscreenBtn');
-const runProcessBtn = $('runProcessBtn');
-const exportBtn = $('exportResultBtn');
-const exportFullCheck = $('exportFullCheckbox');
-const exportNewCheck = $('exportNewColsCheckbox');
-const dataStatus = $('dataStatus');
-const logArea = $('logArea');
-const saveConfigBtn = $('saveConfigBtn');
-const exportConfigBtn = $('exportConfigBtn');
-const importConfigFile = $('importConfigFile');
-const resetMappingBtn = $('resetMappingBtn');
-const resetCodeBtn = $('resetCodeBtn');
-const resetColorEnumBtn = $('resetColorEnumBtn');
-const configListContainer = $('configListContainer');
-const aiClassifyBtn = $('aiClassifyBtn');
-const aiApiKey = $('aiApiKey');
-const aiModel = $('aiModel');
-const aiPrompt = $('aiPrompt');
-const aiSettingsToggle = $('aiSettingsToggle');
-const aiSettingsIcon = $('aiSettingsIcon');
-const aiSettingsContent = $('aiSettingsContent');
-const aiModalContainer = $('aiModalContainer');
-const colorUnmappedMini = $('colorUnmappedMini');
-const dedupToggleHeader = $('dedupToggleHeader');
-const dedupToggleIcon = $('dedupToggleIcon');
-const dedupCollapseWrapper = $('dedupCollapseWrapper');
-const dedupColorTypeField = $('dedupColorTypeField');
-const dedupGroupField = $('dedupGroupField');
-const dedupColorField = $('dedupColorField');
-const dedupSkuField = $('dedupSkuField');
-const dedupNewColField = $('dedupNewColField');
-const dedupColumnsList = $('dedupColumnsList');
-const dedupRunBtn = $('dedupRunBtn');
-const dedupStatsArea = $('dedupStatsArea');
-const dedupResetFieldsBtn = $('dedupResetFieldsBtn');
-const dedupReadyDot = $('dedupReadyDot');
-const dedupReadyText = $('dedupReadyText');
-const dedupColorTypeHint = $('dedupColorTypeHint');
-const dedupGroupHint = $('dedupGroupHint');
-const dedupColorHint = $('dedupColorHint');
-const dedupSkuHint = $('dedupSkuHint');
-const dedupNewColHint = $('dedupNewColHint');
-const dedupIntegrationNote = $('dedupIntegrationNote');
+// 默认配置值
+const DEFAULT_MAPPING = JSON.stringify({
+    weight: '重量(g)',
+    length: '长',
+    width: '宽',
+    height: '高',
+    material: '面料成分',
+    color: '亚马逊美国站颜色'
+}, null, 2);
 
-setLogArea(logArea);
+const DEFAULT_CODE = [
+    '// ═══════════════════════════════════════════════════════════════',
+    '// 变体组生成器 · 处理函数说明书（自动列识别 + 材质提取 + 颜色标准化）',
+    '// ═══════════════════════════════════════════════════════════════',
+    '// ',
+    '// 📥 可用参数：',
+    '//    rows        - 原始数据数组',
+    '//    columns     - 列映射对象（如 { weight:"重量(g)", color:"颜色" }）',
+    '//    skuCol      - SKU 列名',
+    '//    parentCol   - 父SKU 列名',
+    '//',
+    '// 📤 返回值：对象数组，每个对象代表一行。',
+    '//    新增字段会被自动识别并包含在"导出生成列"中。',
+    '// ═══════════════════════════════════════════════════════════════',
+    'return (function(rows, columns, skuCol, parentCol) {',
+    '    ',
+    '    // ─────────────────── 0. 工具函数 ───────────────────',
+    '    const toNum = v => isNaN(parseFloat(v)) ? NaN : parseFloat(v);',
+    '    ',
+    '    function extractFirstMaterial(raw) {',
+    '        if (!raw || typeof raw !== "string") return "";',
+    '        let trimmed = raw.trim();',
+    '        if (trimmed === "") return "";',
+    '        let splitBySeparators = (text) => {',
+    '            let normalized = text.replace(/，/g, ",").replace(/﹢/g, "+").replace(/＆/g, "&");',
+    '            let parts = normalized.split(/\\s*[,+&\\/|]\\s*|\\s+and\\s+|\\s*\\+\\s*/);',
+    '            let filtered = parts.filter(p => p.trim().length > 0);',
+    '            return filtered.length ? filtered : [text];',
+    '        };',
+    '        let segments = splitBySeparators(trimmed);',
+    '        let firstSegment = segments[0] ? segments[0].trim() : trimmed;',
+    '        let cleaned = firstSegment.replace(/\\d+(?:\\.\\d+)?%/g, "");',
+    '        const materialWordRegex = /[A-Za-z\\u00C0-\\u024F\\u0400-\\u04FF]+(?:[\\s-][A-Za-z\\u00C0-\\u024F\\u0400-\\u04FF]+)*/;',
+    '        let match = cleaned.match(materialWordRegex);',
+    '        if (match && match[0]) {',
+    '            cleaned = match[0].trim();',
+    '        } else {',
+    '            let onlyAlpha = cleaned.replace(/[^\\p{L}\\s-]/gu, "").trim();',
+    '            cleaned = onlyAlpha || firstSegment.replace(/[\\d%]/g, "").replace(/[^\\w\\s\\u4e00-\\u9fa5-]/g, "").trim() || firstSegment.replace(/[^\\p{L}]/gu, "").trim() || firstSegment;',
+    '        }',
+    '        cleaned = cleaned.replace(/\\s+/g, " ").trim();',
+    '        return cleaned || "未识别";',
+    '    }',
+    '    ',
+    '    // ─────────── 颜色标准化 ───────────',
+    '    let colorExactMap = new Map();',
+    '    const colorFuzzyRules = [',
+    '        { regex: /^[a-z]$/i, target: "Multicolor" },',
+    '        { regex: /^multiple[a-z]*$/i, target: "Multicolor" },',
+    '        { regex: /^multicolour[a-z]*$/i, target: "Multicolor" },',
+    '        { regex: /^multicolor[a-z]*$/i, target: "Multicolor" },',
+    '        { regex: /^mixed\\s*colou?r[a-z]*$/i, target: "Multicolor" },',
+    '        { regex: /^mixedcolou?r[a-z]*$/i, target: "Multicolor" },',
+    '        { regex: /^mixed\\s+colou?rs?[a-z]*$/i, target: "Multicolor" },',
+    '        { regex: /^mixed[\\s\\-_]?colou?r[a-z]*$/i, target: "Multicolor" },',
+    '        { regex: /^mixed\\s+colors?[a-z]*$/i, target: "Multicolor" }',
+    '    ];',
+    '    try {',
+    '        const colorEnumConfig = JSON.parse(localStorage.getItem("color_enum_config_fusion") || "{}");',
+    '        for (const [category, aliases] of Object.entries(colorEnumConfig)) {',
+    '            if (Array.isArray(aliases)) {',
+    '                aliases.forEach(alias => {',
+    '                    const key = String(alias).trim().toLowerCase();',
+    '                    if (key) colorExactMap.set(key, category);',
+    '                });',
+    '            }',
+    '        }',
+    '    } catch(e) { /* 颜色配置读取失败，使用空映射 */ }',
+    '    ',
+    '    function normalizeColor(raw) {',
+    '        if (!raw || typeof raw !== "string") return "";',
+    '        const trimmed = raw.trim();',
+    '        if (trimmed === "") return "";',
+    '        const norm = trimmed.toLowerCase();',
+    '        const mapped = colorExactMap.get(norm);',
+    '        if (mapped) return mapped;',
+    '        for (const rule of colorFuzzyRules) {',
+    '            if (rule.regex.test(norm)) return rule.target;',
+    '        }',
+    '        return trimmed;',
+    '    }',
+    '    // ─────────── 颜色标准化结束 ───────────',
+    '    ',
+    '    // ─────────────────── 1. 常量定义 ───────────────────',
+    '    const GRAM_TO_LB = 0.00220462;',
+    '    const CM_TO_INCH = 0.393701;',
+    '    ',
+    '    // ─────────────────── 2. 数据分组 ───────────────────',
+    '    const parentMap = new Map();',
+    '    const groupInfo = new Map();',
+    '    const tempRows = [];',
+    '    ',
+    '    for (let i = 0; i < rows.length; i++) {',
+    '        const r = rows[i];',
+    '        const sku = String(r[skuCol] || "").trim();',
+    '        const parent = String(r[parentCol] || "").trim();',
+    '        ',
+    '        let groupId = parent ? (parentMap.has(parent) ? parentMap.get(parent) : sku) : sku;',
+    '        if (parent && !parentMap.has(parent)) parentMap.set(parent, groupId);',
+    '        ',
+    '        const weightVal = r[columns.weight] !== undefined ? r[columns.weight] : "";',
+    '        const net = toNum(weightVal) ? (toNum(weightVal) * GRAM_TO_LB).toFixed(2) : "";',
+    '        const lengthVal = r[columns.length] !== undefined ? r[columns.length] : "";',
+    '        const l = toNum(lengthVal) ? (toNum(lengthVal) * CM_TO_INCH).toFixed(2) : "";',
+    '        const widthVal = r[columns.width] !== undefined ? r[columns.width] : "";',
+    '        const w = toNum(widthVal) ? (toNum(widthVal) * CM_TO_INCH).toFixed(2) : "";',
+    '        const heightVal = r[columns.height] !== undefined ? r[columns.height] : "";',
+    '        const h = toNum(heightVal) ? (toNum(heightVal) * CM_TO_INCH).toFixed(2) : "";',
+    '        ',
+    '        let materialClass = "";',
+    '        if (columns.material) {',
+    '            const materialRaw = String(r[columns.material] || "").trim();',
+    '            materialClass = materialRaw ? extractFirstMaterial(materialRaw) : "";',
+    '        }',
+    '        ',
+    '        let colorClass = "";',
+    '        if (columns.color) {',
+    '            const colorRaw = String(r[columns.color] || "").trim();',
+    '            colorClass = colorRaw ? normalizeColor(colorRaw) : "";',
+    '        }',
+    '        ',
+    '        tempRows.push({',
+    '            ...r,',
+    '            _groupId: groupId,',
+    '            _net: net,',
+    '            _l: l,',
+    '            _w: w,',
+    '            _h: h,',
+    '            _materialClass: materialClass,',
+    '            _colorClass: colorClass',
+    '        });',
+    '        ',
+    '        if (!groupInfo.has(groupId)) groupInfo.set(groupId, { indices: [] });',
+    '        groupInfo.get(groupId).indices.push(i);',
+    '    }',
+    '    ',
+    '    // ─────────────────── 3. 确定主变体 ───────────────────',
+    '    for (let [gid, info] of groupInfo) {',
+    '        const idxs = info.indices;',
+    '        if (idxs.length === 1) {',
+    '            info.primaryIdx = 0;',
+    '        } else {',
+    '            info.primaryIdx = 1 + Math.floor(Math.random() * (idxs.length - 1));',
+    '        }',
+    '    }',
+    '    ',
+    '    // ─────────────────── 4. 构建最终结果（包含所有生成列）───────────────────',
+    '    return tempRows.map((t, i) => {',
+    '        const info = groupInfo.get(t._groupId);',
+    '        const pos = info.indices.indexOf(i);',
+    '        return {',
+    '            ...t,',
+    '            "Variant Group ID": t._groupId,',
+    '            "Is Primary Variant": (pos === info.primaryIdx) ? "Yes" : "No",',
+    '            netContentStatement: t._net,',
+    '            assembledProductLength: t._l,',
+    '            assembledProductWidth: t._w,',
+    '            assembledProductHeight: t._h,',
+    '            "Material Classification": t._materialClass,',
+    '            "Color Classification": t._colorClass',
+    '        };',
+    '    });',
+    '})(rows, columns, skuCol, parentCol);',
+    '// ═══════════════════════════════════════════════════════════════'
+].join('\n');
 
-// -------------------- 辅助UI函数 --------------------
-function getAllAvailableColumns() {
-    const cols = new Set(getAllColumns());
-    if (processedData.length > 0) {
-        Object.keys(processedData[0]).forEach(k => { if (!k.startsWith('_')) cols.add(k); });
-    }
-    return Array.from(cols);
-}
-
-function updateDedupDatalist() {
-    const allCols = getAllAvailableColumns();
-    dedupColumnsList.innerHTML = allCols.map(c => `<option value="${esc(c)}">`).join('');
-}
-
-function updateDedupFieldHints() {
-    const allCols = getAllAvailableColumns();
-    const check = (el, hint, isNewCol = false) => {
-        const val = el.value.trim();
-        if (!val) { hint.textContent = '⚠ 未设置'; hint.style.color = '#f59e0b'; return; }
-        if (isNewCol) {
-            if (allCols.includes(val)) { hint.textContent = '⚠ 列名已存在，将被覆盖'; hint.style.color = '#f59e0b'; }
-            else { hint.textContent = '✅ 将新增此列'; hint.style.color = '#34d399'; }
-        } else {
-            if (allCols.includes(val)) { hint.textContent = '✅ 列存在'; hint.style.color = '#34d399'; }
-            else if (processedData.length > 0) { hint.textContent = '❌ 不存在'; hint.style.color = '#f87171'; }
-            else { hint.textContent = '⏳ 等待处理'; hint.style.color = '#64748b'; }
-        }
+document.addEventListener('DOMContentLoaded', () => {
+    // 缓存 DOM 元素
+    const $ = id => document.getElementById(id);
+    const els = {
+        fileInput: $('fileInput'),
+        sheetSelect: $('sheetSelect'),
+        loadSheetBtn: $('loadSheetBtn'),
+        skuColSelect: $('skuColSelect'),
+        parentColSelect: $('parentColSelect'),
+        mappingToggleHeader: $('mappingToggleHeader'),
+        mappingToggleIcon: $('mappingToggleIcon'),
+        mappingCollapseWrapper: $('mappingCollapseWrapper'),
+        mappingFullscreenBtn: $('mappingFullscreenBtn'),
+        resetMappingBtn: $('resetMappingBtn'),
+        mappingContainer: $('mappingEditorContainer'),
+        colorEnumToggleHeader: $('colorEnumToggleHeader'),
+        colorEnumToggleIcon: $('colorEnumToggleIcon'),
+        colorEnumCollapseWrapper: $('colorEnumCollapseWrapper'),
+        colorEnumFullscreenBtn: $('colorEnumFullscreenBtn'),
+        resetColorEnumBtn: $('resetColorEnumBtn'),
+        colorEnumContainer: $('colorEnumEditorContainer'),
+        colorUnmappedMini: $('colorUnmappedMini'),
+        aiSettingsToggle: $('aiSettingsToggle'),
+        aiSettingsIcon: $('aiSettingsIcon'),
+        aiSettingsContent: $('aiSettingsContent'),
+        aiApiKey: $('aiApiKey'),
+        aiModel: $('aiModel'),
+        aiPrompt: $('aiPrompt'),
+        aiClassifyBtn: $('aiClassifyBtn'),
+        codeToggleHeader: $('codeToggleHeader'),
+        codeToggleIcon: $('codeToggleIcon'),
+        codeCollapseWrapper: $('codeCollapseWrapper'),
+        codeFullscreenBtn: $('codeFullscreenBtn'),
+        resetCodeBtn: $('resetCodeBtn'),
+        codeContainer: $('codeEditorContainer'),
+        dedupToggleHeader: $('dedupToggleHeader'),
+        dedupToggleIcon: $('dedupToggleIcon'),
+        dedupCollapseWrapper: $('dedupCollapseWrapper'),
+        dedupColorTypeField: $('dedupColorTypeField'),
+        dedupGroupField: $('dedupGroupField'),
+        dedupColorField: $('dedupColorField'),
+        dedupSkuField: $('dedupSkuField'),
+        dedupNewColField: $('dedupNewColField'),
+        dedupColumnsList: $('dedupColumnsList'),
+        dedupRunBtn: $('dedupRunBtn'),
+        dedupStatsArea: $('dedupStatsArea'),
+        dedupResetFieldsBtn: $('dedupResetFieldsBtn'),
+        dedupReadyBadge: $('dedupReadyBadge'),
+        dedupReadyDot: $('dedupReadyDot'),
+        dedupReadyText: $('dedupReadyText'),
+        dedupColorTypeHint: $('dedupColorTypeHint'),
+        dedupGroupHint: $('dedupGroupHint'),
+        dedupColorHint: $('dedupColorHint'),
+        dedupSkuHint: $('dedupSkuHint'),
+        dedupNewColHint: $('dedupNewColHint'),
+        dedupIntegrationNote: $('dedupIntegrationNote'),
+        runProcessBtn: $('runProcessBtn'),
+        exportBtn: $('exportResultBtn'),
+        exportFullCheck: $('exportFullCheckbox'),
+        exportNewCheck: $('exportNewColsCheckbox'),
+        dataStatus: $('dataStatus'),
+        logArea: $('logArea'),
+        saveConfigBtn: $('saveConfigBtn'),
+        exportConfigBtn: $('exportConfigBtn'),
+        importConfigFile: $('importConfigFile'),
+        configListContainer: $('configListContainer'),
+        aiModalContainer: $('aiModalContainer'),
+        mappingCard: $('mappingCard'),
+        colorEnumCard: $('colorEnumCard'),
+        codeCard: $('codeCard')
     };
-    check(dedupColorTypeField, dedupColorTypeHint);
-    check(dedupGroupField, dedupGroupHint);
-    check(dedupColorField, dedupColorHint);
-    check(dedupSkuField, dedupSkuHint);
-    check(dedupNewColField, dedupNewColHint, true);
-}
 
-function updateDedupReadyStatus() {
-    const allCols = getAllAvailableColumns();
-    const f1 = dedupColorTypeField.value.trim(), f2 = dedupGroupField.value.trim(),
-          f3 = dedupColorField.value.trim(), f4 = dedupSkuField.value.trim();
-    const newCol = dedupNewColField.value.trim();
-    const allSet = f1 && f2 && f3 && f4 && newCol;
-    let allExist = false;
-    if (allSet && processedData.length > 0) allExist = [f1, f2, f3, f4].every(f => allCols.includes(f));
-    if (processedData.length > 0 && allSet && allExist) {
-        dedupReadyDot.className = 'dedup-ready-indicator ready';
-        dedupReadyText.textContent = '可执行去重';
-        dedupRunBtn.disabled = false;
-    } else if (processedData.length > 0 && allSet && !allExist) {
-        dedupReadyDot.className = 'dedup-ready-indicator';
-        dedupReadyText.textContent = '字段不存在';
-        dedupRunBtn.disabled = true;
-    } else if (processedData.length === 0) {
-        dedupReadyDot.className = 'dedup-ready-indicator';
-        dedupReadyText.textContent = '等待变体组处理';
-        dedupRunBtn.disabled = true;
-    } else {
-        dedupReadyDot.className = 'dedup-ready-indicator';
-        dedupReadyText.textContent = '请设置字段';
-        dedupRunBtn.disabled = true;
-    }
-}
+    // 初始化日志
+    const log = createLogger(els.logArea);
 
-function saveDedupFields() {
-    saveDedupFieldsToStorage({
-        colorType: dedupColorTypeField.value.trim(),
-        variantGroup: dedupGroupField.value.trim(),
-        amazonColor: dedupColorField.value.trim(),
-        sku: dedupSkuField.value.trim(),
-        newColName: dedupNewColField.value.trim()
-    });
-}
+    // 初始化编辑器
+    const initialColorEnum = ConfigManager.getColorEnum();
+    const editors = initEditors(
+        els.mappingContainer,
+        els.colorEnumContainer,
+        els.codeContainer,
+        {
+            mapping: DEFAULT_MAPPING,
+            colorEnum: JSON.stringify(initialColorEnum, null, 2),
+            code: DEFAULT_CODE
+        }
+    );
+    const { mappingEditor, colorEnumEditor, codeEditor } = editors;
 
-function loadDedupFieldsToUI() {
-    const fields = getDedupFields();
-    dedupColorTypeField.value = fields.colorType || '';
-    dedupGroupField.value = fields.variantGroup || '';
-    dedupColorField.value = fields.amazonColor || '';
-    dedupSkuField.value = fields.sku || (skuColSelect.value || '');
-    dedupNewColField.value = fields.newColName || '去重后颜色';
-}
-
-function resetDedupFieldsToDefault() {
-    const def = { ...DEFAULT_DEDUP_FIELDS };
-    dedupColorTypeField.value = def.colorType;
-    dedupGroupField.value = def.variantGroup;
-    dedupColorField.value = def.amazonColor;
-    dedupSkuField.value = skuColSelect.value || def.sku || '';
-    dedupNewColField.value = def.newColName;
-    saveDedupFields();
-    updateDedupFieldHints();
-    updateDedupReadyStatus();
-    log('🎨 颜色去重字段已重置为默认值', 'info');
-}
-
-// -------------------- 核心操作函数 --------------------
-function updateColorUnmappedMiniWrapper() {
-    updateColorUnmappedMini(getRawData(), getAllColumns(), mappingEditor, colorEnumEditor, colorUnmappedMini);
-}
-
-function runProcess() {
-    const raw = getRawData();
-    if (!raw.length) { log('请先加载数据', 'error'); return; }
-    const skuCol = skuColSelect.value, parentCol = parentColSelect.value;
-    if (!skuCol || !parentCol) { log('请选择SKU和父SKU列', 'error'); return; }
-    const mappingJSON = mappingEditor.getValue();
-    const codeStr = codeEditor.getValue();
-    // 保存颜色枚举
-    saveColorEnumFromEditor();
-
-    const result = processData(raw, skuCol, parentCol, mappingJSON, codeStr, getAllColumns(), (res, newCols) => {
-        processedData = res;
-        dataStatus.textContent = `✅ 已处理 ${processedData.length} 行`;
-        updateColorUnmappedMiniWrapper();
-        updateDedupDatalist();
-        updateDedupFieldHints();
-        if (!dedupSkuField.value.trim() && skuCol) { dedupSkuField.value = skuCol; saveDedupFields(); }
-        dedupStatsArea.innerHTML = '';
-        dedupIntegrationNote.style.display = 'none';
-        lastDedupColName = '';
-        updateDedupReadyStatus();
-    });
-    if (result === null) {
-        // 错误已记录
-    }
-}
-
-function exportData() {
-    if (!processedData.length) { log('无数据可导出', 'error'); return; }
-    const allCols = Object.keys(processedData[0]);
-    const newCols = allCols.filter(c => !getAllColumns().includes(c) && !c.startsWith('_'));
-    const skuCol = skuColSelect.value;
-    let exportCols = [];
-    if (exportFullCheck.checked) exportCols = allCols.filter(c => !c.startsWith('_'));
-    else exportCols = exportNewCheck.checked ? [skuCol, ...newCols.filter(c => c !== skuCol)] : [skuCol];
-    exportCols = exportCols.filter(c => allCols.includes(c));
-    const exportRows = processedData.map(row => {
-        const obj = {};
-        exportCols.forEach(c => obj[c] = row[c] ?? '');
-        return obj;
-    });
-    try {
-        const ws = XLSX.utils.json_to_sheet(exportRows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "结果");
-        XLSX.writeFile(wb, `variant_result_${Date.now()}.xlsx`);
-        log(`📎 导出成功（${exportCols.length}列）`, 'success');
-    } catch { log('导出失败', 'error'); }
-}
-
-function saveColorEnumFromEditor() {
-    if (!colorEnumEditor) return;
-    try {
-        const parsed = JSON.parse(colorEnumEditor.getValue());
-        if (parsed && typeof parsed === 'object') saveColorEnumToStorage(parsed);
-    } catch {}
-}
-
-function loadAISettings() {
-    aiApiKey.value = lsGet(LK_AI_KEY, '');
-    aiModel.value = lsGet(LK_AI_MODEL, 'deepseek-chat');
-    aiPrompt.value = lsGet(LK_AI_PROMPT, DEFAULT_AI_PROMPT);
-}
-
-function saveAISettings() {
-    lsSet(LK_AI_KEY, aiApiKey.value);
-    lsSet(LK_AI_MODEL, aiModel.value);
-    lsSet(LK_AI_PROMPT, aiPrompt.value);
-}
-
-function initEditors() {
-    mappingEditor = CodeMirror(mappingContainer, {
-        value: DEFAULT_MAPPING,
-        mode: { name: 'javascript', json: true },
-        theme: 'material-darker',
-        lineNumbers: true,
-        tabSize: 2
-    });
-    mappingEditor.setSize('100%', '100px');
-
-    colorEnumEditor = CodeMirror(colorEnumContainer, {
-        value: JSON.stringify(getStoredColorEnum(), null, 2),
-        mode: { name: 'javascript', json: true },
-        theme: 'material-darker',
-        lineNumbers: true,
-        tabSize: 2
-    });
-    colorEnumEditor.setSize('100%', '220px');
+    // 颜色标准化引擎初始化
+    buildColorMap(initialColorEnum);
+    // 颜色枚举编辑器变化时更新引擎与未映射提示
     colorEnumEditor.on('change', () => {
-        saveColorEnumFromEditor();
-        updateColorUnmappedMiniWrapper();
+        try {
+            const parsed = JSON.parse(colorEnumEditor.getValue());
+            ConfigManager.saveColorEnum(parsed);
+            buildColorMap(parsed);
+            updateUnmappedMini();
+        } catch { /* 忽略解析错误 */ }
     });
 
-    codeEditor = CodeMirror(codeContainer, {
-        value: DEFAULT_CODE,
-        mode: 'javascript',
-        theme: 'material-darker',
-        lineNumbers: true,
-        tabSize: 2,
-        viewportMargin: Infinity
-    });
-    codeEditor.setSize('100%', '420px');
-}
-
-// 加载工作表回调
-function loadSheetCallback() {
-    loadSheet(
-        getCurrentSheetName(),
-        sheetSelect,
-        skuColSelect,
-        parentColSelect,
-        dedupSkuField,
-        saveDedupFields,
-        updateDedupDatalist,
-        updateDedupFieldHints,
-        updateDedupReadyStatus,
-        dataStatus,
-        dedupStatsArea,
-        dedupIntegrationNote,
-        (name) => { lastDedupColName = name; }
-    );
-    // 清空 processedData
-    processedData = [];
-    updateDedupDatalist();
-    updateDedupFieldHints();
-    updateDedupReadyStatus();
-}
-
-// 去重执行
-function runColorDedup() {
-    const colorTypeCol = dedupColorTypeField.value.trim(),
-          groupCol = dedupGroupField.value.trim(),
-          colorCol = dedupColorField.value.trim(),
-          skuCol = dedupSkuField.value.trim();
-    const newColName = dedupNewColField.value.trim();
-    const result = runDedup(
-        processedData,
-        colorTypeCol, groupCol, colorCol, skuCol, newColName,
-        lastDedupColName,
-        (name) => { lastDedupColName = name; },
-        (res, groups, rows, colName) => {
-            processedData = res;
-            dedupStatsArea.innerHTML = `
-                <span class="dedup-stat">📊 总行: ${res.length}</span>
-                <span class="dedup-stat">🔁 重复组: ${groups}</span>
-                <span class="dedup-stat">✏️ 去重行: ${rows}</span>
-                <span class="dedup-stat">🆕 新列: "${colName}"</span>
-            `;
-            dedupIntegrationNote.style.display = 'block';
-            dataStatus.textContent = `✅ 已去重，含列 "${colName}"`;
-            updateDedupFieldHints();
-            updateDedupReadyStatus();
-        }
-    );
-    if (result === null) {
-        // 错误已记录
+    // 未映射颜色提示
+    function getColorColumnName() {
+        try {
+            const m = JSON.parse(mappingEditor.getValue());
+            return m.color || null;
+        } catch { return null; }
     }
-}
-
-// AI 分类
-async function handleAIClassify() {
-    saveColorEnumFromEditor();
-    const unmapped = findUnmappedColors(getRawData(), getAllColumns(), mappingEditor, colorEnumEditor).map(u => u.display);
-    if (!unmapped.length) { alert('没有未映射颜色'); return; }
-    aiClassifyBtn.disabled = true;
-    const suggestions = await callAI(unmapped, aiApiKey.value, aiModel.value, aiPrompt.value);
-    aiClassifyBtn.disabled = false;
-    if (suggestions && suggestions.length) {
-        showAISuggestions(suggestions, aiModalContainer, colorEnumEditor, saveColorEnumFromEditor, updateColorUnmappedMiniWrapper, log);
+    function scanColorValues() {
+        if (!store.rawDataRows.length) return [];
+        const col = getColorColumnName();
+        if (!col || !store.allColumns.includes(col)) return [];
+        const unique = new Set();
+        store.rawDataRows.forEach(r => {
+            const v = String(r[col] || '').trim();
+            if (v) unique.add(v);
+        });
+        return Array.from(unique);
     }
-}
+    function updateUnmappedMini() {
+        const allColors = scanColorValues();
+        if (!allColors.length) {
+            els.colorUnmappedMini.classList.add('hidden');
+            return;
+        }
+        const unmapped = findUnmappedColors(allColors);
+        if (!unmapped.length) {
+            els.colorUnmappedMini.classList.add('hidden');
+            return;
+        }
+        els.colorUnmappedMini.classList.remove('hidden');
+        const esc = s => String(s).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+        const tags = unmapped.slice(0, 15).map(u => `<span class="unmapped-tag">${esc(u.display)}</span>`).join('');
+        const more = unmapped.length > 15 ? ` ...及另外${unmapped.length - 15}项` : '';
+        els.colorUnmappedMini.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-yellow-400"></i> 未映射: ${tags}${more}`;
+    }
 
-// 方案应用包装函数
-function applyConfigWrapper(cfg) {
-    applyConfig(cfg, getAllColumns(), skuColSelect, parentColSelect, mappingEditor, codeEditor, colorEnumEditor, saveColorEnumFromEditor, {
-        colorType: dedupColorTypeField,
-        group: dedupGroupField,
-        color: dedupColorField,
-        sku: dedupSkuField,
-        newCol: dedupNewColField
-    }, updateDedupDatalist, updateDedupFieldHints, updateDedupReadyStatus);
-}
-
-// 方案保存
-function handleSaveConfig() {
-    const name = prompt('方案名称：', currentConfig.name || '新方案');
-    if (!name) return;
-    const cfgs = loadConfigs();
-    const cfg = getCurrentFullConfig(skuColSelect, parentColSelect, mappingEditor, codeEditor, colorEnumEditor, {
-        colorType: dedupColorTypeField.value.trim(),
-        variantGroup: dedupGroupField.value.trim(),
-        amazonColor: dedupColorField.value.trim(),
-        sku: dedupSkuField.value.trim(),
-        newColName: dedupNewColField.value.trim()
+    // 初始化面板折叠
+    initCollapse(els.mappingToggleHeader, els.mappingToggleIcon, els.mappingCollapseWrapper,
+        'expanded-content-mapping', ConfigManager.getCollapsedState('mapping'), () => {
+            setTimeout(() => mappingEditor.refresh(), 350);
+        });
+    initCollapse(els.colorEnumToggleHeader, els.colorEnumToggleIcon, els.colorEnumCollapseWrapper,
+        'expanded-content-color-enum', ConfigManager.getCollapsedState('colorEnum'), () => {
+            setTimeout(() => colorEnumEditor.refresh(), 350);
+        });
+    initCollapse(els.codeToggleHeader, els.codeToggleIcon, els.codeCollapseWrapper,
+        'expanded-content', ConfigManager.getCollapsedState('code'), () => {
+            setTimeout(() => codeEditor.refresh(), 350);
+        });
+    // AI 设置折叠
+    const aiCollapsed = ConfigManager.getCollapsedState('ai');
+    els.aiSettingsContent.className = aiCollapsed ? 'collapsed-content' : 'expanded-content';
+    els.aiSettingsIcon.className = aiCollapsed ? 'fa-solid fa-chevron-right text-gray-500' : 'fa-solid fa-chevron-down text-gray-500';
+    els.aiSettingsToggle.addEventListener('click', () => {
+        const now = els.aiSettingsContent.classList.contains('expanded-content');
+        els.aiSettingsContent.className = now ? 'collapsed-content' : 'expanded-content';
+        els.aiSettingsIcon.className = now ? 'fa-solid fa-chevron-right text-gray-500' : 'fa-solid fa-chevron-down text-gray-500';
+        ConfigManager.saveCollapsedState('ai', now);
     });
-    cfg.name = name;
-    const idx = cfgs.findIndex(c => c.name === name);
-    if (idx >= 0) cfgs[idx] = cfg;
-    else cfgs.push(cfg);
-    saveConfigs(cfgs);
-    currentConfig.name = name;
-    renderConfigList(configListContainer, loadConfigs, applyConfigWrapper, log);
-    log('方案已保存', 'success');
-}
-
-// -------------------- 初始化 --------------------
-function init() {
-    createStars('stars');
-    initEditors();
-    loadAISettings();
-    loadDedupFieldsToUI();
-
-    // 折叠初始化
-    initCollapse(mappingToggleHeader, mappingToggleIcon, mappingCollapseWrapper, 'expanded-content-mapping', LK_MAPPING_COLLAPSED);
-    initCollapse(colorEnumToggleHeader, colorEnumToggleIcon, colorEnumCollapseWrapper, 'expanded-content-color-enum', LK_COLOR_COLLAPSED);
-    initCollapse(codeToggleHeader, codeToggleIcon, codeCollapseWrapper, 'expanded-content', LK_CODE_COLLAPSED);
-
-    const dedupSaved = lsGet(LK_DEDUP_COLLAPSED, false);
-    dedupCollapseWrapper.className = dedupSaved ? 'collapsed-content' : 'expanded-content-dedup';
-    dedupToggleIcon.className = dedupSaved ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
-    dedupToggleHeader.addEventListener('click', () => {
-        const now = dedupCollapseWrapper.classList.contains('expanded-content-dedup');
-        dedupCollapseWrapper.className = now ? 'collapsed-content' : 'expanded-content-dedup';
-        dedupToggleIcon.className = now ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
-        lsSet(LK_DEDUP_COLLAPSED, now);
+    // 去重面板折叠
+    const dedupCollapsed = ConfigManager.getCollapsedState('dedup');
+    els.dedupCollapseWrapper.className = dedupCollapsed ? 'collapsed-content' : 'expanded-content-dedup';
+    els.dedupToggleIcon.className = dedupCollapsed ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+    els.dedupToggleHeader.addEventListener('click', () => {
+        const now = els.dedupCollapseWrapper.classList.contains('expanded-content-dedup');
+        els.dedupCollapseWrapper.className = now ? 'collapsed-content' : 'expanded-content-dedup';
+        els.dedupToggleIcon.className = now ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+        ConfigManager.saveCollapsedState('dedup', now);
     });
 
-    // AI折叠
-    const aiCollapsed = lsGet(LK_AI_COLLAPSED, true);
-    aiSettingsContent.className = aiCollapsed ? 'collapsed-content' : 'expanded-content';
-    aiSettingsIcon.className = aiCollapsed ? 'fa-solid fa-chevron-right text-gray-500' : 'fa-solid fa-chevron-down text-gray-500';
-    aiSettingsToggle.addEventListener('click', () => {
-        const now = aiSettingsContent.classList.contains('expanded-content');
-        aiSettingsContent.className = now ? 'collapsed-content' : 'expanded-content';
-        aiSettingsIcon.className = now ? 'fa-solid fa-chevron-right text-gray-500' : 'fa-solid fa-chevron-down text-gray-500';
-        lsSet(LK_AI_COLLAPSED, now);
+    // 全屏切换
+    els.mappingFullscreenBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        toggleFullscreen(els.mappingCard, mappingEditor, els.mappingFullscreenBtn);
     });
-
-    // 事件绑定
-    fileInput.addEventListener('change', e => {
-        if (e.target.files[0]) {
-            handleFile(e.target.files[0], sheetSelect, loadSheetCallback);
+    els.colorEnumFullscreenBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        toggleFullscreen(els.colorEnumCard, colorEnumEditor, els.colorEnumFullscreenBtn);
+    });
+    els.codeFullscreenBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        toggleFullscreen(els.codeCard, codeEditor, els.codeFullscreenBtn);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            if (els.mappingCard.classList.contains('fullscreen-card')) toggleFullscreen(els.mappingCard, mappingEditor, els.mappingFullscreenBtn);
+            if (els.colorEnumCard.classList.contains('fullscreen-card')) toggleFullscreen(els.colorEnumCard, colorEnumEditor, els.colorEnumFullscreenBtn);
+            if (els.codeCard.classList.contains('fullscreen-card')) toggleFullscreen(els.codeCard, codeEditor, els.codeFullscreenBtn);
         }
     });
-    loadSheetBtn.addEventListener('click', () => {
-        if (getWorkbook()) {
-            setCurrentSheetName(sheetSelect.value);
-            loadSheetCallback();
-        }
-    });
-    runProcessBtn.addEventListener('click', runProcess);
-    exportBtn.addEventListener('click', exportData);
-    saveConfigBtn.addEventListener('click', handleSaveConfig);
-    exportConfigBtn.addEventListener('click', () => {
-        const blob = new Blob([JSON.stringify(loadConfigs(), null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'variant_configs.json';
-        a.click();
-    });
-    importConfigFile.addEventListener('change', e => {
-        const f = e.target.files[0];
-        if (!f) return;
-        const r = new FileReader();
-        r.onload = ev => {
-            try { saveConfigs(JSON.parse(ev.target.result)); log('导入成功', 'success'); } catch { log('无效JSON', 'error'); }
-            importConfigFile.value = '';
-            renderConfigList(configListContainer, loadConfigs, applyConfigWrapper, log);
+
+    // 文件处理
+    function handleFile(file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const wb = parseWorkbook(e.target.result);
+                store.workbook = wb;
+                els.sheetSelect.innerHTML = getSheetNames(wb).map(n => `<option>${n}</option>`).join('');
+                els.sheetSelect.disabled = false;
+                store.currentSheetName = wb.SheetNames[0];
+                els.sheetSelect.value = store.currentSheetName;
+                loadCurrentSheet();
+                log(`📁 文件 "${file.name}" 已加载`, 'info');
+            } catch (err) {
+                log('文件解析失败', 'error');
+            }
         };
-        r.readAsText(f);
-    });
-    resetMappingBtn.addEventListener('click', () => mappingEditor.setValue(DEFAULT_MAPPING));
-    resetCodeBtn.addEventListener('click', () => codeEditor.setValue(DEFAULT_CODE));
-    resetColorEnumBtn.addEventListener('click', () => {
-        colorEnumEditor.setValue(JSON.stringify(DEFAULT_COLOR_ENUM, null, 2));
-        saveColorEnumFromEditor();
-        updateColorUnmappedMiniWrapper();
+        reader.readAsArrayBuffer(file);
+    }
+    els.fileInput.addEventListener('change', e => e.target.files[0] && handleFile(e.target.files[0]));
+    els.loadSheetBtn.addEventListener('click', () => {
+        if (store.workbook) {
+            store.currentSheetName = els.sheetSelect.value;
+            loadCurrentSheet();
+        }
     });
     document.body.addEventListener('dragover', e => e.preventDefault());
     document.body.addEventListener('drop', e => {
         e.preventDefault();
-        if (e.dataTransfer.files[0]) {
-            handleFile(e.dataTransfer.files[0], sheetSelect, loadSheetCallback);
-        }
+        if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
     });
-    mappingFullscreenBtn.addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(mappingCard, mappingEditor, mappingFullscreenBtn); });
-    colorEnumFullscreenBtn.addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(colorEnumCard, colorEnumEditor, colorEnumFullscreenBtn); });
-    codeFullscreenBtn.addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(codeCard, codeEditor, codeFullscreenBtn); });
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') {
-            if (mappingCard.classList.contains('fullscreen-card')) toggleFullscreen(mappingCard, mappingEditor, mappingFullscreenBtn);
-            if (colorEnumCard.classList.contains('fullscreen-card')) toggleFullscreen(colorEnumCard, colorEnumEditor, colorEnumFullscreenBtn);
-            if (codeCard.classList.contains('fullscreen-card')) toggleFullscreen(codeCard, codeEditor, codeFullscreenBtn);
+
+    function loadCurrentSheet() {
+        if (!store.workbook || !store.currentSheetName) return;
+        try {
+            const { rows, columns } = sheetToJson(store.workbook, store.currentSheetName);
+            if (!rows.length) { log('工作表为空', 'error'); return; }
+            store.setRawData(store.workbook, store.currentSheetName, rows, columns);
+            updateColumnSelects(columns);
+            log(`📊 已加载 "${store.currentSheetName}"，${rows.length}行`, 'info');
+            els.dataStatus.textContent = `✅ 已加载 ${rows.length} 行`;
+            // 重置处理状态
+            els.dedupStatsArea.innerHTML = '';
+            els.dedupIntegrationNote.style.display = 'none';
+        } catch (err) {
+            log('加载工作表失败', 'error');
         }
-    });
-    skuColSelect.addEventListener('change', () => {
-        if (!dedupSkuField.value.trim() && skuColSelect.value) { dedupSkuField.value = skuColSelect.value; saveDedupFields(); }
+    }
+
+    function updateColumnSelects(columns) {
+        const opts = columns.map(c => `<option value="${c}">${c}</option>`).join('');
+        els.skuColSelect.innerHTML = els.parentColSelect.innerHTML = `<option value="">-- 选择列 --</option>${opts}`;
+        els.skuColSelect.disabled = els.parentColSelect.disabled = false;
+        // 自动猜测 SKU 和父 SKU 列
+        const find = keys => columns.find(c => keys.some(k => c.toLowerCase().includes(k)));
+        const sku = find(['sku', '商品编码', '子sku']) || '';
+        const parent = find(['父', 'parent', '父sku']) || '';
+        els.skuColSelect.value = sku;
+        els.parentColSelect.value = parent;
+        // 同步去重 SKU 字段
+        if (!els.dedupSkuField.value.trim() && sku) {
+            els.dedupSkuField.value = sku;
+            // 触发保存
+        }
+    }
+
+    // SKU 选择变化时同步去重字段
+    els.skuColSelect.addEventListener('change', () => {
+        if (!els.dedupSkuField.value.trim() && els.skuColSelect.value) {
+            els.dedupSkuField.value = els.skuColSelect.value;
+            ConfigManager.saveDedupFields({
+                colorType: els.dedupColorTypeField.value,
+                variantGroup: els.dedupGroupField.value,
+                amazonColor: els.dedupColorField.value,
+                sku: els.dedupSkuField.value,
+                newColName: els.dedupNewColField.value
+            });
+        }
+        // 更新 datalist
         updateDedupDatalist();
     });
-    parentColSelect.addEventListener('change', () => updateDedupDatalist());
+    els.parentColSelect.addEventListener('change', () => updateDedupDatalist());
 
-    dedupRunBtn.addEventListener('click', runColorDedup);
-    dedupResetFieldsBtn.addEventListener('click', resetDedupFieldsToDefault);
-    [dedupColorTypeField, dedupGroupField, dedupColorField, dedupSkuField, dedupNewColField].forEach(el => {
-        el.addEventListener('input', () => { saveDedupFields(); updateDedupFieldHints(); updateDedupReadyStatus(); });
-        el.addEventListener('focus', () => updateDedupDatalist());
+    function updateDedupDatalist() {
+        const allCols = store.getAllAvailableColumns();
+        els.dedupColumnsList.innerHTML = allCols.map(c => `<option value="${c}">`).join('');
+    }
+
+    // 处理执行
+    els.runProcessBtn.addEventListener('click', () => {
+        if (!store.rawDataRows.length) { log('请先加载数据', 'error'); return; }
+        const skuCol = els.skuColSelect.value;
+        const parentCol = els.parentColSelect.value;
+        if (!skuCol || !parentCol) { log('请选择SKU和父SKU列', 'error'); return; }
+        let columns;
+        try {
+            columns = JSON.parse(mappingEditor.getValue());
+        } catch {
+            log('映射JSON格式错误', 'error');
+            return;
+        }
+        try {
+            const result = processVariants(store.rawDataRows, columns, skuCol, parentCol, codeEditor.getValue(), normalizeColor);
+            store.setProcessedData(result);
+            const newCols = Object.keys(result[0]).filter(c => !store.allColumns.includes(c) && !c.startsWith('_'));
+            log(`✅ 处理完成，${result.length}行，新增${newCols.length}列: ${newCols.join(', ')}`, 'success');
+            els.dataStatus.textContent = `✅ 已处理 ${result.length} 行`;
+            updateUnmappedMini();
+            updateDedupDatalist();
+            // 清空去重统计
+            els.dedupStatsArea.innerHTML = '';
+            els.dedupIntegrationNote.style.display = 'none';
+        } catch (e) {
+            log(`❌ 处理错误: ${e.message}`, 'error');
+        }
     });
 
-    aiClassifyBtn.addEventListener('click', handleAIClassify);
-    aiApiKey.addEventListener('input', saveAISettings);
-    aiModel.addEventListener('change', saveAISettings);
-    aiPrompt.addEventListener('input', saveAISettings);
+    // 导出结果
+    els.exportBtn.addEventListener('click', () => {
+        if (!store.processedData.length) { log('无数据可导出', 'error'); return; }
+        const allCols = Object.keys(store.processedData[0]);
+        const newCols = allCols.filter(c => !store.allColumns.includes(c) && !c.startsWith('_'));
+        const skuCol = els.skuColSelect.value;
+        let exportCols = [];
+        if (els.exportFullCheck.checked) {
+            exportCols = allCols.filter(c => !c.startsWith('_'));
+        } else if (els.exportNewCheck.checked) {
+            exportCols = [skuCol, ...newCols.filter(c => c !== skuCol)];
+        } else {
+            exportCols = [skuCol];
+        }
+        exportCols = exportCols.filter(c => allCols.includes(c));
+        try {
+            exportToExcel(store.processedData, exportCols);
+            log(`📎 导出成功（${exportCols.length}列）`, 'success');
+        } catch (e) {
+            log('导出失败', 'error');
+        }
+    });
+
+    // 编辑器重置按钮
+    els.resetMappingBtn.addEventListener('click', () => mappingEditor.setValue(DEFAULT_MAPPING));
+    els.resetCodeBtn.addEventListener('click', () => codeEditor.setValue(DEFAULT_CODE));
+    els.resetColorEnumBtn.addEventListener('click', () => {
+        const defaultEnum = ConfigManager.getDefaults().COLOR_ENUM;
+        colorEnumEditor.setValue(JSON.stringify(defaultEnum, null, 2));
+        // 触发 change 事件会自动更新引擎
+    });
+
+    // AI 功能
+    loadAISettings();
+    els.aiApiKey.addEventListener('input', saveAISettings);
+    els.aiModel.addEventListener('change', saveAISettings);
+    els.aiPrompt.addEventListener('input', saveAISettings);
+    function loadAISettings() {
+        const settings = ConfigManager.getAISettings();
+        els.aiApiKey.value = settings.apiKey;
+        els.aiModel.value = settings.model;
+        els.aiPrompt.value = settings.prompt;
+    }
+    function saveAISettings() {
+        ConfigManager.saveAISettings({
+            apiKey: els.aiApiKey.value,
+            model: els.aiModel.value,
+            prompt: els.aiPrompt.value
+        });
+    }
+
+    els.aiClassifyBtn.addEventListener('click', async () => {
+        const unmapped = findUnmappedColors(scanColorValues()).map(u => u.display);
+        if (!unmapped.length) {
+            alert('没有未映射颜色');
+            return;
+        }
+        els.aiClassifyBtn.disabled = true;
+        try {
+            const settings = ConfigManager.getAISettings();
+            const suggestions = await callAI(unmapped, settings.apiKey, settings.model, settings.prompt);
+            if (suggestions && suggestions.length) showAISuggestions(suggestions);
+        } catch (e) {
+            alert('AI分类失败: ' + e.message);
+        } finally {
+            els.aiClassifyBtn.disabled = false;
+        }
+    });
+
+    function showAISuggestions(suggestions) {
+        els.aiModalContainer.innerHTML = '';
+        const overlay = document.createElement('div');
+        overlay.className = 'ai-modal-overlay';
+        const esc = s => String(s).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+        overlay.innerHTML = `
+            <div class="ai-modal">
+                <h3 class="text-xl font-bold mb-3"><i class="fa-solid fa-robot text-purple-400"></i> AI建议</h3>
+                <div class="max-h-60 overflow-y-auto mb-4">${suggestions.map(s => `<div class="ai-suggestion-item"><span>${esc(s.value)} → <b class="text-green-400">${esc(s.key)}</b></span></div>`).join('')}</div>
+                <div class="flex justify-end gap-3"><button class="btn-glass" id="aiCancelBtn">取消</button><button class="btn-glass btn-primary" id="aiApplyBtn"><i class="fa-solid fa-check"></i> 应用</button></div>
+            </div>`;
+        els.aiModalContainer.appendChild(overlay);
+        const close = () => els.aiModalContainer.innerHTML = '';
+        document.getElementById('aiCancelBtn').addEventListener('click', close);
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        document.getElementById('aiApplyBtn').addEventListener('click', () => {
+            try {
+                let cfg = JSON.parse(colorEnumEditor.getValue());
+                suggestions.forEach(({ key, value }) => {
+                    if (!key || !value) return;
+                    if (!cfg[key]) cfg[key] = [];
+                    if (!cfg[key].includes(value)) cfg[key].push(value);
+                });
+                colorEnumEditor.setValue(JSON.stringify(cfg, null, 2));
+                // change 事件会自动触发
+                close();
+                log('✅ AI建议已应用', 'success');
+            } catch (e) { alert('合并失败'); }
+        });
+    }
+
+    // 初始化去重面板
+    const dedup = initDedupPanel({
+        dedupColorTypeField: els.dedupColorTypeField,
+        dedupGroupField: els.dedupGroupField,
+        dedupColorField: els.dedupColorField,
+        dedupSkuField: els.dedupSkuField,
+        dedupNewColField: els.dedupNewColField,
+        dedupColumnsList: els.dedupColumnsList,
+        dedupRunBtn: els.dedupRunBtn,
+        dedupStatsArea: els.dedupStatsArea,
+        dedupResetFieldsBtn: els.dedupResetFieldsBtn,
+        dedupReadyDot: els.dedupReadyDot,
+        dedupReadyText: els.dedupReadyText,
+        dedupColorTypeHint: els.dedupColorTypeHint,
+        dedupGroupHint: els.dedupGroupHint,
+        dedupColorHint: els.dedupColorHint,
+        dedupSkuHint: els.dedupSkuHint,
+        dedupNewColHint: els.dedupNewColHint,
+        dedupIntegrationNote: els.dedupIntegrationNote,
+        logFn: log
+    });
+
+    // 方案管理
+    function getCurrentConfig() {
+        return {
+            name: store.currentConfigName,
+            skuColumn: els.skuColSelect.value,
+            parentSkuColumn: els.parentColSelect.value,
+            mapping: mappingEditor.getValue(),
+            code: codeEditor.getValue(),
+            colorEnum: colorEnumEditor.getValue(),
+            dedupFields: {
+                colorType: els.dedupColorTypeField.value.trim(),
+                variantGroup: els.dedupGroupField.value.trim(),
+                amazonColor: els.dedupColorField.value.trim(),
+                sku: els.dedupSkuField.value.trim(),
+                newColName: els.dedupNewColField.value.trim()
+            }
+        };
+    }
+    function applyConfig(cfg) {
+        if (cfg.skuColumn && store.allColumns.includes(cfg.skuColumn)) els.skuColSelect.value = cfg.skuColumn;
+        if (cfg.parentSkuColumn && store.allColumns.includes(cfg.parentSkuColumn)) els.parentColSelect.value = cfg.parentSkuColumn;
+        if (cfg.mapping) mappingEditor.setValue(cfg.mapping);
+        if (cfg.code) codeEditor.setValue(cfg.code);
+        if (cfg.colorEnum) {
+            colorEnumEditor.setValue(cfg.colorEnum);
+            // change 事件会触发
+        }
+        if (cfg.dedupFields) {
+            els.dedupColorTypeField.value = cfg.dedupFields.colorType || '';
+            els.dedupGroupField.value = cfg.dedupFields.variantGroup || '';
+            els.dedupColorField.value = cfg.dedupFields.amazonColor || '';
+            els.dedupSkuField.value = cfg.dedupFields.sku || '';
+            els.dedupNewColField.value = cfg.dedupFields.newColName || '去重后颜色';
+            ConfigManager.saveDedupFields({
+                colorType: cfg.dedupFields.colorType,
+                variantGroup: cfg.dedupFields.variantGroup,
+                amazonColor: cfg.dedupFields.amazonColor,
+                sku: cfg.dedupFields.sku,
+                newColName: cfg.dedupFields.newColName
+            });
+            dedup.updateHints?.();
+            dedup.updateReadyStatus?.();
+        }
+        store.currentConfigName = cfg.name || '未命名';
+        updateDedupDatalist();
+    }
+    const configPanel = initConfigPanel({
+        configListContainer: els.configListContainer,
+        saveConfigBtn: els.saveConfigBtn,
+        exportConfigBtn: els.exportConfigBtn,
+        importConfigFile: els.importConfigFile,
+        getCurrentConfigFn: getCurrentConfig,
+        onApplyConfigFn: applyConfig,
+        logFn: log
+    });
+
+    // 初始化星星背景（保留）
+    createStars();
+
+    function createStars() {
+        const container = document.getElementById('stars');
+        if (!container) return;
+        const colors = ['#60a5fa', '#f472b6', '#fbbf24', '#34d399', '#a78bfa', '#f87171', '#38bdf8', '#fb923c'];
+        for (let i = 0; i < 150; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            const size = Math.random() * 2.5 + 1;
+            star.style.width = star.style.height = size + 'px';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+            star.style.setProperty('--delay', Math.random() * 5 + 's');
+            star.style.background = colors[Math.floor(Math.random() * colors.length)];
+            container.appendChild(star);
+        }
+    }
 
     // 恢复上次去重列名
-    lastDedupColName = lsGet('last_dedup_col_name', '');
+    store.setLastDedupColName(ConfigManager.getLastDedupColName());
 
-    // 初始渲染
-    renderConfigList(configListContainer, loadConfigs, applyConfigWrapper, log);
-
+    // 初始刷新
     updateDedupDatalist();
-    updateDedupFieldHints();
-    updateDedupReadyStatus();
     log('🚀 系统就绪，上传Excel后依次执行“处理”与“颜色去重”，最后导出（去重列将包含在内）');
-}
-
-// 启动
-init();
+});
