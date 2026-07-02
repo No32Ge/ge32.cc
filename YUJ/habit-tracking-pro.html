@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Data Processor V6</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        /* Enterprise Theme CSS */
+        :root {
+            --bg-main: #f3f2f1; --bg-panel: #ffffff; --border-color: #e1dfdd;
+            --primary-brand: #0f6cbd; --primary-hover: #0c5696;
+            --text-main: #323130; --text-muted: #605e5c;
+            --row-completed: #f8f8f8; --row-active: #e6f2fb;
+            --status-done: #107c41; --status-pending: #d83b01;
+            --sys-log-brand: #4b3869; --warning-brand: #d13438;
+        }
+
+        body { font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; margin: 0; padding: 0; background-color: var(--bg-main); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* SVG Icons Control */
+        .svg-icon { width: 14px; height: 14px; fill: currentColor; vertical-align: middle; flex-shrink: 0; }
+        
+        /* Ribbon / Header */
+        .ribbon { background-color: var(--primary-brand); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 100; height: 28px; flex-shrink: 0; }
+        .ribbon-title { font-weight: 600; font-size: 16px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 15px;}
+        .daily-volume { background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 12px; font-size: 12px; font-family: 'Consolas', monospace; }
+        .ribbon-controls { display: flex; align-items: center; gap: 8px; }
+        .ribbon-controls button { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 12px; border-radius: 2px; cursor: pointer; font-size: 12px; transition: 0.2s; display: flex; align-items: center; gap: 6px;}
+        .ribbon-controls button:hover { background: rgba(255,255,255,0.3); }
+
+        /* Toolbar */
+        .toolbar { background-color: var(--bg-panel); padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 15px; height: 32px; flex-shrink: 0; }
+        .btn-execute { background-color: var(--primary-brand); color: white; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 2px; min-width: 190px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-execute:hover { background-color: var(--primary-hover); }
+        .btn-execute:disabled { background-color: #c8c6c4; cursor: not-allowed; }
+        .btn-toggle { background-color: #fff; border: 1px solid var(--border-color); padding: 7px 12px; cursor: pointer; border-radius: 2px; font-size: 13px; color: var(--text-main); display: flex; align-items: center; gap: 6px; width: 140px; justify-content: center; }
+        .btn-toggle:hover { background-color: #f3f2f1; }
+        .btn-rollback { background-color: white; border: 1px solid var(--border-color); color: var(--warning-brand); padding: 7px 12px; cursor: pointer; border-radius: 2px; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px;}
+        .btn-rollback:hover:not(:disabled) { background-color: #fdf3f4; }
+        .btn-rollback:disabled { color: #c8c6c4; cursor: not-allowed; border-color: var(--border-color); }
+
+        /* Progress Bar */
+        .progress-container { flex-grow: 1; display: flex; flex-direction: column; gap: 4px; margin-left: 10px; }
+        .progress-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); font-family: 'Consolas', monospace;}
+        .progress-bar-bg { height: 6px; background-color: #edebe9; width: 100%; border-radius: 3px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background-color: var(--primary-brand); width: 0%; transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+
+        /* Table Area */
+        .table-container { flex-grow: 1; min-height: 0; overflow: hidden; background-color: var(--bg-panel); display: flex; flex-direction: column; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        thead { position: sticky; top: 0; background-color: var(--bg-main); box-shadow: 0 1px 0 var(--border-color); z-index: 10; }
+        th { padding: 8px 12px; font-size: 12px; color: var(--text-muted); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); text-transform: uppercase; }
+        td { padding: 8px 12px; font-size: 13px; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); font-family: 'Consolas', monospace; white-space: nowrap; }
+        tbody tr:hover { background-color: #f3f2f1; }
+        tr.completed td { color: #a19f9d; background-color: var(--row-completed); }
+        tr.active-row td { background-color: var(--row-active); font-weight: bold; border-left: 3px solid var(--primary-brand); }
+        
+        .status-badge { font-size: 11px; font-weight: 600; font-family: 'Segoe UI', sans-serif; padding: 2px 6px; border-radius: 2px; text-transform: uppercase;}
+        .status-completed { color: var(--status-done); background: #dff6dd; }
+        .status-pending { color: var(--status-pending); background: #fde7e9; }
+
+        /* Pagination Bar */
+        .pagination-bar { display: none; padding: 10px 20px; background: var(--bg-panel); border-top: 1px solid var(--border-color); align-items: center; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
+        .pagination-controls { display: flex; gap: 10px; align-items: center; }
+        .btn-page { background: white; border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 2px; cursor: pointer; font-size: 12px; color: var(--text-main); transition: 0.2s;}
+        .btn-page:hover:not(:disabled) { background: #f3f2f1; }
+        .btn-page:disabled { color: #c8c6c4; cursor: not-allowed; }
+
+        /* Tabs */
+        .tab-bar { background-color: #f3f2f1; border-top: 1px solid var(--border-color); display: flex; overflow-x: auto; padding: 4px 10px 0 10px; height: 32px; flex-shrink: 0;}
+        .tab { padding: 6px 16px; background-color: #e1dfdd; border: 1px solid var(--border-color); border-bottom: none; margin-right: 4px; border-radius: 4px 4px 0 0; cursor: pointer; font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; white-space: nowrap; transition: 0.1s;}
+        .tab.active { background-color: var(--bg-panel); color: var(--primary-brand); font-weight: bold; border-bottom: 1px solid var(--bg-panel); margin-bottom: -1px; }
+        .tab.sys-tab { background-color: #e6e0f8; color: var(--sys-log-brand); }
+        .tab.sys-tab.active { background-color: var(--bg-panel); border-top: 2px solid var(--sys-log-brand); }
+        .tab:hover:not(.active) { background-color: #d2d0ce; }
+        .tab-add { font-weight: bold; font-size: 14px; padding: 0 12px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center;}
+        .tab-add:hover { color: var(--primary-brand); }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal { background: white; padding: 24px; border-radius: 4px; width: 500px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .modal h2 { margin-top: 0; font-size: 18px; }
+        .row-group { display: flex; gap: 15px; }
+        .form-group { margin-bottom: 15px; flex: 1; }
+        .form-group label { display: block; font-size: 13px; margin-bottom: 5px; color: var(--text-muted); }
+        .form-group input, .form-group textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid var(--border-color); font-family: inherit; }
+        .form-group textarea { height: 120px; font-family: 'Consolas', monospace; font-size: 12px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn-modal { padding: 6px 16px; cursor: pointer; border: 1px solid var(--border-color); background: white; }
+        .btn-primary { background: var(--primary-brand); color: white; border: none; }
+    </style>
+</head>
+<body>
+
+    <!-- SVG Library (Invisible) -->
+    <svg style="display: none;">
+        <symbol id="icon-chart" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></symbol>
+        <symbol id="icon-lock" viewBox="0 0 24 24"><path d="M12 17a2 2 0 100-4 2 2 0 000 4z"/><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10z"/></symbol>
+        <symbol id="icon-download" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></symbol>
+        <symbol id="icon-upload" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></symbol>
+        <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
+        <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
+        <symbol id="icon-rewind" viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></symbol>
+        <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></symbol>
+        <symbol id="icon-clipboard" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></symbol>
+        <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
+    </svg>
+
+    <div class="ribbon">
+        <div class="ribbon-title">
+            Data Processing & Audit Center 
+            <span class="daily-volume" id="dailyVolume" title="Your total productivity today">Today's Volume: 0 txns</span>
+        </div>
+        <div class="ribbon-controls">
+            <span id="dateDisplay" style="margin-right: 15px; font-size: 12px; opacity: 0.8;"></span>
+            <button onclick="exportData()"><svg class="svg-icon"><use href="#icon-download"></use></svg> Export JSON</button>
+            <button onclick="document.getElementById('importFile').click()"><svg class="svg-icon"><use href="#icon-upload"></use></svg> Import JSON</button>
+            <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
+            <button onclick="deleteCurrentSheet()" style="background: rgba(216, 59, 1, 0.8);"><svg class="svg-icon"><use href="#icon-trash"></use></svg> Delete Sheet</button>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button class="btn-execute" id="btnExecute" onclick="processNext()"><svg class="svg-icon"><use href="#icon-play"></use></svg> Execute Next (Enter)</button>
+        <button class="btn-rollback" id="btnRollback" onclick="rollbackLast()"><svg class="svg-icon"><use href="#icon-rewind"></use></svg> Rollback</button>
+        <button class="btn-toggle" id="btnToggleView" onclick="toggleViewMode()"><svg class="svg-icon" id="toggleIcon"><use href="#icon-eye"></use></svg> <span id="toggleText">View Logs</span></button>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-labels">
+                <span id="statusLabel">Status: Ready</span>
+                <span id="progressCount">Cycle: 0 | 0 / 0</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container" id="tableContainer">
+        <!-- 主表格区 -->
+        <div style="flex-grow: 1; overflow: auto;">
+            <table id="dataTable">
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        
+        <!-- 底部分页区 (仅在 Log 模式激活) -->
+        <div class="pagination-bar" id="paginationBar">
+            <span id="pageInfo">Showing 1-100 of 500 records</span>
+            <div class="pagination-controls">
+                <button class="btn-page" id="btnPrevPage" onclick="changePage(-1)">Previous</button>
+                <span style="font-weight: bold;" id="pageIndicator">Page 1 / 5</span>
+                <button class="btn-page" id="btnNextPage" onclick="changePage(1)">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Dashboard Container -->
+    <div id="analyticsContainer" style="display: none; flex-grow: 1; padding: 20px; background: var(--bg-panel); flex-direction: column; gap: 15px; overflow-y: auto; min-height: 0;">
+        <div style="display: flex; gap: 15px; align-items: center; background: var(--bg-main); padding: 12px 20px; border-radius: 4px; border: 1px solid var(--border-color); flex-shrink: 0; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Date Range:</label>
+                <input type="date" id="chartStartDate" style="padding: 5px; border: 1px solid var(--border-color); border-radius: 2px;">
+                <span style="color: var(--text-muted);">to</span>
+                <input type="date" id="chartEndDate" style="padding: 5px; border: 1px solid var(--border-color); border-radius: 2px;">
+            </div>
+            <button onclick="updateAnalyticsChart()" class="btn-toggle" style="width: auto; padding: 5px 15px; background: var(--primary-brand); color: white; border: none;">Apply Range</button>
+        </div>
+        <div id="chartContainer" style="flex-grow: 1; min-height: 420px; border: 1px solid var(--border-color); border-radius: 4px; padding: 15px; background: white;"></div>
+    </div>
+
+    <div class="tab-bar">
+        <div id="tabsContainer" style="display: flex;"></div>
+        <div class="tab-add" onclick="openModal()" title="New Worksheet"><svg class="svg-icon"><use href="#icon-plus"></use></svg></div>
+    </div>
+
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal">
+            <h2>Create New Processing Sheet</h2>
+            <div class="form-group">
+                <label>Sheet Name</label>
+                <input type="text" id="sheetName" placeholder="e.g. Finance Reconciliation" value="Daily Routine">
+            </div>
+            <div class="row-group">
+                <div class="form-group">
+                    <label>Rows per Cycle</label>
+                    <input type="number" id="targetCount" min="1" value="15">
+                </div>
+                <div class="form-group">
+                    <label>Action Status Label</label>
+                    <input type="text" id="actionLabel" placeholder="e.g. AUDITED" value="EXECUTED">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Data Source Template (JSON Array)</label>
+                <textarea id="jsonData"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal" onclick="closeModal()">Cancel</button>
+                <button class="btn-modal btn-primary" onclick="createTask()">Create</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const STORAGE_KEY = 'enterprise_audit_v6';
+    const SYS_LOG_ID = 'SYS_MASTER_LOG';
+    const SYS_ANALYTICS_ID = 'SYS_ANALYTICS_DASHBOARD';
+    const LOGS_PER_PAGE = 100; // 分页常量
+    
+    let analyticsChartInstance = null;
+    
+    const DEFAULT_JSON = [
+        {"Txn_ID": "TX-9901", "Module": "CoreDB", "Verification": "Hash Match"},
+        {"Txn_ID": "TX-9902", "Module": "CoreDB", "Verification": "Hash Match"},
+        {"Txn_ID": "TX-9903", "Module": "Payment", "Verification": "Token Validate"}
+    ];
+
+    let appState = {
+        date: new Date().toLocaleDateString(),
+        activeId: null,
+        tasks: [],
+        globalLogs: []
+    };
+
+    let currentViewMode = 'DATA'; 
+    let currentPage = 1; // 当前页码状态
+
+    function init() {
+        const todayStr = new Date().toLocaleDateString();
+        document.getElementById('dateDisplay').innerText = `Session: ${todayStr}`;
+        document.getElementById('jsonData').value = JSON.stringify(DEFAULT_JSON, null, 2);
+
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try { appState = JSON.parse(saved); } catch (e) { console.error("Parse Error"); }
+            if (appState.date !== todayStr) {
+                appState.date = todayStr;
+                appState.tasks.forEach(t => { t.progress = 0; t.cycles = 0; });
+                saveData();
+            }
+        } else {
+            appState.tasks.push({
+                id: 'sheet_' + Date.now(),
+                name: 'Default Batch', targetCount: 15, progress: 0, cycles: 0,
+                actionLabel: 'EXECUTED', logs: [], dataTemplate: DEFAULT_JSON
+            });
+            appState.activeId = appState.tasks[0].id;
+            saveData();
+        }
+
+        if(!appState.globalLogs) appState.globalLogs = [];
+        appState.tasks.forEach(t => {
+            if(!t.logs) t.logs = [];
+            if(!t.actionLabel) t.actionLabel = 'EXECUTED';
+        });
+
+        renderApp();
+    }
+
+    function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); }
+    function getActiveTask() { return appState.tasks.find(t => t.id === appState.activeId); }
+    function getTodayVolume() {
+        const todayStr = new Date().toLocaleDateString();
+        return appState.globalLogs.filter(log => log.sysDate === todayStr).length;
+    }
+
+    // ==========================================
+    // UI Rendering
+    // ==========================================
+    function renderApp() {
+        renderTabs();
+        document.getElementById('dailyVolume').innerText = `Today's Volume: ${getTodayVolume()} txns`;
+        
+        const executeBtn = document.getElementById('btnExecute');
+        const rollbackBtn = document.getElementById('btnRollback');
+        const toggleBtn = document.getElementById('btnToggleView');
+        const progContainer = document.getElementById('progressContainer');
+        const paginationBar = document.getElementById('paginationBar');
+        const tableContainer = document.getElementById('tableContainer');
+        const analyticsContainer = document.getElementById('analyticsContainer');
+
+        if (appState.activeId === SYS_LOG_ID) {
+            tableContainer.style.display = 'flex';
+            analyticsContainer.style.display = 'none';
+            executeBtn.style.display = 'none'; rollbackBtn.style.display = 'none'; toggleBtn.style.display = 'none';
+            progContainer.style.opacity = '0';
+            paginationBar.style.display = 'flex';
+            renderLogsPaginated(appState.globalLogs, true);
+            return;
+        }
+
+        if (appState.activeId === SYS_ANALYTICS_ID) {
+            tableContainer.style.display = 'none';
+            analyticsContainer.style.display = 'flex';
+            executeBtn.style.display = 'none'; rollbackBtn.style.display = 'none'; toggleBtn.style.display = 'none';
+            progContainer.style.opacity = '0';
+            paginationBar.style.display = 'none';
+            setTimeout(initializeAnalytics, 50);
+            return;
+        }
+
+        tableContainer.style.display = 'flex';
+        analyticsContainer.style.display = 'none';
+
+        const activeTask = getActiveTask();
+        if (!activeTask) return;
+
+        executeBtn.style.display = 'flex'; rollbackBtn.style.display = 'flex'; toggleBtn.style.display = 'flex';
+        progContainer.style.opacity = '1';
+        rollbackBtn.disabled = activeTask.logs.length === 0;
+
+        const iconUse = document.querySelector('#toggleIcon use');
+        const btnText = document.getElementById('toggleText');
+        
+        if (currentViewMode === 'DATA') {
+            paginationBar.style.display = 'none';
+            iconUse.setAttribute('href', '#icon-eye');
+            btnText.innerText = 'View Logs';
+            renderTaskData(activeTask);
+        } else {
+            paginationBar.style.display = 'flex';
+            iconUse.setAttribute('href', '#icon-clipboard');
+            btnText.innerText = 'View Data';
+            renderLogsPaginated(activeTask.logs, false, activeTask.actionLabel);
+        }
+
+        updateDashboard(activeTask);
+    }
+
+    function renderTabs() {
+        const container = document.getElementById('tabsContainer');
+        container.innerHTML = '';
+        
+        const sysTab = document.createElement('div');
+        sysTab.className = `tab sys-tab ${appState.activeId === SYS_LOG_ID ? 'active' : ''}`;
+        sysTab.onclick = () => switchTab(SYS_LOG_ID);
+        sysTab.innerHTML = `<svg class="svg-icon"><use href="#icon-lock"></use></svg> <span>Master Audit Log</span>`;
+        container.appendChild(sysTab);
+
+        const analyticsTab = document.createElement('div');
+        analyticsTab.className = `tab sys-tab ${appState.activeId === SYS_ANALYTICS_ID ? 'active' : ''}`;
+        analyticsTab.onclick = () => switchTab(SYS_ANALYTICS_ID);
+        analyticsTab.style.backgroundColor = '#eaf5ff';
+        analyticsTab.style.color = 'var(--primary-brand)';
+        if (appState.activeId === SYS_ANALYTICS_ID) {
+            analyticsTab.style.borderTop = '2px solid var(--primary-brand)';
+            analyticsTab.style.backgroundColor = 'var(--bg-panel)';
+        }
+        analyticsTab.innerHTML = `<svg class="svg-icon"><use href="#icon-chart"></use></svg> <span>Analytics Hub</span>`;
+        container.appendChild(analyticsTab);
+
+        appState.tasks.forEach(task => {
+            const tab = document.createElement('div');
+            tab.className = `tab ${task.id === appState.activeId ? 'active' : ''}`;
+            tab.onclick = () => switchTab(task.id);
+            tab.innerHTML = `<span>${task.name} <small>(${task.cycles}+${task.progress}/${task.targetCount})</small></span>`;
+            container.appendChild(tab);
+        });
+    }
+
+    function renderTaskData(task) {
+        const thead = document.getElementById('tableHead');
+        const tbody = document.getElementById('tableBody');
+        if (!task.dataTemplate || task.dataTemplate.length === 0) return;
+
+        const keys = Object.keys(task.dataTemplate[0]);
+        let headerRow = '<tr><th>Row ID</th>';
+        keys.forEach(k => headerRow += `<th>${k}</th>`);
+        headerRow += '<th>Status</th></tr>';
+        thead.innerHTML = headerRow;
+        tbody.innerHTML = '';
+
+        const templateLength = task.dataTemplate.length;
+        for (let i = 0; i < task.targetCount; i++) {
+            const tr = document.createElement('tr');
+            const isCompleted = i < task.progress;
+            const isActive = i === task.progress;
+
+            if (isCompleted) tr.classList.add('completed');
+            if (isActive) { tr.classList.add('active-row'); tr.id = "activeRow"; }
+
+            const rowData = task.dataTemplate[i % templateLength];
+            let html = `<td>#${String(i + 1).padStart(3, '0')}</td>`;
+            keys.forEach(k => html += `<td>${rowData[k]}</td>`);
+
+            const statusBadge = isCompleted 
+                ? `<span class="status-badge status-completed">${task.actionLabel}</span>` 
+                : `<span class="status-badge status-pending">PENDING</span>`;
+            html += `<td>${statusBadge}</td>`;
+
+            tr.innerHTML = html;
+            tbody.appendChild(tr);
+        }
+        setTimeout(scrollToActive, 50);
+    }
+
+    // ==========================================
+    // Pagination Engine
+    // ==========================================
+    function renderLogsPaginated(logsArray, isGlobal, actionLabel = 'EXECUTED') {
+        const thead = document.getElementById('tableHead');
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        if (isGlobal) {
+            thead.innerHTML = '<tr><th>Date</th><th>Sys Timestamp</th><th>Target Worksheet</th><th>Cycle</th><th>Row ID</th></tr>';
+        } else {
+            thead.innerHTML = '<tr><th>Log Time</th><th>Cycle</th><th>Row Number</th><th>Action</th></tr>';
+        }
+
+        const totalLogs = logsArray.length;
+        const totalPages = Math.max(1, Math.ceil(totalLogs / LOGS_PER_PAGE));
+        
+        // 防呆逻辑：如果超出最大页码，自动重置回最后一页
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        // 倒序排列获取最新数据
+        const reversedLogs = [...logsArray].reverse();
+        const startIdx = (currentPage - 1) * LOGS_PER_PAGE;
+        const endIdx = Math.min(startIdx + LOGS_PER_PAGE, totalLogs);
+        
+        const pageData = reversedLogs.slice(startIdx, endIdx);
+
+        pageData.forEach(log => {
+            const tr = document.createElement('tr');
+            if (isGlobal) {
+                tr.style.color = 'var(--text-muted)';
+                tr.innerHTML = `<td>${log.sysDate}</td><td>${log.timestamp}</td><td><b>${log.sheet}</b></td>
+                                <td>Cycle ${log.cycle}</td><td>Row ${log.row}</td>`;
+            } else {
+                tr.innerHTML = `<td>${log.timestamp}</td><td>Cycle ${log.cycle}</td><td>Row ${log.row}</td>
+                                <td><span class="status-badge status-completed">${actionLabel}</span></td>`;
+            }
+            tbody.appendChild(tr);
+        });
+
+        // 更新分页 UI
+        document.getElementById('pageInfo').innerText = totalLogs === 0 ? 'No records found' : `Showing ${startIdx + 1}-${endIdx} of ${totalLogs} records`;
+        document.getElementById('pageIndicator').innerText = `Page ${currentPage} / ${totalPages}`;
+        document.getElementById('btnPrevPage').disabled = currentPage === 1;
+        document.getElementById('btnNextPage').disabled = currentPage === totalPages;
+    }
+
+    function changePage(delta) {
+        currentPage += delta;
+        renderApp();
+    }
+
+    function updateDashboard(task) {
+        const percent = (task.progress / task.targetCount) * 100;
+        document.getElementById('progressBar').style.width = `${percent}%`;
+        document.getElementById('progressCount').innerText = `${task.cycles} + ${task.progress}/${task.targetCount}`;
+        document.getElementById('btnExecute').disabled = false;
+    }
+
+    // ==========================================
+    // Actions Logic
+    // ==========================================
+    function processNext() {
+        const task = getActiveTask();
+        if (!task) return;
+
+        if (task.progress >= task.targetCount) { task.cycles++; task.progress = 1; } 
+        else { task.progress++; }
+
+        const logId = 'log_' + Date.now() + Math.floor(Math.random()*1000);
+        const logEntry = {
+            id: logId, sysDate: new Date().toLocaleDateString(),
+            timestamp: new Date().toLocaleString('en-US', { hour12: false }),
+            sheet: task.name, cycle: task.cycles + 1, row: task.progress
+        };
+
+        task.logs.push(logEntry); appState.globalLogs.push(logEntry);
+        
+        // 自动切回第一页以显示最新日志
+        if (currentViewMode === 'LOGS' || appState.activeId === SYS_LOG_ID) {
+            currentPage = 1;
+        }
+
+        saveData(); renderApp();
+    }
+
+    function rollbackLast() {
+        const task = getActiveTask();
+        if (!task || task.logs.length === 0) return;
+        
+        const lastLog = task.logs.pop(); 
+        appState.globalLogs = appState.globalLogs.filter(l => l.id !== lastLog.id);
+
+        if (task.progress === 1) {
+            if (task.cycles > 0) { task.cycles--; task.progress = task.targetCount; } 
+            else { task.progress = 0; }
+        } else if (task.progress > 0) {
+            task.progress--;
+        }
+
+        // 自动切回第一页
+        if (currentViewMode === 'LOGS' || appState.activeId === SYS_LOG_ID) currentPage = 1;
+
+        saveData(); renderApp();
+    }
+
+    function switchTab(taskId) {
+        if (appState.activeId !== taskId) {
+            appState.activeId = taskId;
+            currentViewMode = 'DATA'; 
+            currentPage = 1; // 重置页码
+            saveData(); renderApp();
+        }
+    }
+
+    // ==========================================
+    // Analytics & Trend Line Chart
+    // ==========================================
+    function parseLocalDate(dateStr) {
+        const parts = dateStr.split(/[-/]/);
+        if (parts.length === 3) {
+            if (parts[0].length === 4) {
+                return new Date(parts[0], parts[1] - 1, parts[2]);
+            } else {
+                const d = new Date(dateStr);
+                if (!isNaN(d.getTime())) return d;
+            }
+        }
+        return new Date(dateStr);
+    }
+
+    function formatDateToYYYYMMDD(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function initializeAnalytics() {
+        const startInput = document.getElementById('chartStartDate');
+        const endInput = document.getElementById('chartEndDate');
+        
+        if (!startInput.value || !endInput.value) {
+            const today = new Date();
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(today.getDate() - 7);
+            
+            startInput.value = formatDateToYYYYMMDD(sevenDaysAgo);
+            endInput.value = formatDateToYYYYMMDD(today);
+        }
+        
+        updateAnalyticsChart();
+    }
+
+    function updateAnalyticsChart() {
+        const chartDom = document.getElementById('chartContainer');
+        if (!chartDom) return;
+
+        if (analyticsChartInstance) {
+            analyticsChartInstance.dispose();
+        }
+        analyticsChartInstance = echarts.init(chartDom);
+
+        const startVal = document.getElementById('chartStartDate').value;
+        const endVal = document.getElementById('chartEndDate').value;
+
+        if (!startVal || !endVal) return;
+
+        const dateArray = [];
+        let current = new Date(startVal);
+        const endLimit = new Date(endVal);
+
+        while (current <= endLimit) {
+            dateArray.push(formatDateToYYYYMMDD(current));
+            current.setDate(current.getDate() + 1);
+        }
+
+        const logs = (appState.globalLogs || []).map(log => {
+            let parsedDate = parseLocalDate(log.sysDate);
+            if (isNaN(parsedDate.getTime())) parsedDate = new Date();
+            return { ...log, stdDate: formatDateToYYYYMMDD(parsedDate) };
+        });
+
+        const allSheets = Array.from(new Set([
+            ...appState.tasks.map(t => t.name),
+            ...logs.map(l => l.sheet)
+        ]));
+
+        const seriesData = {};
+        allSheets.forEach(sheet => {
+            seriesData[sheet] = dateArray.map(() => 0);
+        });
+        const totalSeries = dateArray.map(() => 0);
+
+        logs.forEach(log => {
+            const dateIdx = dateArray.indexOf(log.stdDate);
+            if (dateIdx !== -1) {
+                if (seriesData[log.sheet]) {
+                    seriesData[log.sheet][dateIdx]++;
+                }
+                totalSeries[dateIdx]++;
+            }
+        });
+
+        const echartsSeries = [];
+        const enterprisePalette = [
+            '#0f6cbd', '#107c41', '#d83b01', '#8764b8', '#0078d4', 
+            '#a80000', '#002050', '#008272', '#c83b01', '#10893e'
+        ];
+
+        allSheets.forEach((sheet, idx) => {
+            echartsSeries.push({
+                name: sheet,
+                type: 'line',
+                data: seriesData[sheet],
+                smooth: true,
+                symbolSize: 6,
+                lineStyle: { width: 2 },
+                itemStyle: { color: enterprisePalette[idx % enterprisePalette.length] }
+            });
+        });
+
+        echartsSeries.push({
+            name: 'Total Volume',
+            type: 'line',
+            data: totalSeries,
+            smooth: true,
+            symbolSize: 8,
+            lineStyle: { width: 3.5, type: 'dashed' },
+            itemStyle: { color: '#323130' }
+        });
+
+        const option = {
+            title: {
+                text: 'Daily Execution Statistics Trend Analysis',
+                left: 'left',
+                textStyle: { color: 'var(--text-main)', fontSize: 15, fontWeight: '600' }
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'cross', label: { backgroundColor: '#605e5c' } }
+            },
+            legend: {
+                bottom: 5,
+                type: 'scroll',
+                textStyle: { color: 'var(--text-muted)' }
+            },
+            grid: {
+                top: 60,
+                left: '3%',
+                right: '4%',
+                bottom: 80,
+                containLabel: true
+            },
+            toolbox: {
+                feature: {
+                    dataZoom: { yAxisIndex: 'none', title: { zoom: 'Zoom', back: 'Reset' } },
+                    restore: { title: 'Restore' },
+                    saveAsImage: { title: 'Save' }
+                },
+                right: 10,
+                top: 0
+            },
+            dataZoom: [
+                {
+                    type: 'inside',
+                    start: 0,
+                    end: 100
+                },
+                {
+                    type: 'slider',
+                    start: 0,
+                    end: 100,
+                    bottom: 35,
+                    height: 20
+                }
+            ],
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: dateArray,
+                axisLabel: { color: 'var(--text-muted)' },
+                axisLine: { lineStyle: { color: 'var(--border-color)' } }
+            },
+            yAxis: {
+                type: 'value',
+                minInterval: 1,
+                axisLabel: { color: 'var(--text-muted)' },
+                splitLine: { lineStyle: { type: 'dashed', color: 'var(--border-color)' } },
+                axisLine: { lineStyle: { color: 'var(--border-color)' } }
+            },
+            series: echartsSeries
+        };
+
+        analyticsChartInstance.setOption(option);
+    }
+
+    window.addEventListener('resize', function() {
+        if (analyticsChartInstance) {
+            analyticsChartInstance.resize();
+        }
+    });
+
+    function toggleViewMode() {
+        currentViewMode = currentViewMode === 'DATA' ? 'LOGS' : 'DATA';
+        currentPage = 1; // 切换视图时重置页码
+        renderApp();
+    }
+
+    function scrollToActive() {
+        const activeRow = document.getElementById('activeRow');
+        const container = document.getElementById('tableContainer').firstElementChild;
+        if (activeRow && container) {
+            container.scrollTo({ top: activeRow.offsetTop - 120, behavior: 'smooth' });
+        }
+    }
+
+    function deleteCurrentSheet() {
+        if (appState.activeId === SYS_LOG_ID) { alert("Security Policy: Cannot delete Master Audit Log."); return; }
+        const task = getActiveTask();
+        if (task && confirm(`Permanently delete worksheet "${task.name}"?`)) {
+            appState.tasks = appState.tasks.filter(t => t.id !== task.id);
+            appState.activeId = SYS_LOG_ID; 
+            currentPage = 1;
+            saveData(); renderApp();
+        }
+    }
+
+    // ==========================================
+    // JSON & Modal
+    // ==========================================
+    function exportData() {
+        const blob = new Blob([JSON.stringify(appState, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `Enterprise_Backup_${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (parsed && parsed.tasks) { appState = parsed; saveData(); init(); alert('Imported successfully.'); }
+            } catch (err) { alert('Invalid JSON.'); }
+        };
+        reader.readAsText(file); event.target.value = '';
+    }
+
+    function openModal() { document.getElementById('taskModal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('taskModal').style.display = 'none'; }
+
+    function createTask() {
+        const name = document.getElementById('sheetName').value.trim() || 'Untitled Batch';
+        const count = parseInt(document.getElementById('targetCount').value);
+        const actionLab = document.getElementById('actionLabel').value.trim().toUpperCase() || 'EXECUTED';
+        const jsonStr = document.getElementById('jsonData').value.trim();
+
+        if (isNaN(count) || count <= 0) { alert('Invalid Target Rows.'); return; }
+
+        let parsedData;
+        try {
+            parsedData = JSON.parse(jsonStr || JSON.stringify(DEFAULT_JSON));
+            if (!Array.isArray(parsedData) || parsedData.length===0) throw new Error();
+        } catch (e) { alert(`JSON Parsing Error. Must be an array of objects.`); return; }
+
+        const newTask = {
+            id: 'sheet_' + Date.now(), name: name, targetCount: count, progress: 0, cycles: 0, 
+            actionLabel: actionLab, logs: [], dataTemplate: parsedData
+        };
+
+        appState.tasks.push(newTask);
+        appState.activeId = newTask.id;
+        currentPage = 1; currentViewMode = 'DATA';
+        saveData(); closeModal(); renderApp();
+    }
+
+    document.addEventListener('keydown', function(e) {
+        const isInputActive = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+        if (e.key === 'Enter' && !isInputActive) {
+            if (document.getElementById('taskModal').style.display !== 'flex' && appState.activeId !== SYS_LOG_ID) {
+                if (!document.getElementById('btnExecute').disabled) processNext();
+            }
+        }
+        if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !isInputActive) {
+            e.preventDefault();
+            if (document.getElementById('taskModal').style.display !== 'flex' && appState.activeId !== SYS_LOG_ID) rollbackLast();
+        }
+    });
+
+    window.onload = init;
+</script>
+</body>
+</html>
