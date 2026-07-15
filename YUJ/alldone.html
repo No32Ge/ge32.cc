@@ -1,0 +1,3055 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SKU DONE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+    <style>
+/* 虚拟工作区内联编译解析: lilsku/lilsku/styles.css */
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    margin: 0;
+    background: #f8fafc;
+    color: #1e293b;
+    min-height: 100vh;
+}
+.app-wrapper { min-height: 100vh; }
+.app-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.tab-btn {
+    padding: 0.4rem 1rem;
+    border-radius: 0.5rem;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.15s;
+}
+.tab-btn:hover { background: #e2e8f0; }
+.tab-btn.active {
+    background: #ffffff;
+    color: #1e293b;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.page { display: none; }
+.page.active { display: block; }
+
+.white-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s;
+}
+.white-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+.field-label { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; }
+.field-hint { font-size: 0.65rem; color: #94a3b8; margin-top: 2px; min-height: 16px; }
+
+.input-white {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    color: #1e293b;
+    font-size: 0.85rem;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+}
+.input-white:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.input-white:disabled { background: #f1f5f9; color: #94a3b8; }
+.input-white option, .input-white optgroup { background: #fff; color: #1e293b; }
+
+.input-white-sm {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    color: #1e293b;
+    font-size: 0.8rem;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+}
+.input-white-sm:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+
+.btn-white {
+    padding: 0.45rem 1rem;
+    border-radius: 2rem;
+    font-weight: 500;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+}
+.btn-white:hover { background: #f1f5f9; border-color: #3b82f6; }
+.btn-white-sm { padding: 0.3rem 0.75rem; font-size: 0.75rem; border-radius: 1.5rem; }
+
+.btn-primary {
+    padding: 0.45rem 1rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    background: #3b82f6;
+    color: white;
+    border: none;
+}
+.btn-primary:hover { background: #2563eb; }
+.btn-primary-lg {
+    padding: 0.7rem 2rem;
+    font-size: 0.95rem;
+    border-radius: 2.5rem;
+    font-weight: 600;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s, transform 0.1s;
+}
+.btn-primary-lg:hover { background: #2563eb; transform: scale(1.02); }
+.btn-primary-lg:active { transform: scale(0.98); }
+
+.btn-accent {
+    padding: 0.45rem 1rem;
+    border-radius: 2rem;
+    font-weight: 500;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    background: #10b981;
+    color: white;
+    border: none;
+}
+.btn-accent:hover { background: #059669; }
+.btn-accent-sm { padding: 0.3rem 0.75rem; font-size: 0.75rem; border-radius: 1.5rem; background: #10b981; color: white; border: none; cursor: pointer; }
+
+.btn-warn { background: #f59e0b; color: white; border: none; }
+.btn-warn:hover { background: #d97706; }
+
+.btn-white:active, .btn-primary:active, .btn-accent:active { transform: scale(0.97); }
+button:disabled { opacity: 0.5; pointer-events: none; }
+
+.checkbox-white {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: #475569;
+    cursor: pointer;
+}
+.checkbox-white input[type="checkbox"] {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.25rem;
+    background: #fff;
+    position: relative;
+}
+.checkbox-white input[type="checkbox"]:checked { background: #3b82f6; border-color: #3b82f6; }
+.checkbox-white input[type="checkbox"]:checked::after {
+    content: "✓";
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.7rem;
+}
+
+.CodeMirror {
+    height: auto !important;
+    min-height: 100px;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+    background: #263238; /* material-darker base */
+}
+.log-area-white {
+    background: #f1f5f9;
+    border-radius: 0.6rem;
+    padding: 0.75rem;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #475569;
+}
+.log-entry { margin: 2px 0; }
+.log-entry.error { color: #dc2626; }
+.log-entry.success { color: #059669; }
+.log-entry.warning { color: #d97706; }
+
+.toggle-header { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 0.5rem; }
+.collapsed-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.expanded-content { max-height: 600px; overflow: hidden; transition: max-height 0.3s ease; }
+.expanded-content-mapping { max-height: 200px; overflow: hidden; transition: max-height 0.3s ease; }
+.expanded-content-color-enum { max-height: 350px; overflow: hidden; transition: max-height 0.3s ease; }
+.expanded-content-dedup { max-height: 700px; overflow: hidden; transition: max-height 0.3s ease; }
+.expanded-content-pricing { max-height: 800px; overflow: hidden; transition: max-height 0.3s ease; }
+
+
+.fullscreen-card {
+    position: fixed !important;
+    inset: 1.5rem !important;
+    z-index: 100 !important;
+    background: #ffffff !important;
+    border: 1px solid #3b82f6 !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    transition: all 0.3s ease;
+}
+.fullscreen-card .expanded-content,
+.fullscreen-card .expanded-content-mapping,
+.fullscreen-card .expanded-content-color-enum,
+.fullscreen-card .expanded-content-dedup,
+.fullscreen-card .expanded-content-pricing,
+
+.fullscreen-card .CodeMirror { height: 100% !important; }
+
+#mappingEditorContainer { height: 100px !important; overflow: hidden; }
+#mappingEditorContainer .CodeMirror { height: 100px !important; min-height: 100px; }
+#colorEnumEditorContainer { height: 220px !important; overflow: hidden; }
+#colorEnumEditorContainer .CodeMirror { height: 220px !important; min-height: 150px; }
+#codeEditorContainer { height: 420px; overflow: hidden; }
+#codeEditorContainer .CodeMirror { height: 420px !important; min-height: 100px; }
+#priceFormulaContainer { height: 260px; overflow: hidden; }
+#priceFormulaContainer .CodeMirror { height: 260px !important; min-height: 100px; }
+
+.ai-suggestion-item { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.5rem; padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; }
+.ai-modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+.ai-modal { background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1.5rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+.unmapped-tag { background: #fef3c7; color: #92400e; display: inline-block; margin: 3px 6px 3px 0; padding: 3px 8px; border-radius: 4px; font-size: 12px; border: 1px solid #fcd34d; }
+.dedup-stat { background: #f1f5f9; border-radius: 1.5rem; padding: 0.3rem 0.8rem; font-size: 0.7rem; color: #475569; border: 1px solid #e2e8f0; white-space: nowrap; }
+.toast-dedup { position: fixed; top:20px; right:20px; background: #1e293b; color: white; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem; z-index: 9999; animation: slideIn 0.3s ease, fadeOut 0.3s ease 1.8s forwards; }
+@keyframes slideIn { from { transform: translateX(100px); opacity:0; } to { transform: translateX(0); opacity:1; } }
+@keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+.hidden { display: none !important; }
+.dedup-ready-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; background: #94a3b8; }
+.dedup-ready-indicator.ready { background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.5); }
+.filter-condition-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.8rem;
+    padding: 0.8rem;
+}
+.filter-sku-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: #eef2ff;
+    border-radius: 2rem;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.filter-sku-chip:hover { background: #dbeafe; }
+.config-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 2rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+.config-default-check {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: #475569;
+    margin: 0;
+}
+.config-default-check input[type="checkbox"] {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+    <!-- 顶部导航 -->
+    <header class="app-header">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-layer-group text-blue-600 text-xl"></i>
+                <h1 class="text-lg font-bold text-gray-800">SKU DONE</h1>
+            </div>
+            <div class="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                <button id="tabMainBtn" class="tab-btn active"><i class="fa-solid fa-house"></i> 主页</button>
+                <button id="tabFilterBtn" class="tab-btn"><i class="fa-solid fa-filter"></i> 筛选</button>
+                <button id="tabConfigBtn" class="tab-btn"><i class="fa-solid fa-sliders"></i> 配置</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主页 -->
+    <div id="mainPage" class="page active max-w-4xl mx-auto px-4 py-6 space-y-6">
+        <!-- 文件上传卡片 -->
+        <div class="white-card p-5">
+            <h2 class="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-file-excel text-green-600"></i> 上传数据
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="field-label">📂 上传 Excel</label>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="input-white w-full mt-1">
+                </div>
+                <div>
+                    <label class="field-label">📄 工作表</label>
+                    <select id="sheetSelect" disabled class="input-white w-full mt-1"><option>— 请先上传 —</option></select>
+                </div>
+                <div class="flex items-end">
+                    <button id="loadSheetBtn" class="btn-white w-full"><i class="fa-solid fa-arrows-rotate"></i> 加载</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 核心列选择 -->
+        <div class="white-card p-5">
+            <h2 class="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-key text-blue-600"></i> 关键列
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="field-label">🔑 SKU 列</label>
+                    <input type="text" id="skuColSelect" class="input-white w-full mt-1" placeholder="输入或选择列名" list="skuColList" autocomplete="off" disabled>
+                    <datalist id="skuColList"></datalist>
+                </div>
+                <div>
+                    <label class="field-label">🔗 父SKU 列</label>
+                    <input type="text" id="parentColSelect" class="input-white w-full mt-1" placeholder="输入或选择列名" list="parentColList" autocomplete="off" disabled>
+                    <datalist id="parentColList"></datalist>
+                </div>
+            </div>
+        </div>
+
+        <!-- 运行与导出 -->
+        <div class="white-card p-5">
+            <div class="flex flex-wrap gap-3 items-center justify-between">
+                <button id="runProcessBtn" class="btn-primary-lg"><i class="fa-solid fa-play"></i> 执行变体组处理</button>
+                <div class="flex gap-2">
+                    <button id="exportResultBtn" class="btn-white"><i class="fa-solid fa-file-export"></i> 导出结果</button>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 items-center mt-3" id="quickActionsRow">
+                <button id="quickPriceBtn" class="btn-white" style="font-size:0.75rem; padding:0.3rem 0.8rem;"><i class="fa-solid fa-calculator"></i> 价格计算</button>
+                <button id="quickDedupBtn" class="btn-white" style="font-size:0.75rem; padding:0.3rem 0.8rem;"><i class="fa-solid fa-filter"></i> 执行去重</button>
+        
+                <button id="quickAiBtn" class="btn-accent-sm hidden"><i class="fa-solid fa-robot"></i> AI 颜色分类</button>
+            </div>
+            <div class="flex items-center gap-4 mt-3">
+                <label class="checkbox-white"><input type="checkbox" id="exportFullCheckbox" /> <span>导出全部列</span></label>
+                <label class="checkbox-white"><input type="checkbox" id="exportNewColsCheckbox" checked /> <span>导出生成列</span></label>
+                <span class="text-sm text-gray-500" id="dataStatus">⚡ 就绪</span>
+            </div>
+        </div>
+
+        <!-- 日志 -->
+        <div class="white-card p-5">
+            <h3 class="font-semibold text-gray-700 mb-2"><i class="fa-solid fa-terminal mr-2"></i>运行日志</h3>
+            <div id="logArea" class="log-area-white">等待操作...</div>
+        </div>
+    </div>
+
+    <!-- 筛选页 -->
+    <div id="filterPage" class="page max-w-5xl mx-auto px-4 py-6 space-y-6" style="display:none;">
+        <!-- 执行面板 -->
+        <div class="white-card p-5">
+            <div class="flex flex-wrap gap-3 items-center">
+                <button id="filterRunBtn" class="btn-primary"><i class="fa-solid fa-play"></i> 执行筛选</button>
+                <button id="filterCopyBtn" class="btn-white"><i class="fa-solid fa-copy"></i> 复制SKU</button>
+                <button id="filterSelectAllBtn" class="btn-white"><i class="fa-solid fa-check-double"></i> 全选</button>
+                <button id="filterDeleteBtn" class="btn-white" style="border-color:#f5b5b5; color:#b91c1c;"><i class="fa-solid fa-trash"></i> 删除选中</button>
+            </div>
+            <div class="mt-3 flex items-center gap-2">
+                <span class="text-sm text-gray-500">筛选结果：</span>
+                <span id="filterResultCount" class="text-sm font-medium">0 个SKU</span>
+            </div>
+            <div id="filterResultContainer" class="flex flex-wrap gap-2 mt-2 max-h-60 overflow-y-auto p-2 bg-gray-50 rounded-lg"></div>
+        </div>
+
+        <!-- 筛选配置管理（默认折叠） -->
+        <div class="white-card p-5" id="filterConfigCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="filterConfigToggleHeader">
+                <h3 class="text-base font-semibold text-gray-700 flex items-center gap-2">
+                    <i id="filterConfigToggleIcon" class="fa-solid fa-chevron-right text-gray-400"></i> 💾 筛选方案
+                </h3>
+            </div>
+            <div id="filterConfigCollapseWrapper" class="collapsed-content">
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="filterConfigNameInput" class="input-white-sm flex-1" placeholder="方案名称">
+                    <button id="filterSaveConfigBtn" class="btn-white"><i class="fa-solid fa-floppy-disk"></i> 保存</button>
+                </div>
+                <div id="filterConfigListContainer" class="space-y-1"></div>
+            </div>
+        </div>
+
+        <!-- 筛选条件组（添加按钮在顶部） -->
+        <div class="white-card p-5">
+            <h2 class="text-base font-semibold text-gray-700 mb-4"><i class="fa-solid fa-filter text-blue-600 mr-2"></i>SKU 筛选器</h2>
+            <p class="text-xs text-gray-500 mb-4">基于已加载数据，多条件筛选并批量删除行。请先在主页设置SKU列。</p>
+            <button id="filterAddConditionBtn" class="btn-white-sm mb-3"><i class="fa-solid fa-plus"></i> 添加条件</button>
+            <!-- 条件组 -->
+            <div id="filterConditionsContainer" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- 配置页 -->
+    <div id="configPage" class="page max-w-5xl mx-auto px-4 py-6 space-y-6" style="display:none;">
+        <!-- 方案管理 -->
+        <div class="white-card p-5">
+            <div class="flex flex-wrap justify-between items-center">
+                <h2 class="text-base font-semibold text-gray-700"><i class="fa-solid fa-folder-open mr-2"></i>方案管理</h2>
+                <div class="flex gap-2">
+                    <button id="saveConfigBtn" class="btn-white"><i class="fa-solid fa-floppy-disk"></i> 保存方案</button>
+                    <button id="exportConfigBtn" class="btn-white"><i class="fa-solid fa-download"></i> 导出</button>
+                    <button id="importConfigBtn" class="btn-white" onclick="document.getElementById('importConfigFile').click()"><i class="fa-solid fa-upload"></i> 导入</button>
+                    <input type="file" id="importConfigFile" accept=".json" class="hidden">
+                </div>
+            </div>
+            <div id="configListContainer" class="flex flex-wrap gap-2 mt-3"></div>
+        </div>
+
+        <!-- 列映射 -->
+        <div class="white-card p-5" id="mappingCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="mappingToggleHeader">
+                <h2 class="text-base font-semibold flex items-center gap-2">
+                    <i id="mappingToggleIcon" class="fa-solid fa-chevron-down text-gray-500"></i>
+                    <i class="fa-solid fa-map-pin text-cyan-600 mr-2"></i> 列映射 (JSON)
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="mappingFullscreenBtn" class="btn-white-sm" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetMappingBtn" class="btn-white-sm"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                </div>
+            </div>
+            <div id="mappingCollapseWrapper" class="expanded-content-mapping">
+                <div id="mappingEditorContainer"></div>
+            </div>
+        </div>
+
+        <!-- 枚举配置 (JSON) -->
+        <div class="white-card p-5" id="colorEnumCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="colorEnumToggleHeader">
+                <h2 class="text-base font-semibold flex items-center gap-2">
+                    <i id="colorEnumToggleIcon" class="fa-solid fa-chevron-down text-gray-500"></i>
+                    <i class="fa-solid fa-palette text-purple-600 mr-2"></i> 枚举配置 (JSON)
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="colorEnumFullscreenBtn" class="btn-white-sm" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetColorEnumBtn" class="btn-white-sm"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                    <button id="aiClassifyBtn" class="btn-accent-sm"><i class="fa-solid fa-robot"></i> AI 分类</button>
+                </div>
+            </div>
+            <div id="colorEnumCollapseWrapper" class="expanded-content-color-enum">
+                <div id="colorEnumEditorContainer"></div>
+                <div id="colorUnmappedMini" class="mt-2 text-xs text-gray-500 hidden"></div>
+            </div>
+            <!-- 归类执行区域 -->
+            <div class="mt-3 border-t border-gray-200 pt-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="field-label">📥 源数据列</label>
+                        <input type="text" id="classifySourceCol" class="input-white-sm mt-1" placeholder="输入或选择列名" list="classifySourceColList" autocomplete="off">
+                        <datalist id="classifySourceColList"></datalist>
+                    </div>
+                    <div>
+                        <label class="field-label">🆕 生成名称</label>
+                        <input type="text" id="classifyOutputCol" class="input-white-sm mt-1" placeholder="例如：Color Classification" value="Color Classification">
+                    </div>
+                </div>
+                <button id="classifyRunBtn" class="btn-accent"><i class="fa-solid fa-play"></i> 执行归类</button>
+            </div>
+            <div class="mt-3 border-t border-gray-200 pt-3">
+                <div class="toggle-header text-xs text-gray-500" id="aiSettingsToggle">
+                    <i id="aiSettingsIcon" class="fa-solid fa-chevron-right text-gray-400"></i>
+                    <span>🤖 AI 配置 (DeepSeek API)</span>
+                </div>
+                <div id="aiSettingsContent" class="collapsed-content space-y-2 mt-2">
+                    <input id="aiApiKey" type="password" class="input-white w-full" placeholder="API密钥 sk-...">
+                    <select id="aiModel" class="input-white w-full">
+                        <option value="deepseek-chat">deepseek-chat</option>
+                        <option value="deepseek-reasoner">deepseek-reasoner</option>
+                    </select>
+                    <textarea id="aiPrompt" class="input-white w-full h-20 resize-y text-xs" placeholder="系统提示词..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 处理函数 -->
+        <div class="white-card p-5" id="codeCard">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="codeToggleHeader">
+                <h2 class="text-base font-semibold flex items-center gap-2">
+                    <i id="codeToggleIcon" class="fa-solid fa-chevron-down text-gray-500"></i>
+                    <i class="fa-solid fa-code text-purple-600 mr-2"></i> 处理函数
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="codeFullscreenBtn" class="btn-white-sm" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="resetCodeBtn" class="btn-white-sm"><i class="fa-solid fa-arrow-rotate-left"></i> 默认</button>
+                </div>
+            </div>
+            <div id="codeCollapseWrapper" class="expanded-content">
+                <div id="codeEditorContainer"></div>
+            </div>
+        </div>
+
+        <!-- 价格计算器 -->
+        <div class="white-card p-5" id="priceCard" style="border-left: 4px solid #3b82f6;">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="priceToggleHeader">
+                <h2 class="text-base font-semibold flex items-center gap-2">
+                    <i id="priceToggleIcon" class="fa-solid fa-chevron-down text-gray-500"></i>
+                    <i class="fa-solid fa-calculator text-blue-600 mr-2"></i> 价格计算器
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="priceFullscreenBtn" class="btn-white-sm" title="全屏编辑"><i class="fa-solid fa-expand"></i></button>
+                    <button id="priceResetFieldsBtn" class="btn-white-sm"><i class="fa-solid fa-arrow-rotate-left"></i> 重置字段</button>
+                    <button id="priceResetFormulaBtn" class="btn-white-sm"><i class="fa-solid fa-code-branch"></i> 重置公式</button>
+                </div>
+            </div>
+            <div id="priceCollapseWrapper" class="expanded-content-pricing">
+                <p class="text-xs text-gray-500 mb-4">配置列、汇率与公式，处理后方可执行。</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                    <div><label class="field-label">💱 美元汇率</label><input type="number" id="priceRateInput" class="input-white-sm mt-1" value="7.2" step="0.01"></div>
+                    <div><label class="field-label">💰 SKU价格 (￥)</label><input type="text" id="priceSkuColSelect" class="input-white-sm mt-1" placeholder="输入或选择" list="priceSkuColList" autocomplete="off"><datalist id="priceSkuColList"></datalist></div>
+                    <div><label class="field-label">⚖️ 重量 (g)</label><input type="text" id="priceWeightColSelect" class="input-white-sm mt-1" placeholder="输入或选择" list="priceWeightColList" autocomplete="off"><datalist id="priceWeightColList"></datalist></div>
+                    <div><label class="field-label">📦 泡重 (选填)</label><input type="text" id="priceVolWeightColSelect" class="input-white-sm mt-1" placeholder="输入或选择" list="priceVolWeightColList" autocomplete="off"><datalist id="priceVolWeightColList"></datalist></div>
+                </div>
+                <div class="mb-3">
+                    <p class="text-xs text-gray-500 mb-1">自定义公式</p>
+                    <div id="priceFormulaContainer"></div>
+                </div>
+                <div class="flex flex-wrap gap-2 items-center mb-3">
+                    <button id="priceRunBtn" class="btn-primary"><i class="fa-solid fa-play"></i> 执行价格计算</button>
+                    <span id="priceStatsArea" class="flex flex-wrap gap-2"></span>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- 数据去重 -->
+        <div class="white-card p-5" id="colorDedupCard" style="border-left: 4px solid #10b981;">
+            <div class="flex justify-between items-center mb-3 toggle-header" id="dedupToggleHeader">
+                <h2 class="text-base font-semibold flex items-center gap-2">
+                    <i id="dedupToggleIcon" class="fa-solid fa-chevron-down text-gray-500"></i>
+                    <i class="fa-solid fa-filter text-green-600 mr-2"></i> 数据去重
+                    <span id="dedupReadyBadge" class="dedup-stat"><span class="dedup-ready-indicator" id="dedupReadyDot"></span><span id="dedupReadyText">等待处理</span></span>
+                </h2>
+                <div class="flex gap-2" onclick="event.stopPropagation()">
+                    <button id="dedupResetFieldsBtn" class="btn-white-sm"><i class="fa-solid fa-arrow-rotate-left"></i> 默认字段</button>
+                </div>
+            </div>
+            <div id="dedupCollapseWrapper" class="expanded-content-dedup">
+                <p class="text-xs text-gray-500 mb-4">对相同父类（分组列）下的输入字段值进行去重，生成唯一后缀。</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                    <div><label class="field-label">📥 输入字段</label><input type="text" id="dedupInputField" class="input-white-sm mt-1" list="dedupColumnsList" autocomplete="off"><div class="field-hint" id="dedupInputHint"></div></div>
+                    <div><label class="field-label">🔗 父类分组列</label><input type="text" id="dedupGroupField" class="input-white-sm mt-1" list="dedupColumnsList" autocomplete="off"><div class="field-hint" id="dedupGroupHint"></div></div>
+                    <div><label class="field-label">🆕 输出列名</label><input type="text" id="dedupOutputField" class="input-white-sm mt-1" placeholder="去重后值"><div class="field-hint" id="dedupOutputHint"></div></div>
+                    <div>
+                        <label class="field-label">🔡 去重方案</label>
+                        <select id="dedupMode" class="input-white-sm mt-1">
+                            <option value="letter">加字母 (A, B, C...)</option>
+                            <option value="number">加数字 (1, 2, 3...)</option>
+                        </select>
+                    </div>
+                </div>
+                <datalist id="dedupColumnsList"></datalist>
+                <div class="flex flex-wrap gap-2 items-center mb-3">
+                    <button id="dedupRunBtn" class="btn-accent" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> 执行去重</button>
+                    <span id="dedupStatsArea" class="flex flex-wrap gap-2"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="aiModalContainer"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://www.ge32.cc/YUJ/map.js"></script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/config.js
+
+// ============== 配置常量（挂载到 window） ==============
+(function() {
+    const LK_COLOR_ENUM = 'color_enum_config_fusion';
+    const LK_AI_KEY = 'color_ai_api_key_fusion';
+    const LK_AI_MODEL = 'color_ai_model_fusion';
+    const LK_AI_PROMPT = 'color_ai_prompt_fusion';
+    const LK_COLOR_COLLAPSED = 'color_enum_collapsed_fusion';
+    const LK_AI_COLLAPSED = 'color_ai_collapsed_fusion';
+    const LK_MAPPING_COLLAPSED = 'mapping_editor_collapsed_fusion';
+    const LK_CODE_COLLAPSED = 'code_editor_collapsed_fusion';
+    const LK_CONFIGS = 'variant_gen_configs_fusion_v3';
+    const LK_DEDUP_COLLAPSED = 'color_dedup_collapsed_fusion';
+    const LK_DEDUP_FIELDS = 'color_dedup_fields_fusion';
+
+    const DEFAULT_COLOR_ENUM = {
+        "Green": ["mint green", "army green", "light green", "dark green", "grean", "greem", "gteen",
+            "green ", " green"
+        ],
+        "Gold": ["rose gold", "rosegold", "rose-gold"],
+        "Blue": ["sky blue", "light blue", "light bule", "light b lue", "dark blue", "navy", "navy blue",
+            "bleu", "bule", "bluw"
+        ],
+        "Brown": ["coffee", "khaki", "brown", "browm", "broun", "brawn"],
+        "Red": ["watermelon red", "watermellon red", "redd", "red ", "wine", "Wine"],
+        "Silver": ["sliver", "silvery", "silver,clear", "silverclear", "siver", "silvre"],
+        "Gray": ["dark gray", "dark grey", "grey", "gray", "graay", "graey"],
+        "Clear": ["transparent", "transparant", "transperent", "transperant", "clear", "clearr", "clera"],
+        "Black": ["black", "blak", "blck", "balck"],
+        "White": ["white", "whit", "wite", "whtie", "while"],
+        "Yellow": ["yellow", "yello", "yelow"],
+        "Orange": ["orange", "orenge", "orng"],
+        "Pink": ["pink", "pinc", "peenk", "champagne", "Champagne"],
+        "Purple": ["purple", "purpel", "purpple", "violet"],
+        "Multicolor": ["color", "colorful", "mul", "as show", "as shown"]
+    };
+    const DEFAULT_AI_PROMPT =
+        `你是一个颜色分类专家。请将以下颜色名称映射到标准类别。\n标准类别包括: Green, Gold, Blue, Brown, Red, Silver, Gray, Clear, Black, White, Yellow, Orange, Pink, Purple, Beige, Multicolor 等。\n规则:\n- 拼写错误应映射到正确颜色 (如 "bule" -> "Blue")\n- 包含多种颜色的名称 (如 "Blue,Red") 应归类为 "Multicolor"\n- 缩写需展开 (如 "GN" -> "Green")\n- 材质/纹理描述 (如 "wood", "camouflage") 归入合理颜色或 Multicolor\n- 无法判断的归入 "Multicolor"\n请返回JSON数组，格式: [{"key":"标准类别","value":"原始颜色名称"}, ...] 只返回JSON，不要其他内容。`;
+
+    const DEFAULT_DEDUP_FIELDS = {
+        inputField: '',
+        groupField: 'Variant Group ID',
+        outputField: '去重后值',
+        mode: 'letter'
+    };
+
+    const DEFAULT_MAPPING = JSON.stringify({
+        weight: '重量(g)',
+        length: '长',
+        width: '宽',
+        height: '高',
+        material: '面料成分',
+        color: '亚马逊美国站颜色'
+    }, null, 2);
+
+    const LK_PRICE_RATE = 'ge32_exchange_rate';
+    const LK_PRICE_FORMULA = 'ge32_formula_code';
+    const LK_PRICE_COLLAPSED = 'ge32_formula_collapsed';
+    const LK_PRICE_FIELDS = 'ge32_price_fields';
+    const LK_LAST_PRICE_COLS = 'last_price_cols';
+
+    const DEFAULT_PRICE_RATE = 7.2;
+
+    const DEFAULT_PRICE_FORMULA = [
+        'function compute(row, shippingRates, exchangeRate) {',
+        '    const PROFIT_FACTOR_LOW  = 0.5;',
+        '    const PROFIT_FACTOR_MID  = 0.52;',
+        '    const PROFIT_FACTOR_HIGH = 0.65;',
+        '',
+        '    function getWeightBucket(w) {',
+        '        return Math.round((w + 4.99) / 10) * 10;',
+        '    }',
+        '',
+        '    function getShippingCost(w) {',
+        '        const bucket = getWeightBucket(w);',
+        '        return shippingRates.get(bucket) ?? 999;',
+        '    }',
+        '',
+        '    const weight = parseFloat(row.weight) || 0;',
+        '    const volWeight = parseFloat(row.volWeight) || 0;',
+        '    const skuPrice = parseFloat(row.skuPrice) || 0;',
+        '',
+        '    const actualWeight = Math.max(weight, volWeight);',
+        '    const shippingCNY = getShippingCost(actualWeight);',
+        '    const totalCNY = skuPrice + shippingCNY;',
+        '    const usdBase = totalCNY / exchangeRate;',
+        '',
+        '    let profitFactor = usdBase <= 5 ? PROFIT_FACTOR_LOW',
+        '                     : usdBase <= 15 ? PROFIT_FACTOR_MID',
+        '                     : PROFIT_FACTOR_HIGH;',
+        '',
+        '    const finalPrice = usdBase / profitFactor;',
+        '',
+        '    return {',
+        '        actualWeight,',
+        '        shippingCNY,',
+        '        totalCNY,',
+        '        finalUsdPrice: Math.round(finalPrice * 100) / 100',
+        '    };',
+        '}'
+    ].join('\n');
+
+    const DEFAULT_PRICE_FIELDS = { skuPriceCol: '', weightCol: '', volWeightCol: '' };
+
+    const DEFAULT_CODE = [
+        '// ═══════════════════════════════════════════════════════════════',
+        '// 变体组生成器 · 处理函数说明书（自动列识别 + 材质提取 + 颜色标准化）',
+        '// ═══════════════════════════════════════════════════════════════',
+        '// ',
+        '// 📥 可用参数：',
+        '//    rows        - 原始数据数组',
+        '//    columns     - 列映射对象（如 { weight:"重量(g)", color:"颜色" }）',
+        '//    skuCol      - SKU 列名',
+        '//    parentCol   - 父SKU 列名',
+        '//',
+        '// 📤 返回值：对象数组，每个对象代表一行。',
+        '//    新增字段会被自动识别并包含在"导出生成列"中。',
+        '// ═══════════════════════════════════════════════════════════════',
+        'return (function(rows, columns, skuCol, parentCol) {',
+        '    ',
+        '    // ─────────────────── 0. 工具函数 ───────────────────',
+        '    const toNum = v => isNaN(parseFloat(v)) ? NaN : parseFloat(v);',
+        '    ',
+        '    function extractFirstMaterial(raw) {',
+        '        if (!raw || typeof raw !== "string") return "";',
+        '        let trimmed = raw.trim();',
+        '        if (trimmed === "") return "";',
+        '        let splitBySeparators = (text) => {',
+        '            let normalized = text.replace(/，/g, ",").replace(/﹢/g, "+").replace(/＆/g, "&");',
+        '            let parts = normalized.split(/\\s*[,+&\\/|]\\s*|\\s+and\\s+|\\s*\\+\\s*/);',
+        '            let filtered = parts.filter(p => p.trim().length > 0);',
+        '            return filtered.length ? filtered : [text];',
+        '        };',
+        '        let segments = splitBySeparators(trimmed);',
+        '        let firstSegment = segments[0] ? segments[0].trim() : trimmed;',
+        '        let cleaned = firstSegment.replace(/\\d+(?:\\.\\d+)?%/g, "");',
+        '        const materialWordRegex = /[A-Za-z\\u00C0-\\u024F\\u0400-\\u04FF]+(?:[\\s-][A-Za-z\\u00C0-\\u024F\\u0400-\\u04FF]+)*/;',
+        '        let match = cleaned.match(materialWordRegex);',
+        '        if (match && match[0]) {',
+        '            cleaned = match[0].trim();',
+        '        } else {',
+        '            let onlyAlpha = cleaned.replace(/[^\\p{L}\\s-]/gu, "").trim();',
+        '            cleaned = onlyAlpha || firstSegment.replace(/[\\d%]/g, "").replace(/[^\\w\\s\\u4e00-\\u9fa5-]/g, "").trim() || firstSegment.replace(/[^\\p{L}]/gu, "").trim() || firstSegment;',
+        '        }',
+        '        cleaned = cleaned.replace(/\\s+/g, " ").trim();',
+        '        return cleaned || "未识别";',
+        '    }',
+        '    ',
+        '    // ─────────── 颜色标准化 ───────────',
+        '    let colorExactMap = new Map();',
+        '    const colorFuzzyRules = [',
+        '        { regex: /^[a-z]$/i, target: "Multicolor" },',
+        '        { regex: /^multiple[a-z]*$/i, target: "Multicolor" },',
+        '        { regex: /^multicolour[a-z]*$/i, target: "Multicolor" },',
+        '        { regex: /^multicolor[a-z]*$/i, target: "Multicolor" },',
+        '        { regex: /^mixed\\s*colou?r[a-z]*$/i, target: "Multicolor" },',
+        '        { regex: /^mixedcolou?r[a-z]*$/i, target: "Multicolor" },',
+        '        { regex: /^mixed\\s+colou?rs?[a-z]*$/i, target: "Multicolor" },',
+        '        { regex: /^mixed[\\s\\-_]?colou?r[a-z]*$/i, target: "Multicolor" },',
+        '        { regex: /^mixed\\s+colors?[a-z]*$/i, target: "Multicolor" }',
+        '    ];',
+        '    try {',
+        '        const colorEnumConfig = JSON.parse(localStorage.getItem("color_enum_config_fusion") || "{}");',
+        '        for (const [category, aliases] of Object.entries(colorEnumConfig)) {',
+        '            if (Array.isArray(aliases)) {',
+        '                aliases.forEach(alias => {',
+        '                    const key = String(alias).trim().toLowerCase();',
+        '                    if (key) colorExactMap.set(key, category);',
+        '                });',
+        '            }',
+        '        }',
+        '    } catch(e) { /* 颜色配置读取失败，使用空映射 */ }',
+        '    ',
+        '    function normalizeColor(raw) {',
+        '        if (!raw || typeof raw !== "string") return "";',
+        '        const trimmed = raw.trim();',
+        '        if (trimmed === "") return "";',
+        '        const norm = trimmed.toLowerCase();',
+        '        const mapped = colorExactMap.get(norm);',
+        '        if (mapped) return mapped;',
+        '        for (const rule of colorFuzzyRules) {',
+        '            if (rule.regex.test(norm)) return rule.target;',
+        '        }',
+        '        return trimmed;',
+        '    }',
+        '    // ─────────── 颜色标准化结束 ───────────',
+        '    ',
+        '    // ─────────────────── 1. 常量定义 ───────────────────',
+        '    const GRAM_TO_LB = 0.00220462;',
+        '    const CM_TO_INCH = 0.393701;',
+        '    ',
+        '    // ─────────────────── 2. 数据分组 ───────────────────',
+        '    const parentMap = new Map();',
+        '    const groupInfo = new Map();',
+        '    const tempRows = [];',
+        '    ',
+        '    for (let i = 0; i < rows.length; i++) {',
+        '        const r = rows[i];',
+        '        const sku = String(r[skuCol] || "").trim();',
+        '        const parent = String(r[parentCol] || "").trim();',
+        '        ',
+        '        let groupId = parent ? (parentMap.has(parent) ? parentMap.get(parent) : sku) : sku;',
+        '        if (parent && !parentMap.has(parent)) parentMap.set(parent, groupId);',
+        '        ',
+        '        const weightVal = r[columns.weight] !== undefined ? r[columns.weight] : "";',
+        '        const net = toNum(weightVal) ? (toNum(weightVal) * GRAM_TO_LB).toFixed(2) : "";',
+        '        const lengthVal = r[columns.length] !== undefined ? r[columns.length] : "";',
+        '        const l = toNum(lengthVal) ? (toNum(lengthVal) * CM_TO_INCH).toFixed(2) : "";',
+        '        const widthVal = r[columns.width] !== undefined ? r[columns.width] : "";',
+        '        const w = toNum(widthVal) ? (toNum(widthVal) * CM_TO_INCH).toFixed(2) : "";',
+        '        const heightVal = r[columns.height] !== undefined ? r[columns.height] : "";',
+        '        const h = toNum(heightVal) ? (toNum(heightVal) * CM_TO_INCH).toFixed(2) : "";',
+        '        ',
+        '        let materialClass = "";',
+        '        if (columns.material) {',
+        '            const materialRaw = String(r[columns.material] || "").trim();',
+        '            materialClass = materialRaw ? extractFirstMaterial(materialRaw) : "";',
+        '        }',
+        '        ',
+        '        let colorClass = "";',
+        '        if (columns.color) {',
+        '            const colorRaw = String(r[columns.color] || "").trim();',
+        '            colorClass = colorRaw ? normalizeColor(colorRaw) : "";',
+        '        }',
+        '        ',
+        '        tempRows.push({',
+        '            ...r,',
+        '            _groupId: groupId,',
+        '            _net: net,',
+        '            _l: l,',
+        '            _w: w,',
+        '            _h: h,',
+        '            _materialClass: materialClass,',
+        '            _colorClass: colorClass',
+        '        });',
+        '        ',
+        '        if (!groupInfo.has(groupId)) groupInfo.set(groupId, { indices: [] });',
+        '        groupInfo.get(groupId).indices.push(i);',
+        '    }',
+        '    ',
+        '    // ─────────────────── 3. 确定主变体 ───────────────────',
+        '    for (let [gid, info] of groupInfo) {',
+        '        const idxs = info.indices;',
+        '        if (idxs.length === 1) {',
+        '            info.primaryIdx = 0;',
+        '        } else {',
+        '            info.primaryIdx = 1 + Math.floor(Math.random() * (idxs.length - 1));',
+        '        }',
+        '    }',
+        '    ',
+        '    // ─────────────────── 4. 构建最终结果（包含所有生成列）───────────────────',
+        '    return tempRows.map((t, i) => {',
+        '        const info = groupInfo.get(t._groupId);',
+        '        const pos = info.indices.indexOf(i);',
+        '        return {',
+        '            ...t,',
+        '            "Variant Group ID": t._groupId,',
+        '            "Is Primary Variant": (pos === info.primaryIdx) ? "Yes" : "No",',
+        '            netContentStatement: t._net,',
+        '            assembledProductLength: t._l,',
+        '            assembledProductWidth: t._w,',
+        '            assembledProductHeight: t._h,',
+        '            "Material Classification": t._materialClass,',
+        '            "Color Classification": t._colorClass',
+        '        };',
+        '    });',
+        '})(rows, columns, skuCol, parentCol);',
+        '// ═══════════════════════════════════════════════════════════════'
+    ].join('\n');
+
+    window.LK_COLOR_ENUM = LK_COLOR_ENUM;
+    window.LK_AI_KEY = LK_AI_KEY;
+    window.LK_AI_MODEL = LK_AI_MODEL;
+    window.LK_AI_PROMPT = LK_AI_PROMPT;
+    window.LK_COLOR_COLLAPSED = LK_COLOR_COLLAPSED;
+    window.LK_AI_COLLAPSED = LK_AI_COLLAPSED;
+    window.LK_MAPPING_COLLAPSED = LK_MAPPING_COLLAPSED;
+    window.LK_CODE_COLLAPSED = LK_CODE_COLLAPSED;
+    window.LK_CONFIGS = LK_CONFIGS;
+    window.LK_DEDUP_COLLAPSED = LK_DEDUP_COLLAPSED;
+    window.LK_DEDUP_FIELDS = LK_DEDUP_FIELDS;
+
+    window.LK_PRICE_RATE = LK_PRICE_RATE;
+    window.LK_PRICE_FORMULA = LK_PRICE_FORMULA;
+    window.LK_PRICE_COLLAPSED = LK_PRICE_COLLAPSED;
+    window.LK_PRICE_FIELDS = LK_PRICE_FIELDS;
+    window.LK_LAST_PRICE_COLS = LK_LAST_PRICE_COLS;
+
+    window.DEFAULT_COLOR_ENUM = DEFAULT_COLOR_ENUM;
+    window.DEFAULT_AI_PROMPT = DEFAULT_AI_PROMPT;
+    window.DEFAULT_DEDUP_FIELDS = DEFAULT_DEDUP_FIELDS;
+    window.DEFAULT_MAPPING = DEFAULT_MAPPING;
+    window.DEFAULT_CODE = DEFAULT_CODE;
+    window.DEFAULT_PRICE_RATE = DEFAULT_PRICE_RATE;
+    window.DEFAULT_PRICE_FORMULA = DEFAULT_PRICE_FORMULA;
+    window.DEFAULT_PRICE_FIELDS = DEFAULT_PRICE_FIELDS;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/utils.js
+
+// ============== 工具函数（挂载到 window） ==============
+(function() {
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s || '').replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+
+    function lsGet(key, def) {
+        try {
+            const v = localStorage.getItem(key);
+            return v !== null ? JSON.parse(v) : def;
+        } catch {
+            return def;
+        }
+    }
+
+    function lsSet(key, val) {
+        try {
+            localStorage.setItem(key, JSON.stringify(val));
+        } catch {}
+    }
+
+    function showToastDedup(msg) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-dedup';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2200);
+    }
+
+    function log(msg, type = 'info') {
+        const logArea = window.logArea;
+        if (!logArea) return;
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        logArea.appendChild(entry);
+        logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    function columnLetter(index) {
+        let dividend = index + 1,
+            result = '';
+        while (dividend > 0) {
+            let modulo = (dividend - 1) % 26;
+            result = String.fromCharCode(65 + modulo) + result;
+            dividend = Math.floor((dividend - 1) / 26);
+        }
+        return result;
+    }
+
+    function createStars() {
+        // 星空特效已移除以优化性能
+    }
+
+    window.$ = $;
+    window.esc = esc;
+    window.lsGet = lsGet;
+    window.lsSet = lsSet;
+    window.showToastDedup = showToastDedup;
+    window.log = log;
+    window.columnLetter = columnLetter;
+    window.createStars = createStars;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/state.js
+
+// ============== 全局状态与 DOM 引用（挂载到 window） ==============
+(function() {
+    // 数据状态
+    window.workbook = null;
+    window.currentSheetName = '';
+    window.rawDataRows = [];
+    window.allColumns = [];
+    window.processedData = [];
+
+    // 编辑器实例
+    window.codeEditor = null;
+    window.mappingEditor = null;
+    window.colorEnumEditor = null;
+
+    // 上次去重添加的列名
+    window.lastDedupColName = '';
+
+    // 当前配置
+    window.currentConfig = {
+        name: '默认方案',
+        isDefault: false,
+        mapping: window.DEFAULT_MAPPING,
+        code: window.DEFAULT_CODE,
+        colorEnum: JSON.stringify(window.DEFAULT_COLOR_ENUM, null, 2),
+        skuColumn: '',
+        parentSkuColumn: ''
+    };
+
+    // DOM 元素引用（body 底部加载，此时 DOM 已存在）
+    const $ = window.$;
+    window.fileInput = $('fileInput');
+    window.sheetSelect = $('sheetSelect');
+    window.loadSheetBtn = $('loadSheetBtn');
+    window.skuColSelect = $('skuColSelect');
+    window.parentColSelect = $('parentColSelect');
+    window.mappingContainer = $('mappingEditorContainer');
+    window.codeContainer = $('codeEditorContainer');
+    window.colorEnumContainer = $('colorEnumEditorContainer');
+    window.mappingCard = $('mappingCard');
+    window.codeCard = $('codeCard');
+    window.colorEnumCard = $('colorEnumCard');
+    window.mappingToggleHeader = $('mappingToggleHeader');
+    window.mappingToggleIcon = $('mappingToggleIcon');
+    window.mappingCollapseWrapper = $('mappingCollapseWrapper');
+    window.mappingFullscreenBtn = $('mappingFullscreenBtn');
+    window.colorEnumToggleHeader = $('colorEnumToggleHeader');
+    window.colorEnumToggleIcon = $('colorEnumToggleIcon');
+    window.colorEnumCollapseWrapper = $('colorEnumCollapseWrapper');
+    window.colorEnumFullscreenBtn = $('colorEnumFullscreenBtn');
+    window.codeToggleHeader = $('codeToggleHeader');
+    window.codeToggleIcon = $('codeToggleIcon');
+    window.codeCollapseWrapper = $('codeCollapseWrapper');
+    window.codeFullscreenBtn = $('codeFullscreenBtn');
+    window.runProcessBtn = $('runProcessBtn');
+    window.exportBtn = $('exportResultBtn');
+    window.exportFullCheck = $('exportFullCheckbox');
+    window.exportNewCheck = $('exportNewColsCheckbox');
+    window.dataStatus = $('dataStatus');
+    window.logArea = $('logArea');
+    window.saveConfigBtn = $('saveConfigBtn');
+    window.exportConfigBtn = $('exportConfigBtn');
+    window.importConfigFile = $('importConfigFile');
+    window.resetMappingBtn = $('resetMappingBtn');
+    window.resetCodeBtn = $('resetCodeBtn');
+    window.resetColorEnumBtn = $('resetColorEnumBtn');
+    window.configListContainer = $('configListContainer');
+    window.aiClassifyBtn = $('aiClassifyBtn');
+    window.aiApiKey = $('aiApiKey');
+    window.aiModel = $('aiModel');
+    window.aiPrompt = $('aiPrompt');
+    window.aiSettingsToggle = $('aiSettingsToggle');
+    window.aiSettingsIcon = $('aiSettingsIcon');
+    window.aiSettingsContent = $('aiSettingsContent');
+    window.aiModalContainer = $('aiModalContainer');
+    window.colorUnmappedMini = $('colorUnmappedMini');
+
+    // 数据去重相关 DOM
+    window.dedupToggleHeader = $('dedupToggleHeader');
+    window.dedupToggleIcon = $('dedupToggleIcon');
+    window.dedupCollapseWrapper = $('dedupCollapseWrapper');
+    window.dedupInputField = $('dedupInputField');
+    window.dedupGroupField = $('dedupGroupField');
+    window.dedupOutputField = $('dedupOutputField');
+    window.dedupMode = $('dedupMode');
+    window.dedupColumnsList = $('dedupColumnsList');
+    window.dedupRunBtn = $('dedupRunBtn');
+    window.dedupStatsArea = $('dedupStatsArea');
+    window.dedupResetFieldsBtn = $('dedupResetFieldsBtn');
+    window.dedupReadyBadge = $('dedupReadyBadge');
+    window.dedupReadyDot = $('dedupReadyDot');
+    window.dedupReadyText = $('dedupReadyText');
+    window.dedupInputHint = $('dedupInputHint');
+    window.dedupGroupHint = $('dedupGroupHint');
+    window.dedupOutputHint = $('dedupOutputHint');
+
+    // 价格计算器 DOM
+    window.priceCard = $('priceCard');
+    window.priceToggleHeader = $('priceToggleHeader');
+    window.priceToggleIcon = $('priceToggleIcon');
+    window.priceCollapseWrapper = $('priceCollapseWrapper');
+    window.priceFullscreenBtn = $('priceFullscreenBtn');
+    window.priceRunBtn = $('priceRunBtn');
+    window.priceResetFormulaBtn = $('priceResetFormulaBtn');
+    window.priceResetFieldsBtn = $('priceResetFieldsBtn');
+    window.priceSkuColSelect = $('priceSkuColSelect');
+    window.priceWeightColSelect = $('priceWeightColSelect');
+    window.priceVolWeightColSelect = $('priceVolWeightColSelect');
+    window.priceRateInput = $('priceRateInput');
+    window.priceFormulaContainer = $('priceFormulaContainer');
+    window.priceStatsArea = $('priceStatsArea');
+
+
+    // 标签页
+    window.tabMainBtn = $('tabMainBtn');
+    window.tabFilterBtn = $('tabFilterBtn');
+    window.tabConfigBtn = $('tabConfigBtn');
+    window.mainPage = $('mainPage');
+    window.filterPage = $('filterPage');
+    window.configPage = $('configPage');
+
+    // 筛选器 DOM
+    window.filterConditionsContainer = $('filterConditionsContainer');
+    window.filterAddConditionBtn = $('filterAddConditionBtn');
+    window.filterRunBtn = $('filterRunBtn');
+    window.filterCopyBtn = $('filterCopyBtn');
+    window.filterSelectAllBtn = $('filterSelectAllBtn');
+    window.filterDeleteBtn = $('filterDeleteBtn');
+    window.filterResultContainer = $('filterResultContainer');
+    window.filterResultCount = $('filterResultCount');
+    window.filterConfigNameInput = $('filterConfigNameInput');
+    window.filterSaveConfigBtn = $('filterSaveConfigBtn');
+    window.filterConfigListContainer = $('filterConfigListContainer');
+
+    // 主页快捷按钮
+    window.quickPriceBtn = $('quickPriceBtn');
+    window.quickDedupBtn = $('quickDedupBtn');
+
+    window.quickAiBtn = $('quickAiBtn');
+
+    // 枚举归类 DOM
+    window.classifySourceCol = $('classifySourceCol');
+    window.classifyOutputCol = $('classifyOutputCol');
+    window.classifyRunBtn = $('classifyRunBtn');
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/file-handler.js
+
+// ============== 文件处理（挂载到 window） ==============
+(function() {
+    const { $, esc, lsGet, lsSet, log, showToastDedup, columnLetter } = window;
+
+    function loadSheet() {
+        const { workbook, currentSheetName, sheetSelect, skuColSelect, parentColSelect, allColumns, rawDataRows, dataStatus, dedupSkuField, dedupStatsArea, dedupIntegrationNote, lastDedupColName } = window;
+        if (!workbook || !currentSheetName) return;
+        try {
+            const sheet = workbook.Sheets[currentSheetName];
+            const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+            if (!json.length) { log('工作表为空', 'error'); return; }
+            window.rawDataRows = json;
+            window.allColumns = Object.keys(json[0]);
+            const cols = window.allColumns;
+            const updateDatalist = (listId) => {
+                const dl = document.getElementById(listId);
+                if (dl) dl.innerHTML = cols.map(c => `<option value="${esc(c)}">`).join('');
+            };
+            updateDatalist('skuColList');
+            updateDatalist('parentColList');
+            skuColSelect.disabled = parentColSelect.disabled = false;
+            const find = keys => cols.find(c => keys.some(k => c.toLowerCase().includes(k)));
+            const sku = find(['sku', '商品编码', '子sku']) || '';
+            const parent = find(['父', 'parent', '父sku']) || '';
+            skuColSelect.value = sku;
+            parentColSelect.value = parent;
+            log(`📊 已加载 "${currentSheetName}"，${json.length}行`, 'info');
+            window.processedData = [];
+            dedupStatsArea.innerHTML = '';
+            if (dedupIntegrationNote) dedupIntegrationNote.style.display = 'none';
+            window.lastDedupColName = '';
+            window.updateDedupDatalist();
+            window.updateDedupFieldHints();
+            window.updateDedupReadyStatus();
+            dataStatus.textContent = `✅ 已加载 ${json.length} 行`;
+            // 刷新价格计算器字段下拉框
+            if (window.populatePriceColumnSelects) {
+                setTimeout(() => window.populatePriceColumnSelects(), 50);
+            }
+            // 输出颜色匹配状态
+            if (window.logColorMatchStatus) window.logColorMatchStatus();
+        } catch { log('加载工作表失败', 'error'); }
+    }
+
+    function handleFile(file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                window.workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                const sheetSelect = window.sheetSelect;
+                sheetSelect.innerHTML = window.workbook.SheetNames.map(n => `<option>${n}</option>`).join('');
+                sheetSelect.disabled = false;
+                window.currentSheetName = window.workbook.SheetNames[0];
+                sheetSelect.value = window.currentSheetName;
+                loadSheet();
+                log(`📁 文件 "${file.name}" 已加载`, 'info');
+            } catch { log('文件解析失败', 'error'); }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    window.loadSheet = loadSheet;
+    window.handleFile = handleFile;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/editors.js
+
+// ============== 编辑器初始化（挂载到 window） ==============
+(function() {
+    const { $, esc, lsGet, lsSet, log } = window;
+
+    function getStoredColorEnum() {
+        return lsGet(window.LK_COLOR_ENUM, window.DEFAULT_COLOR_ENUM);
+    }
+
+    function saveColorEnumFromEditor() {
+        if (!window.colorEnumEditor) return;
+        try {
+            const parsed = JSON.parse(window.colorEnumEditor.getValue());
+            if (parsed && typeof parsed === 'object') lsSet(window.LK_COLOR_ENUM, parsed);
+        } catch {}
+    }
+
+    function initEditors() {
+        const mappingContainer = window.mappingContainer;
+        const codeContainer = window.codeContainer;
+        const colorEnumContainer = window.colorEnumContainer;
+        window.mappingEditor = CodeMirror(mappingContainer, {
+            value: window.DEFAULT_MAPPING,
+            mode: { name: 'javascript', json: true },
+            theme: 'material-darker',
+            lineNumbers: true,
+            tabSize: 2
+        });
+        window.mappingEditor.setSize('100%', '100px');
+
+        window.colorEnumEditor = CodeMirror(colorEnumContainer, {
+            value: JSON.stringify(getStoredColorEnum(), null, 2),
+            mode: { name: 'javascript', json: true },
+            theme: 'material-darker',
+            lineNumbers: true,
+            tabSize: 2
+        });
+        window.colorEnumEditor.setSize('100%', '220px');
+        window.colorEnumEditor.on('change', () => {
+            saveColorEnumFromEditor();
+            window.updateColorUnmappedMini();
+        });
+
+        window.codeEditor = CodeMirror(codeContainer, {
+            value: window.DEFAULT_CODE,
+            mode: 'javascript',
+            theme: 'material-darker',
+            lineNumbers: true,
+            tabSize: 2,
+            viewportMargin: Infinity
+        });
+        window.codeEditor.setSize('100%', '420px');
+    }
+
+    window.initEditors = initEditors;
+    window.getStoredColorEnum = getStoredColorEnum;
+    window.saveColorEnumFromEditor = saveColorEnumFromEditor;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/color-ai.js
+
+// ============== 颜色 AI 分类与未映射提示 ==============
+(function() {
+    const { $, esc, lsGet, lsSet, log } = window;
+
+    function getColorColumnName() {
+        try {
+            const m = JSON.parse(window.mappingEditor.getValue());
+            return m.color || null;
+        } catch { return null; }
+    }
+
+    function scanColorValues() {
+        const rawDataRows = window.rawDataRows;
+        if (!rawDataRows.length) return [];
+        const col = getColorColumnName();
+        if (!col || !window.allColumns.includes(col)) return [];
+        const unique = new Set();
+        rawDataRows.forEach(r => {
+            const v = String(r[col] || '').trim();
+            if (v) unique.add(v);
+        });
+        return Array.from(unique);
+    }
+
+    function findUnmappedColors() {
+        const allColors = scanColorValues();
+        if (!allColors.length) return [];
+        let enumConfig;
+        try {
+            enumConfig = JSON.parse(window.colorEnumEditor.getValue());
+        } catch {
+            return allColors.map(c => ({ display: c, count: 1 }));
+        }
+        const exactMap = new Map();
+        for (const [cat, aliases] of Object.entries(enumConfig)) {
+            if (Array.isArray(aliases))
+                aliases.forEach(a => {
+                    const k = String(a).trim().toLowerCase();
+                    if (k) exactMap.set(k, cat);
+                });
+        }
+        const fuzzyRules = [
+            { regex: /^[a-z]$/i },
+            { regex: /^multiple[a-z]*$/i },
+            { regex: /^multicolou?r[a-z]*$/i },
+            { regex: /^mixed\s*colou?r[a-z]*$/i },
+            { regex: /^mixedcolou?r[a-z]*$/i },
+            { regex: /^mixed\s+colou?rs?[a-z]*$/i },
+            { regex: /^mixed[\s\-_]?colou?r[a-z]*$/i },
+            { regex: /^mixed\s+colors?[a-z]*$/i }
+        ];
+        const unmapped = [];
+        allColors.forEach(c => {
+            const norm = c.toLowerCase();
+            if (exactMap.has(norm)) return;
+            if (fuzzyRules.some(r => r.regex.test(norm))) return;
+            unmapped.push({ display: c, count: 1 });
+        });
+        return unmapped;
+    }
+
+    function updateColorUnmappedMini() {
+        const unmapped = findUnmappedColors();
+        const colorUnmappedMini = window.colorUnmappedMini;
+        if (!unmapped.length) {
+            colorUnmappedMini.classList.add('hidden');
+            return;
+        }
+        colorUnmappedMini.classList.remove('hidden');
+        const tags = unmapped.slice(0, 15).map(u => `<span class="unmapped-tag">${esc(u.display)}</span>`).join('');
+        const more = unmapped.length > 15 ? ` ...及另外${unmapped.length - 15}项` : '';
+        colorUnmappedMini.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-yellow-400"></i> 未映射: ${tags}${more}`;
+    }
+
+    // AI 分类
+    async function callAI(unmapped) {
+        const key = window.aiApiKey.value.trim();
+        if (!key) {
+            alert('请填写API密钥');
+            return null;
+        }
+        try {
+            const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                body: JSON.stringify({
+                    model: window.aiModel.value,
+                    messages: [
+                        { role: 'system', content: window.aiPrompt.value.trim() || window.DEFAULT_AI_PROMPT },
+                        { role: 'user', content: unmapped.join('\n') }
+                    ],
+                    temperature: 0.1,
+                    max_tokens: 2000
+                })
+            });
+            if (!res.ok) throw new Error(`API错误 ${res.status}`);
+            const data = await res.json();
+            const match = data.choices[0].message.content.match(/\[[\s\S]*\]/);
+            if (!match) throw new Error('未返回JSON');
+            return JSON.parse(match[0]);
+        } catch (e) {
+            alert('AI分类失败: ' + e.message);
+            return null;
+        }
+    }
+
+    function showAISuggestions(suggestions) {
+        const aiModalContainer = window.aiModalContainer;
+        aiModalContainer.innerHTML = '';
+        const overlay = document.createElement('div');
+        overlay.className = 'ai-modal-overlay';
+        overlay.innerHTML = `
+            <div class="ai-modal">
+                <h3 class="text-xl font-bold mb-3"><i class="fa-solid fa-robot text-purple-400"></i> AI建议</h3>
+                <div class="max-h-60 overflow-y-auto mb-4">${suggestions.map(s => `<div class="ai-suggestion-item"><span>${esc(s.value)} → <b class="text-green-400">${esc(s.key)}</b></span></div>`).join('')}</div>
+                <div class="flex justify-end gap-3"><button class="btn-glass" id="aiCancelBtn">取消</button><button class="btn-glass btn-primary" id="aiApplyBtn"><i class="fa-solid fa-check"></i> 应用</button></div>
+            </div>`;
+        aiModalContainer.appendChild(overlay);
+        const close = () => aiModalContainer.innerHTML = '';
+        document.getElementById('aiCancelBtn').addEventListener('click', close);
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        document.getElementById('aiApplyBtn').addEventListener('click', () => {
+            try {
+                let cfg = JSON.parse(window.colorEnumEditor.getValue());
+                suggestions.forEach(({ key, value }) => {
+                    if (!key || !value) return;
+                    if (!cfg[key]) cfg[key] = [];
+                    if (!cfg[key].includes(value)) cfg[key].push(value);
+                });
+                window.colorEnumEditor.setValue(JSON.stringify(cfg, null, 2));
+                window.saveColorEnumFromEditor();
+                updateColorUnmappedMini();
+                close();
+                log('✅ AI建议已应用', 'success');
+            } catch (e) { alert('合并失败'); }
+        });
+    }
+
+    // AI 设置
+    function loadAISettings() {
+        window.aiApiKey.value = lsGet(window.LK_AI_KEY, '');
+        window.aiModel.value = lsGet(window.LK_AI_MODEL, 'deepseek-chat');
+        window.aiPrompt.value = lsGet(window.LK_AI_PROMPT, window.DEFAULT_AI_PROMPT);
+    }
+
+    function saveAISettings() {
+        lsSet(window.LK_AI_KEY, window.aiApiKey.value);
+        lsSet(window.LK_AI_MODEL, window.aiModel.value);
+        lsSet(window.LK_AI_PROMPT, window.aiPrompt.value);
+    }
+
+    // ─────────── 主页颜色匹配日志 & 快捷AI按钮控制 ───────────
+    function logColorMatchStatus() {
+        const allColors = scanColorValues();
+        if (!allColors.length) {
+            log('🎨 未检测到颜色列或颜色数据为空', 'info');
+            if (window.quickAiBtn) window.quickAiBtn.classList.add('hidden');
+            return;
+        }
+        const unmapped = findUnmappedColors();
+        const mappedCount = allColors.length - unmapped.length;
+        if (unmapped.length === 0) {
+            log(`🎨 颜色匹配：全部已映射 (共${allColors.length}种)`, 'success');
+        } else {
+            const list = unmapped.slice(0, 10).map(u => u.display).join(', ');
+            const more = unmapped.length > 10 ? ` ...及另外${unmapped.length - 10}项` : '';
+            log(`⚠️ 颜色匹配：${mappedCount}种已映射，${unmapped.length}种未映射：${list}${more}`, 'warning');
+        }
+        // 控制主页快捷AI按钮显示
+        const btn = window.quickAiBtn;
+        if (btn) {
+            if (unmapped.length > 0) btn.classList.remove('hidden');
+            else btn.classList.add('hidden');
+        }
+    }
+
+    async function triggerQuickAIClassify() {
+        window.saveColorEnumFromEditor();
+        const unmapped = window.findUnmappedColors().map(u => u.display);
+        if (!unmapped.length) {
+            log('没有未映射颜色', 'info');
+            return;
+        }
+        const btn = window.quickAiBtn;
+        if (btn) btn.disabled = true;
+        const suggestions = await window.callAI(unmapped);
+        if (btn) btn.disabled = false;
+        if (suggestions && suggestions.length) window.showAISuggestions(suggestions);
+    }
+
+    // ─────────── 枚举归类执行 ───────────
+    function runClassification() {
+        const sourceCol = window.classifySourceCol ? window.classifySourceCol.value.trim() : '';
+        const outputCol = window.classifyOutputCol ? window.classifyOutputCol.value.trim() : 'Color Classification';
+        if (!sourceCol) {
+            log('❌ 请选择源数据列', 'error');
+            return;
+        }
+        const data = window.processedData.length ? window.processedData : window.rawDataRows;
+        if (!data.length) {
+            log('❌ 暂无数据', 'error');
+            return;
+        }
+        const allCols = window.processedData.length ? window.getAllAvailableColumns() : window.allColumns;
+        if (!allCols.includes(sourceCol)) {
+            log(`❌ 源数据列 "${sourceCol}" 不存在`, 'error');
+            return;
+        }
+        // 获取枚举配置
+        window.saveColorEnumFromEditor();
+        let enumConfig;
+        try {
+            enumConfig = JSON.parse(window.colorEnumEditor.getValue());
+        } catch {
+            log('❌ 枚举JSON格式错误', 'error');
+            return;
+        }
+        const exactMap = new Map();
+        for (const [cat, aliases] of Object.entries(enumConfig)) {
+            if (Array.isArray(aliases))
+                aliases.forEach(a => {
+                    const k = String(a).trim().toLowerCase();
+                    if (k) exactMap.set(k, cat);
+                });
+        }
+        let matched = 0, unmatched = 0;
+        data.forEach(row => {
+            const raw = String(row[sourceCol] || '').trim();
+            if (!raw) { row[outputCol] = ''; unmatched++; return; }
+            const norm = raw.toLowerCase();
+            const mapped = exactMap.get(norm);
+            if (mapped) {
+                row[outputCol] = mapped;
+                matched++;
+            } else {
+                row[outputCol] = raw;
+                unmatched++;
+            }
+        });
+        log(`🏷️ 归类完成: ${matched} 条精确匹配, ${unmatched} 条保留原值`, 'success');
+        window.dataStatus.textContent = `✅ 归类完成，新列 "${outputCol}"`;
+        if (window.updateDedupDatalist) window.updateDedupDatalist();
+        if (window.updateDedupFieldHints) window.updateDedupFieldHints();
+    }
+
+    window.getColorColumnName = getColorColumnName;
+    window.scanColorValues = scanColorValues;
+    window.findUnmappedColors = findUnmappedColors;
+    window.updateColorUnmappedMini = updateColorUnmappedMini;
+    window.callAI = callAI;
+    window.showAISuggestions = showAISuggestions;
+    window.loadAISettings = loadAISettings;
+    window.saveAISettings = saveAISettings;
+    window.logColorMatchStatus = logColorMatchStatus;
+    window.triggerQuickAIClassify = triggerQuickAIClassify;
+    window.runClassification = runClassification;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/dedup.js
+
+// ============== 数据去重功能 ==============
+(function() {
+    const { $, esc, lsGet, lsSet, log, showToastDedup, columnLetter } = window;
+
+    function getDedupFields() {
+        const saved = lsGet(window.LK_DEDUP_FIELDS, window.DEFAULT_DEDUP_FIELDS);
+        if (!saved || typeof saved !== 'object') return { ...window.DEFAULT_DEDUP_FIELDS };
+        return {
+            inputField: saved.inputField || window.DEFAULT_DEDUP_FIELDS.inputField,
+            groupField: saved.groupField || window.DEFAULT_DEDUP_FIELDS.groupField,
+            outputField: saved.outputField || window.DEFAULT_DEDUP_FIELDS.outputField,
+            mode: saved.mode || window.DEFAULT_DEDUP_FIELDS.mode
+        };
+    }
+
+    function saveDedupFields() {
+        lsSet(window.LK_DEDUP_FIELDS, {
+            inputField: window.dedupInputField ? window.dedupInputField.value.trim() : '',
+            groupField: window.dedupGroupField ? window.dedupGroupField.value.trim() : '',
+            outputField: window.dedupOutputField ? window.dedupOutputField.value.trim() : '',
+            mode: window.dedupMode ? window.dedupMode.value : 'letter'
+        });
+    }
+
+    function loadDedupFieldsToUI() {
+        const fields = getDedupFields();
+        if (window.dedupInputField) window.dedupInputField.value = fields.inputField || '';
+        if (window.dedupGroupField) window.dedupGroupField.value = fields.groupField || '';
+        if (window.dedupOutputField) window.dedupOutputField.value = fields.outputField || '去重后值';
+        if (window.dedupMode) window.dedupMode.value = fields.mode || 'letter';
+    }
+
+    function resetDedupFieldsToDefault() {
+        const def = { ...window.DEFAULT_DEDUP_FIELDS };
+        if (window.dedupInputField) window.dedupInputField.value = def.inputField;
+        if (window.dedupGroupField) window.dedupGroupField.value = def.groupField;
+        if (window.dedupOutputField) window.dedupOutputField.value = def.outputField;
+        if (window.dedupMode) window.dedupMode.value = def.mode;
+        saveDedupFields();
+        updateDedupFieldHints();
+        updateDedupReadyStatus();
+        log('数据去重字段已重置为默认值', 'info');
+    }
+
+    function getAllAvailableColumns() {
+        const cols = new Set(window.allColumns);
+        if (window.processedData.length > 0) {
+            Object.keys(window.processedData[0]).forEach(k => {
+                if (!k.startsWith('_')) cols.add(k);
+            });
+        }
+        return Array.from(cols);
+    }
+
+    function updateDedupDatalist() {
+        const allCols = getAllAvailableColumns();
+        window.dedupColumnsList.innerHTML = allCols.map(c => `<option value="${esc(c)}">`).join('');
+    }
+
+    function updateDedupFieldHints() {
+        const allCols = getAllAvailableColumns();
+        const check = (el, hint, isNewCol = false) => {
+            if (!el || !hint) return;
+            const val = el.value.trim();
+            if (!val) {
+                hint.textContent = '⚠ 未设置';
+                hint.style.color = '#f59e0b';
+                return;
+            }
+            if (isNewCol) {
+                if (allCols.includes(val)) {
+                    hint.textContent = '⚠ 列名已存在，将被覆盖';
+                    hint.style.color = '#f59e0b';
+                } else {
+                    hint.textContent = '✅ 将新增此列';
+                    hint.style.color = '#34d399';
+                }
+            } else {
+                if (allCols.includes(val)) {
+                    hint.textContent = '✅ 列存在';
+                    hint.style.color = '#34d399';
+                } else if (window.processedData.length > 0) {
+                    hint.textContent = '❌ 不存在';
+                    hint.style.color = '#f87171';
+                } else {
+                    hint.textContent = '⏳ 等待处理';
+                    hint.style.color = '#64748b';
+                }
+            }
+        };
+        check(window.dedupInputField, window.dedupInputHint);
+        check(window.dedupGroupField, window.dedupGroupHint);
+        check(window.dedupOutputField, window.dedupOutputHint, true);
+    }
+
+    function updateDedupReadyStatus() {
+        const allCols = getAllAvailableColumns();
+        const input = window.dedupInputField ? window.dedupInputField.value.trim() : '';
+        const group = window.dedupGroupField ? window.dedupGroupField.value.trim() : '';
+        const output = window.dedupOutputField ? window.dedupOutputField.value.trim() : '';
+        const allSet = input && group && output;
+        let allExist = false;
+        if (allSet && window.processedData.length > 0) allExist = [input, group].every(f => allCols.includes(f));
+
+        const dot = window.dedupReadyDot;
+        const text = window.dedupReadyText;
+        const runBtn = window.dedupRunBtn;
+
+        if (window.processedData.length > 0 && allSet && allExist) {
+            dot.className = 'dedup-ready-indicator ready';
+            text.textContent = '可执行去重';
+            runBtn.disabled = false;
+        } else if (window.processedData.length > 0 && allSet && !allExist) {
+            dot.className = 'dedup-ready-indicator';
+            text.textContent = '字段不存在';
+            runBtn.disabled = true;
+        } else if (window.processedData.length === 0) {
+            dot.className = 'dedup-ready-indicator';
+            text.textContent = '等待变体组处理';
+            runBtn.disabled = true;
+        } else {
+            dot.className = 'dedup-ready-indicator';
+            text.textContent = '请设置字段';
+            runBtn.disabled = true;
+        }
+    }
+
+    function runDedup() {
+        const data = window.processedData;
+        if (!data || !data.length) {
+            log('❌ 请先执行“变体组处理”', 'error');
+            return;
+        }
+        const inputField = window.dedupInputField ? window.dedupInputField.value.trim() : '';
+        const groupField = window.dedupGroupField ? window.dedupGroupField.value.trim() : '';
+        const outputField = window.dedupOutputField ? window.dedupOutputField.value.trim() : '';
+        const mode = window.dedupMode ? window.dedupMode.value : 'letter';
+
+        if (!inputField || !groupField || !outputField) {
+            log('❌ 请填写所有字段', 'error');
+            return;
+        }
+        const allCols = getAllAvailableColumns();
+        if (!allCols.includes(inputField)) { log(`❌ 输入字段 "${inputField}" 不存在`, 'error'); return; }
+        if (!allCols.includes(groupField)) { log(`❌ 分组字段 "${groupField}" 不存在`, 'error'); return; }
+
+        // 清理旧列
+        if (window.lastDedupColName && window.lastDedupColName !== outputField) {
+            data.forEach(row => delete row[window.lastDedupColName]);
+            log(`🧹 已移除旧去重列 "${window.lastDedupColName}"`, 'info');
+        }
+
+        const suffixFn = (index) => {
+            if (mode === 'number') return String(index + 1);
+            return columnLetter(index);
+        };
+
+        const groupMap = new Map();
+        data.forEach((row, i) => groupMap.has(row[groupField]) ? groupMap.get(row[groupField]).push(i) : groupMap.set(row[groupField], [i]));
+
+        let groupsModified = 0, totalRowsModified = 0;
+        const newValues = new Array(data.length).fill(null);
+
+        for (const [gid, indices] of groupMap.entries()) {
+            if (indices.length <= 1) {
+                indices.forEach(i => newValues[i] = String(data[i][inputField] || '').trim());
+                continue;
+            }
+            // 收集本组内所有非空 input 值
+            const vals = indices.map(i => String(data[i][inputField] || '').trim());
+            const uniqueVals = [...new Set(vals)];
+            if (uniqueVals.length === indices.length) {
+                indices.forEach(i => newValues[i] = String(data[i][inputField] || '').trim());
+                continue;
+            }
+            groupsModified++;
+            // 按值分组，并在每个值内按顺序加后缀
+            const valueGroups = new Map();
+            indices.forEach(i => {
+                const val = String(data[i][inputField] || '').trim();
+                if (!valueGroups.has(val)) valueGroups.set(val, []);
+                valueGroups.get(val).push(i);
+            });
+            for (const [val, rowIndices] of valueGroups.entries()) {
+                rowIndices.sort((a, b) => a - b);
+                rowIndices.forEach((rowIdx, order) => {
+                    const suffix = suffixFn(order);
+                    const newVal = val ? `${val} ${suffix}` : suffix;
+                    newValues[rowIdx] = newVal;
+                    if (String(data[rowIdx][inputField] || '').trim() !== newVal) totalRowsModified++;
+                });
+            }
+        }
+
+        data.forEach((row, i) => {
+            if (newValues[i] !== null) row[outputField] = newValues[i];
+        });
+
+        window.processedData = data;
+        window.lastDedupColName = outputField;
+        lsSet('last_dedup_col_name', outputField);
+        window.dedupStatsArea.innerHTML = `
+            <span class="dedup-stat">📊 总行: ${data.length}</span>
+            <span class="dedup-stat">🔁 重复组: ${groupsModified}</span>
+            <span class="dedup-stat">✏️ 去重行: ${totalRowsModified}</span>
+            <span class="dedup-stat">🆕 新列: "${outputField}"</span>
+        `;
+        log(`✅ 数据去重完成，新增列 "${outputField}"，修改 ${totalRowsModified} 行`, 'success');
+        showToastDedup('✅ 去重列已添加，请导出');
+        updateDedupFieldHints();
+        updateDedupReadyStatus();
+        window.dataStatus.textContent = `✅ 已去重，含列 "${outputField}"`;
+    }
+
+    window.getDedupFields = getDedupFields;
+    window.saveDedupFields = saveDedupFields;
+    window.loadDedupFieldsToUI = loadDedupFieldsToUI;
+    window.resetDedupFieldsToDefault = resetDedupFieldsToDefault;
+    window.getAllAvailableColumns = getAllAvailableColumns;
+    window.updateDedupDatalist = updateDedupDatalist;
+    window.updateDedupFieldHints = updateDedupFieldHints;
+    window.updateDedupReadyStatus = updateDedupReadyStatus;
+    window.runDedup = runDedup;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/process.js
+
+// ============== 变体组处理 & 导出 ==============
+(function() {
+    const { $, esc, lsGet, lsSet, log } = window;
+
+    function runProcess() {
+        const rawDataRows = window.rawDataRows;
+        if (!rawDataRows.length) {
+            log('请先加载数据', 'error');
+            return;
+        }
+        const skuCol = window.skuColSelect.value;
+        const parentCol = window.parentColSelect.value;
+        if (!skuCol || !parentCol) {
+            log('请选择SKU和父SKU列', 'error');
+            return;
+        }
+        let columns;
+        try {
+            columns = JSON.parse(window.mappingEditor.getValue());
+        } catch {
+            log('映射JSON格式错误', 'error');
+            return;
+        }
+        columns.sku = skuCol;
+        columns.parentSku = parentCol;
+        window.saveColorEnumFromEditor();
+        try {
+            const fn = new Function('rows', 'columns', 'skuCol', 'parentCol', window.codeEditor.getValue());
+            const result = fn(rawDataRows, columns, skuCol, parentCol);
+            if (!Array.isArray(result)) throw new Error('函数必须返回数组');
+            window.processedData = result;
+            const newCols = Object.keys(result[0]).filter(c => !window.allColumns.includes(c) && !c.startsWith('_'));
+            log(`✅ 处理完成，${result.length}行，新增${newCols.length}列: ${newCols.join(', ')}`, 'success');
+            window.dataStatus.textContent = `✅ 已处理 ${result.length} 行`;
+            window.updateColorUnmappedMini();
+            window.updateDedupDatalist();
+            window.updateDedupFieldHints();
+            window.dedupStatsArea.innerHTML = '';
+            if (window.dedupIntegrationNote) window.dedupIntegrationNote.style.display = 'none';
+            window.lastDedupColName = '';
+            window.updateDedupReadyStatus();
+            // 刷新价格计算器字段下拉框（可能新增了列）
+            if (window.populatePriceColumnSelects) {
+                window.populatePriceColumnSelects();
+            }
+            // 输出颜色匹配状态
+            if (window.logColorMatchStatus) window.logColorMatchStatus();
+        } catch (e) {
+            log(`❌ 执行错误: ${e.message}`, 'error');
+        }
+    }
+
+    function exportData() {
+        const processedData = window.processedData;
+        if (!processedData.length) {
+            log('无数据可导出', 'error');
+            return;
+        }
+        const allCols = Object.keys(processedData[0]);
+        const newCols = allCols.filter(c => !window.allColumns.includes(c) && !c.startsWith('_'));
+        const skuCol = window.skuColSelect.value;
+        let exportCols = [];
+        if (window.exportFullCheck.checked) {
+            exportCols = allCols.filter(c => !c.startsWith('_'));
+        } else {
+            exportCols = window.exportNewCheck.checked ? [skuCol, ...newCols.filter(c => c !== skuCol)] : [skuCol];
+        }
+        exportCols = exportCols.filter(c => allCols.includes(c));
+        const exportRows = processedData.map(row => {
+            const obj = {};
+            exportCols.forEach(c => obj[c] = row[c] ?? '');
+            return obj;
+        });
+        try {
+            const ws = XLSX.utils.json_to_sheet(exportRows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "结果");
+            XLSX.writeFile(wb, `variant_result_${Date.now()}.xlsx`);
+            log(`📎 导出成功（${exportCols.length}列）`, 'success');
+        } catch {
+            log('导出失败', 'error');
+        }
+    }
+
+    window.runProcess = runProcess;
+    window.exportData = exportData;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/price-calculator.js
+
+// ============== 价格计算器（挂载到 window） ==============
+(function() {
+    const { $, esc, lsGet, lsSet, log } = window;
+
+    // ───────── 常量 ─────────
+    const LK_RATE = 'ge32_exchange_rate';
+    const LK_FORMULA = 'ge32_formula_code';
+    const LK_FORMULA_COLLAPSED = 'ge32_formula_collapsed';
+    const LK_PRICE_FIELDS = 'ge32_price_fields';
+    const LK_LAST_PRICE_COLS = 'last_price_cols';
+
+    const DEFAULT_RATE = 7.2;
+
+    const DEFAULT_FORMULA = [
+        'function compute(row, shippingRates, exchangeRate) {',
+        '    // ========== 利润率配置（可按需修改） ==========',
+        '    const PROFIT_FACTOR_LOW  = 0.5;',
+        '    const PROFIT_FACTOR_MID  = 0.52;',
+        '    const PROFIT_FACTOR_HIGH = 0.65;',
+        '',
+        '    function getWeightBucket(w) {',
+        '        return Math.round((w + 4.99) / 10) * 10;',
+        '    }',
+        '',
+        '    function getShippingCost(w) {',
+        '        const bucket = getWeightBucket(w);',
+        '        return shippingRates.get(bucket) ?? 999;',
+        '    }',
+        '',
+        '    const weight = parseFloat(row.weight) || 0;',
+        '    const volWeight = parseFloat(row.volWeight) || 0;',
+        '    const skuPrice = parseFloat(row.skuPrice) || 0;',
+        '',
+        '    const actualWeight = Math.max(weight, volWeight);',
+        '    const shippingCNY = getShippingCost(actualWeight);',
+        '    const totalCNY = skuPrice + shippingCNY;',
+        '    const usdBase = totalCNY / exchangeRate;',
+        '',
+        '    let profitFactor = usdBase <= 5 ? PROFIT_FACTOR_LOW',
+        '                     : usdBase <= 15 ? PROFIT_FACTOR_MID',
+        '                     : PROFIT_FACTOR_HIGH;',
+        '',
+        '    const finalPrice = usdBase / profitFactor;',
+        '',
+        '    return {',
+        '        actualWeight,',
+        '        shippingCNY,',
+        '        totalCNY,',
+        '        finalUsdPrice: Math.round(finalPrice * 100) / 100',
+        '    };',
+        '}'
+    ].join('\n');
+
+    const DEFAULT_PRICE_FIELDS = {
+        skuPriceCol: '',
+        weightCol: '',
+        volWeightCol: ''
+    };
+
+    // ───────── 内部状态 ─────────
+    let shippingRates = new Map();
+    let lastPriceCols = []; // 上次添加的列名数组
+
+    // ───────── 汇率 ─────────
+    function getRate() { return lsGet(LK_RATE, DEFAULT_RATE); }
+    function saveRate(rate) { lsSet(LK_RATE, rate); }
+    function setExchangeRate(newRate) {
+        const rate = parseFloat(newRate);
+        if (isNaN(rate) || rate <= 0) {
+            log('无效汇率值，请输入正数', 'error');
+            return false;
+        }
+        saveRate(rate);
+        window.priceRateInput.value = rate;
+        log(`汇率已更新为: ${rate}`, 'success');
+        return true;
+    }
+    window.setExchangeRate = setExchangeRate;
+
+    // ───────── 运费表管理 ─────────
+    function refreshShippingRates() {
+        shippingRates.clear();
+        const rawMap = window.map;
+        if (Array.isArray(rawMap)) {
+            rawMap.forEach(([weight, cost]) => shippingRates.set(Number(weight), Number(cost)));
+        } else if (rawMap instanceof Map) {
+            shippingRates = new Map(rawMap);
+        }
+        log(`运费表已刷新 (${shippingRates.size} 档位)`, 'info');
+    }
+
+    // 监听 window.map 变化
+    (function setupMapWatcher() {
+        let _map = window.map;
+        Object.defineProperty(window, 'map', {
+            get() { return _map; },
+            set(value) {
+                _map = value;
+                refreshShippingRates();
+                log('检测到 window.map 已更新，运费表自动同步', 'warning');
+            },
+            configurable: true
+        });
+    })();
+
+    // ───────── 价格字段配置 ─────────
+    function getPriceFields() {
+        const saved = lsGet(LK_PRICE_FIELDS, DEFAULT_PRICE_FIELDS);
+        return {
+            skuPriceCol: saved.skuPriceCol || '',
+            weightCol: saved.weightCol || '',
+            volWeightCol: saved.volWeightCol || ''
+        };
+    }
+
+    function savePriceFields() {
+        lsSet(LK_PRICE_FIELDS, {
+            skuPriceCol: window.priceSkuColSelect ? window.priceSkuColSelect.value : '',
+            weightCol: window.priceWeightColSelect ? window.priceWeightColSelect.value : '',
+            volWeightCol: window.priceVolWeightColSelect ? window.priceVolWeightColSelect.value : ''
+        });
+    }
+
+    function populatePriceColumnSelects() {
+        const allCols = window.getAllAvailableColumns ? window.getAllAvailableColumns() : window.allColumns;
+        const updateDatalist = (listId, inputEl) => {
+            const dl = document.getElementById(listId);
+            if (dl) dl.innerHTML = allCols.map(c => `<option value="${esc(c)}">`).join('');
+            if (inputEl) inputEl.setAttribute('list', listId);
+        };
+        updateDatalist('priceSkuColList', window.priceSkuColSelect);
+        updateDatalist('priceWeightColList', window.priceWeightColSelect);
+        updateDatalist('priceVolWeightColList', window.priceVolWeightColSelect);
+    }
+
+    function loadPriceFieldsToUI() {
+        const fields = getPriceFields();
+        if (window.priceSkuColSelect) window.priceSkuColSelect.value = fields.skuPriceCol;
+        if (window.priceWeightColSelect) window.priceWeightColSelect.value = fields.weightCol;
+        if (window.priceVolWeightColSelect) window.priceVolWeightColSelect.value = fields.volWeightCol;
+    }
+
+    // ───────── 公式编辑器 ─────────
+    let priceFormulaEditor;
+    function initPriceFormulaEditor() {
+        if (!window.priceFormulaContainer) return;
+        const saved = lsGet(LK_FORMULA, DEFAULT_FORMULA);
+        priceFormulaEditor = CodeMirror(window.priceFormulaContainer, {
+            value: saved,
+            mode: 'javascript',
+            theme: 'material-darker',
+            lineNumbers: true,
+            tabSize: 2
+        });
+        priceFormulaEditor.setSize('100%', '260px');
+        priceFormulaEditor.on('change', () => {
+            lsSet(LK_FORMULA, priceFormulaEditor.getValue());
+        });
+        window.priceFormulaEditor = priceFormulaEditor;
+    }
+
+    // ───────── 执行计算 ─────────
+    function runPriceCalc() {
+        const data = window.processedData;
+        if (!data || !data.length) {
+            log('❌ 请先执行“变体组处理”或确保有处理后的数据', 'error');
+            return;
+        }
+        const skuPriceCol = window.priceSkuColSelect.value.trim();
+        const weightCol = window.priceWeightColSelect.value.trim();
+        const volWeightCol = window.priceVolWeightColSelect.value.trim();
+        if (!skuPriceCol || !weightCol) {
+            log('❌ 请至少选择 SKU价格列 和 重量列', 'error');
+            return;
+        }
+        const rate = getRate();
+        if (!shippingRates.size) refreshShippingRates();
+
+        let computeFn;
+        try {
+            const code = priceFormulaEditor.getValue();
+            computeFn = new Function('row', 'shippingRates', 'exchangeRate',
+                code + '; return compute(row, shippingRates, exchangeRate);'
+            );
+            // 预测试
+            computeFn({ skuPrice: 1, weight: 1, volWeight: 0 }, shippingRates, rate);
+        } catch (err) {
+            log(`❌ 公式错误: ${err.message}`, 'error');
+            return;
+        }
+
+        // 清理旧价格列
+        if (lastPriceCols.length) {
+            lastPriceCols.forEach(col => data.forEach(row => delete row[col]));
+            log(`🧹 已移除旧价格列: ${lastPriceCols.join(', ')}`, 'info');
+        }
+
+        const newColsSet = new Set();
+        let ok = 0, fail = 0;
+        data.forEach(row => {
+            try {
+                // 构造增强 row 对象，保留原始字段并注入 skuPrice/weight/volWeight
+                const enhanced = { ...row };
+                enhanced.skuPrice = row[skuPriceCol] ?? 0;
+                enhanced.weight = row[weightCol] ?? 0;
+                enhanced.volWeight = volWeightCol ? (row[volWeightCol] ?? 0) : 0;
+
+                const result = computeFn(enhanced, shippingRates, rate);
+                if (typeof result === 'object' && result !== null) {
+                    Object.keys(result).forEach(k => newColsSet.add(k));
+                    Object.assign(row, result);
+                    ok++;
+                } else {
+                    fail++;
+                }
+            } catch (e) {
+                fail++;
+                log(`行计算失败: ${e.message}`, 'warning');
+            }
+        });
+
+        lastPriceCols = Array.from(newColsSet);
+        lsSet(LK_LAST_PRICE_COLS, lastPriceCols);
+        log(`💰 价格计算完成: ${ok} 成功, ${fail} 失败，新增列: ${lastPriceCols.join(', ')}`, 'success');
+        window.dataStatus.textContent = `✅ 已计价，含列: ${lastPriceCols.join(', ')}`;
+        // 更新去重等面板的列提示
+        if (window.updateDedupDatalist) window.updateDedupDatalist();
+        if (window.updateDedupFieldHints) window.updateDedupFieldHints();
+    }
+
+    // ───────── 面板折叠与全屏 ─────────
+    function initPricePanelCollapse() {
+        const toggle = window.priceToggleHeader;
+        const icon = window.priceToggleIcon;
+        const wrapper = window.priceCollapseWrapper;
+        if (!toggle || !icon || !wrapper) return;
+        const saved = lsGet(LK_FORMULA_COLLAPSED, false);
+        wrapper.className = saved ? 'collapsed-content' : 'expanded-content-pricing';
+        icon.className = saved ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+        toggle.addEventListener('click', () => {
+            const now = wrapper.classList.contains('expanded-content-pricing');
+            wrapper.className = now ? 'collapsed-content' : 'expanded-content-pricing';
+            icon.className = now ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+            lsSet(LK_FORMULA_COLLAPSED, now);
+            if (priceFormulaEditor) setTimeout(() => priceFormulaEditor.refresh(), 350);
+        });
+    }
+
+    function initPriceFullscreen() {
+        const card = window.priceCard;
+        const btn = window.priceFullscreenBtn;
+        if (!card || !btn) return;
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const is = card.classList.contains('fullscreen-card');
+            card.classList.toggle('fullscreen-card');
+            btn.innerHTML = is ? '<i class="fa-solid fa-expand"></i>' : '<i class="fa-solid fa-compress"></i>';
+            if (priceFormulaEditor) {
+                setTimeout(() => {
+                    priceFormulaEditor.refresh();
+                    priceFormulaEditor.setSize('100%', is ? 'auto' : '100%');
+                }, 100);
+            }
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && card.classList.contains('fullscreen-card')) {
+                card.classList.remove('fullscreen-card');
+                btn.innerHTML = '<i class="fa-solid fa-expand"></i>';
+                if (priceFormulaEditor) {
+                    setTimeout(() => priceFormulaEditor.refresh(), 100);
+                }
+            }
+        });
+    }
+
+    function initPriceCalcEvents() {
+        // 运行按钮
+        if (window.priceRunBtn) {
+            window.priceRunBtn.addEventListener('click', runPriceCalc);
+        }
+        // 重置公式
+        if (window.priceResetFormulaBtn) {
+            window.priceResetFormulaBtn.addEventListener('click', () => {
+                if (priceFormulaEditor) {
+                    priceFormulaEditor.setValue(DEFAULT_FORMULA);
+                    lsSet(LK_FORMULA, DEFAULT_FORMULA);
+                }
+                log('价格计算公式已重置', 'info');
+            });
+        }
+        // 重置字段
+        if (window.priceResetFieldsBtn) {
+            window.priceResetFieldsBtn.addEventListener('click', () => {
+                const defaults = DEFAULT_PRICE_FIELDS;
+                if (window.priceSkuColSelect) window.priceSkuColSelect.value = defaults.skuPriceCol;
+                if (window.priceWeightColSelect) window.priceWeightColSelect.value = defaults.weightCol;
+                if (window.priceVolWeightColSelect) window.priceVolWeightColSelect.value = defaults.volWeightCol;
+                savePriceFields();
+                log('价格字段已重置', 'info');
+            });
+        }
+        // 列选择变化时保存
+        [window.priceSkuColSelect, window.priceWeightColSelect, window.priceVolWeightColSelect].forEach(el => {
+            if (el) el.addEventListener('change', savePriceFields);
+        });
+        // 汇率修改
+        if (window.priceRateInput) {
+            window.priceRateInput.addEventListener('change', () => {
+                setExchangeRate(window.priceRateInput.value);
+            });
+        }
+    }
+
+    // ───────── 初始化入口 ─────────
+    function initPriceCalculator() {
+        // 恢复汇率
+        if (window.priceRateInput) {
+            window.priceRateInput.value = getRate();
+        }
+        loadPriceFieldsToUI();
+        populatePriceColumnSelects();
+        initPriceFormulaEditor();
+        initPricePanelCollapse();
+        initPriceFullscreen();
+        initPriceCalcEvents();
+        refreshShippingRates();
+
+        // 恢复上次价格列名
+        lastPriceCols = lsGet(LK_LAST_PRICE_COLS, []);
+        if (lastPriceCols.length) {
+            log(`📌 检测到上次价格列: ${lastPriceCols.join(', ')} (将在新计算时覆盖)`, 'info');
+        }
+    }
+
+    window.initPriceCalculator = initPriceCalculator;
+    window.runPriceCalc = runPriceCalc;
+    window.populatePriceColumnSelects = populatePriceColumnSelects;
+})();
+
+</script>
+
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/config-manager.js
+
+// ============== 配置方案管理 ==============
+(function() {
+    const { $, esc, lsGet, lsSet, log } = window;
+
+    function loadConfigs() {
+        return lsGet(window.LK_CONFIGS, []);
+    }
+
+    function saveConfigs(configs) {
+        // 确保最多只有一个默认方案，保留第一个 isDefault 为 true 的，其余设为 false
+        let foundDefault = false;
+        configs.forEach(c => {
+            if (c.isDefault) {
+                if (foundDefault) c.isDefault = false;
+                else foundDefault = true;
+            }
+        });
+        lsSet(window.LK_CONFIGS, configs);
+        renderConfigList();
+    }
+
+    function getCurrentFullConfig() {
+        return {
+            name: window.currentConfig.name || '未命名',
+            isDefault: window.currentConfig.isDefault || false,
+            skuColumn: window.skuColSelect.value,
+            parentSkuColumn: window.parentColSelect.value,
+            mapping: window.mappingEditor ? window.mappingEditor.getValue() : window.currentConfig.mapping,
+            code: window.codeEditor ? window.codeEditor.getValue() : window.currentConfig.code,
+            colorEnum: window.colorEnumEditor ? window.colorEnumEditor.getValue() : window.currentConfig.colorEnum,
+            classifySourceCol: window.classifySourceCol ? window.classifySourceCol.value.trim() : '',
+            classifyOutputCol: window.classifyOutputCol ? window.classifyOutputCol.value.trim() : 'Color Classification',
+            dedupFields: {
+                inputField: window.dedupInputField ? window.dedupInputField.value.trim() : '',
+                groupField: window.dedupGroupField ? window.dedupGroupField.value.trim() : '',
+                outputField: window.dedupOutputField ? window.dedupOutputField.value.trim() : '',
+                mode: window.dedupMode ? window.dedupMode.value : 'letter'
+            },
+            priceFields: {
+                exchangeRate: window.priceRateInput ? window.priceRateInput.value : '7.2',
+                skuPriceCol: window.priceSkuColSelect ? window.priceSkuColSelect.value : '',
+                weightCol: window.priceWeightColSelect ? window.priceWeightColSelect.value : '',
+                volWeightCol: window.priceVolWeightColSelect ? window.priceVolWeightColSelect.value : ''
+            },
+            priceFormula: window.priceFormulaEditor ? window.priceFormulaEditor.getValue() : '',
+        };
+    }
+
+    function applyConfig(cfg) {
+        if (cfg.skuColumn) window.skuColSelect.value = cfg.skuColumn;
+        if (cfg.parentSkuColumn) window.parentColSelect.value = cfg.parentSkuColumn;
+        if (window.mappingEditor && cfg.mapping !== undefined) window.mappingEditor.setValue(cfg.mapping);
+        if (window.codeEditor && cfg.code !== undefined) window.codeEditor.setValue(cfg.code);
+        if (window.colorEnumEditor && cfg.colorEnum !== undefined) {
+            window.colorEnumEditor.setValue(cfg.colorEnum);
+            window.saveColorEnumFromEditor();
+        }
+        if (cfg.classifySourceCol !== undefined && window.classifySourceCol) window.classifySourceCol.value = cfg.classifySourceCol || '';
+        if (cfg.classifyOutputCol !== undefined && window.classifyOutputCol) window.classifyOutputCol.value = cfg.classifyOutputCol || 'Color Classification';
+        if (cfg.dedupFields) {
+            if (window.dedupInputField) window.dedupInputField.value = cfg.dedupFields.inputField || '';
+            if (window.dedupGroupField) window.dedupGroupField.value = cfg.dedupFields.groupField || '';
+            if (window.dedupOutputField) window.dedupOutputField.value = cfg.dedupFields.outputField || '去重后值';
+            if (window.dedupMode) window.dedupMode.value = cfg.dedupFields.mode || 'letter';
+            window.saveDedupFields();
+        }
+        if (cfg.priceFields) {
+            if (window.priceRateInput) window.priceRateInput.value = cfg.priceFields.exchangeRate || '7.2';
+            if (window.priceSkuColSelect) window.priceSkuColSelect.value = cfg.priceFields.skuPriceCol || '';
+            if (window.priceWeightColSelect) window.priceWeightColSelect.value = cfg.priceFields.weightCol || '';
+            if (window.priceVolWeightColSelect) window.priceVolWeightColSelect.value = cfg.priceFields.volWeightCol || '';
+            window.savePriceFields && window.savePriceFields();
+        }
+        if (cfg.priceFormula !== undefined && window.priceFormulaEditor) {
+            window.priceFormulaEditor.setValue(cfg.priceFormula);
+            window.lsSet && window.lsSet('ge32_formula_code', cfg.priceFormula);
+        }
+
+        window.currentConfig.name = cfg.name || '未命名';
+        window.currentConfig.isDefault = !!cfg.isDefault;
+        window.updateDedupDatalist();
+        window.updateDedupFieldHints();
+        window.updateDedupReadyStatus();
+    }
+
+    function setDefaultConfig(index) {
+        const configs = loadConfigs();
+        configs.forEach((c, i) => c.isDefault = (i === index));
+        saveConfigs(configs);
+    }
+
+    function renderConfigList() {
+        const configs = loadConfigs();
+        if (!configs.length) {
+            window.configListContainer.innerHTML = '<span class="text-gray-500 text-sm">暂无方案</span>';
+            return;
+        }
+        window.configListContainer.innerHTML = configs.map((c, i) => `
+            <div class="config-item" data-index="${i}">
+                <label class="checkbox-white config-default-check">
+                    <input type="checkbox" class="config-default-radio" ${c.isDefault ? 'checked' : ''}>
+                    <span>默认</span>
+                </label>
+                <span>📋 ${esc(c.name)}</span>
+                <button class="text-blue-400 hover:text-blue-300 config-apply-btn" data-apply="${i}">应用</button>
+                <button class="text-red-400 hover:text-red-300 config-delete-btn" data-delete="${i}">删除</button>
+            </div>`).join('');
+        
+        // 默认勾选互斥处理
+        window.configListContainer.querySelectorAll('.config-default-radio').forEach(radio => {
+            radio.addEventListener('change', function(e) {
+                if (this.checked) {
+                    const idx = parseInt(this.closest('.config-item').dataset.index, 10);
+                    setDefaultConfig(idx);
+                } else {
+                    // 不允许取消勾选，保持原状
+                    const cfgs = loadConfigs();
+                    const idx = parseInt(this.closest('.config-item').dataset.index, 10);
+                    if (cfgs[idx]) {
+                        this.checked = cfgs[idx].isDefault;
+                    }
+                }
+            });
+        });
+
+        window.configListContainer.querySelectorAll('[data-apply]').forEach(b => b.addEventListener('click', e => {
+            applyConfig(loadConfigs()[e.target.dataset.apply]);
+            log('方案已应用', 'success');
+        }));
+        window.configListContainer.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', e => {
+            const cfgs = loadConfigs();
+            cfgs.splice(e.target.dataset.delete, 1);
+            saveConfigs(cfgs);
+        }));
+    }
+
+    function applyDefaultConfigOnStartup() {
+        const configs = loadConfigs();
+        const defaultCfg = configs.find(c => c.isDefault);
+        if (defaultCfg) {
+            applyConfig(defaultCfg);
+            log(`📌 已自动应用默认方案: ${defaultCfg.name}`, 'info');
+        }
+    }
+
+    window.loadConfigs = loadConfigs;
+    window.saveConfigs = saveConfigs;
+    window.getCurrentFullConfig = getCurrentFullConfig;
+    window.applyConfig = applyConfig;
+    window.renderConfigList = renderConfigList;
+    window.applyDefaultConfigOnStartup = applyDefaultConfigOnStartup;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/filter.js
+
+// ============== SKU 筛选器（复用 rawDataRows，支持条件组、删除） ==============
+(function() {
+    const { $, esc, lsGet, lsSet, log } = window;
+
+    const LK_FILTER_CONFIGS = 'sku_filter_configs_v4';
+    const LK_FILTER_CONDITIONS = 'sku_filter_conditions';
+
+    // ─────────── 内部状态 ───────────
+    let conditionGroups = [];
+    let filteredSKUs = [];
+    // 缓存原始表引用，直接操作 window.rawDataRows
+
+    // ─────────── 默认条件 ───────────
+    const DEFAULT_CONDITIONS = [
+        { column: '', matchType: 'include', keywords: [] },
+        { column: '', matchType: 'gt', numericValue: 30, keywords: [] }
+    ];
+
+    // ─────────── 条件管理 ───────────
+    function loadConditions() {
+        const saved = lsGet(LK_FILTER_CONDITIONS, null);
+        if (saved && Array.isArray(saved)) {
+            conditionGroups = saved.map(g => ({ ...g, keywords: [...(g.keywords || [])] }));
+        } else {
+            conditionGroups = DEFAULT_CONDITIONS.map(g => ({ ...g, keywords: [...(g.keywords || [])] }));
+        }
+    }
+
+    function saveConditions() {
+        lsSet(LK_FILTER_CONDITIONS, conditionGroups);
+    }
+
+    function renderConditionsUI() {
+        const container = window.filterConditionsContainer;
+        if (!container) return;
+        if (!conditionGroups.length) {
+            container.innerHTML = '<div class="text-sm text-gray-400 text-center py-4">暂无筛选条件，点击下方按钮添加</div>';
+            return;
+        }
+        const allCols = window.allColumns.length ? window.allColumns : (window.processedData.length ? Object.keys(window.processedData[0]).filter(k => !k.startsWith('_')) : []);
+        const colOptions = allCols.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+        container.innerHTML = conditionGroups.map((group, idx) => {
+            const mt = group.matchType || 'include';
+            const isNumeric = ['gt','lt','eq','gte','lte'].includes(mt);
+            const isExists = ['exists','notExists'].includes(mt);
+            const keywordsText = (group.keywords || []).join('\n');
+            const numericVal = group.numericValue !== undefined ? group.numericValue : '';
+            return `
+                <div class="filter-condition-card" data-idx="${idx}">
+                    <div class="flex flex-wrap items-end gap-2 mb-2">
+                        <div class="flex-1 min-w-[120px]">
+                            <label class="field-label">列</label>
+                            <select class="input-white-sm filter-col-sel" data-idx="${idx}">
+                                <option value="">-- 选择 --</option>${colOptions.replace(new RegExp(`value="${esc(group.column)}"`), `value="${esc(group.column)}" selected`)}
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[120px]">
+                            <label class="field-label">匹配方式</label>
+                            <select class="input-white-sm filter-match-sel" data-idx="${idx}">
+                                <option value="include" ${mt==='include'?'selected':''}>包含关键词</option>
+                                <option value="exclude" ${mt==='exclude'?'selected':''}>不包含关键词</option>
+                                <option value="exists" ${mt==='exists'?'selected':''}>存在(非空)</option>
+                                <option value="notExists" ${mt==='notExists'?'selected':''}>不存在(空)</option>
+                                <option value="gt" ${mt==='gt'?'selected':''}>大于</option>
+                                <option value="lt" ${mt==='lt'?'selected':''}>小于</option>
+                                <option value="eq" ${mt==='eq'?'selected':''}>等于</option>
+                                <option value="gte" ${mt==='gte'?'selected':''}>≥</option>
+                                <option value="lte" ${mt==='lte'?'selected':''}>≤</option>
+                            </select>
+                        </div>
+                        <button class="btn-white-sm filter-remove-btn" data-idx="${idx}"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div class="mb-2">
+                        ${isNumeric ? `
+                            <label class="field-label">比较数值 (支持 %)</label>
+                            <input type="text" class="input-white-sm filter-numeric-inp" data-idx="${idx}" value="${esc(String(numericVal))}" placeholder="如 100 或 30%">
+                        ` : (isExists ? `
+                            <div class="text-xs text-gray-400">无需额外输入</div>
+                        ` : `
+                            <label class="field-label">关键词 (每行一个)</label>
+                            <textarea class="input-white-sm filter-keywords-ta" data-idx="${idx}" rows="2" placeholder="学生&#10;儿童">${esc(keywordsText)}</textarea>
+                        `)}
+                    </div>
+                </div>`;
+        }).join('');
+
+        // 绑定事件
+        container.querySelectorAll('.filter-col-sel').forEach(sel => sel.addEventListener('change', function(e) {
+            const idx = this.dataset.idx; if (conditionGroups[idx]) conditionGroups[idx].column = this.value; saveConditions();
+        }));
+        container.querySelectorAll('.filter-match-sel').forEach(sel => sel.addEventListener('change', function(e) {
+            const idx = this.dataset.idx; if (conditionGroups[idx]) { conditionGroups[idx].matchType = this.value; saveConditions(); renderConditionsUI(); }
+        }));
+        container.querySelectorAll('.filter-keywords-ta').forEach(ta => ta.addEventListener('change', function(e) {
+            const idx = this.dataset.idx;
+            if (conditionGroups[idx]) {
+                conditionGroups[idx].keywords = parseKeywords(this.value);
+                saveConditions();
+            }
+        }));
+        container.querySelectorAll('.filter-numeric-inp').forEach(inp => inp.addEventListener('change', function(e) {
+            const idx = this.dataset.idx;
+            if (conditionGroups[idx]) {
+                const val = parseNumericInput(this.value);
+                conditionGroups[idx].numericValue = isNaN(val) ? null : val;
+                saveConditions();
+            }
+        }));
+        container.querySelectorAll('.filter-remove-btn').forEach(btn => btn.addEventListener('click', function(e) {
+            const idx = this.dataset.idx;
+            conditionGroups.splice(idx, 1);
+            saveConditions();
+            renderConditionsUI();
+        }));
+    }
+
+    function parseKeywords(text) {
+        if (!text) return [];
+        const lines = text.split(/\r?\n/);
+        const kw = [];
+        lines.forEach(line => {
+            if (line.includes(',')) {
+                line.split(',').forEach(p => { const w = p.trim(); if (w) kw.push(w); });
+            } else {
+                const w = line.trim(); if (w) kw.push(w);
+            }
+        });
+        return [...new Set(kw)];
+    }
+
+    function parseNumericInput(val) {
+        if (val === null || val === undefined) return NaN;
+        let str = String(val).trim();
+        if (str === '') return NaN;
+        if (str.endsWith('%')) {
+            let num = parseFloat(str.slice(0, -1));
+            return isNaN(num) ? NaN : num / 100;
+        }
+        return parseFloat(str);
+    }
+
+    // ─────────── 判断逻辑 ───────────
+    function extractNumber(cellValue) {
+        if (cellValue === undefined || cellValue === null) return NaN;
+        let str = String(cellValue).trim();
+        if (str === '') return NaN;
+        str = str.replace(/,/g, '');
+        if (str.endsWith('%')) {
+            let num = parseFloat(str.slice(0, -1));
+            return isNaN(num) ? NaN : num / 100;
+        }
+        return parseFloat(str);
+    }
+
+    function isRowHit(row, cond) {
+        const col = cond.column;
+        if (!col) return false;
+        const cell = row[col];
+        const mt = cond.matchType || 'include';
+
+        if (mt === 'exists') return cell !== undefined && cell !== null && String(cell).trim() !== '';
+        if (mt === 'notExists') return cell === undefined || cell === null || String(cell).trim() === '';
+
+        if (['gt','lt','eq','gte','lte'].includes(mt)) {
+            const cellNum = extractNumber(cell);
+            if (isNaN(cellNum)) return false;
+            const compVal = cond.numericValue;
+            if (compVal === null || isNaN(compVal)) return false;
+            switch(mt) {
+                case 'gt': return cellNum > compVal;
+                case 'lt': return cellNum < compVal;
+                case 'eq': return Math.abs(cellNum - compVal) < 1e-12;
+                case 'gte': return cellNum >= compVal;
+                case 'lte': return cellNum <= compVal;
+            }
+            return false;
+        }
+
+        // 文本包含/不包含
+        if (cell === undefined || cell === null) return false;
+        const str = String(cell).toLowerCase();
+        const keywords = cond.keywords || [];
+        if (keywords.length === 0) return false;
+        if (mt === 'include') return keywords.some(kw => str.includes(kw.toLowerCase()));
+        if (mt === 'exclude') return !keywords.some(kw => str.includes(kw.toLowerCase()));
+        return false;
+    }
+
+    // ─────────── 执行筛选 ───────────
+    function runFilter() {
+        const skuCol = window.skuColSelect.value.trim();
+        const parentCol = window.parentColSelect.value.trim();
+        if (!skuCol || !parentCol) {
+            log('❌ 请先在主页设置 SKU列 和 父SKU列', 'error');
+            return;
+        }
+        if (!window.rawDataRows.length) {
+            log('❌ 请先上传Excel并加载数据', 'error');
+            return;
+        }
+        const active = conditionGroups.filter(c => c.column && (
+            ['exists','notExists'].includes(c.matchType) ||
+            (['include','exclude'].includes(c.matchType) && (c.keywords||[]).length) ||
+            (['gt','lt','eq','gte','lte'].includes(c.matchType) && !isNaN(c.numericValue))
+        ));
+        if (!active.length) {
+            log('❌ 至少配置一个有效条件', 'error');
+            return;
+        }
+
+        const hitRows = window.rawDataRows.filter(r => active.some(cond => isRowHit(r, cond)));
+        if (!hitRows.length) {
+            filteredSKUs = [];
+            renderFilterResult([]);
+            log('🔍 筛选完成，无命中数据', 'info');
+            return;
+        }
+        // 按父SKU分组，获取组内所有SKU
+        const groups = new Set();
+        hitRows.forEach(r => {
+            let sku = r[skuCol] ? String(r[skuCol]).trim() : '';
+            let parent = r[parentCol] ? String(r[parentCol]).trim() : '';
+            if (sku) groups.add(parent || sku);
+        });
+        const groupMap = new Map();
+        window.rawDataRows.forEach(r => {
+            let sku = r[skuCol] ? String(r[skuCol]).trim() : '';
+            let parent = r[parentCol] ? String(r[parentCol]).trim() : '';
+            if (!sku) return;
+            let key = parent || sku;
+            if (!groupMap.has(key)) groupMap.set(key, new Set());
+            groupMap.get(key).add(sku);
+        });
+        const resultSet = new Set();
+        groups.forEach(g => { const s = groupMap.get(g); if (s) s.forEach(v => resultSet.add(v)); });
+        filteredSKUs = Array.from(resultSet);
+        renderFilterResult(filteredSKUs);
+        log(`🔍 筛选完成：命中 ${hitRows.length} 行，得到 ${filteredSKUs.length} 个独立SKU`, 'success');
+    }
+
+    function renderFilterResult(skuList) {
+        const container = window.filterResultContainer;
+        if (!container) return;
+        if (!skuList.length) {
+            container.innerHTML = '<div class="text-sm text-gray-400 p-4">暂无结果</div>';
+            window.filterResultCount.innerText = '0 个SKU';
+            return;
+        }
+        window.filterResultCount.innerText = `${skuList.length} 个SKU`;
+        container.innerHTML = skuList.map(sku => `
+            <label class="filter-sku-chip">
+                <input type="checkbox" class="filter-sku-check" value="${esc(sku)}">
+                <span>${esc(sku)}</span>
+            </label>
+        `).join('');
+    }
+
+    function getSelectedSKUs() {
+        const checks = document.querySelectorAll('.filter-sku-check:checked');
+        return Array.from(checks).map(cb => cb.value);
+    }
+
+    // ─────────── 删除选中SKU行 ───────────
+    function deleteSelectedSKUs() {
+        const skuCol = window.skuColSelect.value.trim();
+        if (!skuCol) { log('❌ 未设置SKU列', 'error'); return; }
+        const selected = getSelectedSKUs();
+        if (!selected.length) { log('请勾选要删除的SKU', 'warning'); return; }
+        const selectedSet = new Set(selected);
+        const before = window.rawDataRows.length;
+        window.rawDataRows = window.rawDataRows.filter(r => !selectedSet.has(String(r[skuCol] || '').trim()));
+        const deleted = before - window.rawDataRows.length;
+        // 清除处理结果
+        window.processedData = [];
+        log(`🗑️ 已删除 ${deleted} 行，剩余 ${window.rawDataRows.length} 行`, 'success');
+        window.dataStatus.textContent = `✅ 数据已更新 (${window.rawDataRows.length} 行)`;
+        // 重新筛选
+        runFilter();
+        // 刷新主页列提示等（如果有必要）
+        if (window.updateDedupDatalist) window.updateDedupDatalist();
+        if (window.updateDedupFieldHints) window.updateDedupFieldHints();
+    }
+
+    // ─────────── 复制SKU ───────────
+    async function copyFilteredSKUs() {
+        if (!filteredSKUs.length) { log('无筛选结果', 'warning'); return; }
+        const text = filteredSKUs.join('\n');
+        try {
+            await navigator.clipboard.writeText(text);
+            log(`📋 已复制 ${filteredSKUs.length} 个SKU`, 'success');
+        } catch {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+    }
+
+    // ─────────── 配置方案管理 (条件组快照) ───────────
+    function loadConfigs() {
+        return lsGet(LK_FILTER_CONFIGS, []);
+    }
+    function saveConfigsToStorage(configs) {
+        lsSet(LK_FILTER_CONFIGS, configs);
+        renderConfigList();
+    }
+    function getCurrentFilterConfig() {
+        return {
+            conditions: conditionGroups.map(g => ({ ...g, keywords: [...(g.keywords||[])] }))
+        };
+    }
+    function applyFilterConfig(cfg) {
+        if (cfg.conditions) {
+            conditionGroups = cfg.conditions.map(g => ({ ...g, keywords: [...(g.keywords||[])] }));
+            saveConditions();
+            renderConditionsUI();
+            log('筛选条件已应用', 'success');
+        }
+    }
+    function renderConfigList() {
+        const container = window.filterConfigListContainer;
+        if (!container) return;
+        const configs = loadConfigs();
+        if (!configs.length) {
+            container.innerHTML = '<span class="text-sm text-gray-400">暂无保存</span>';
+            return;
+        }
+        container.innerHTML = configs.map((cfg, i) => `
+            <div class="config-item" style="margin-bottom:0.3rem;">
+                <span class="text-sm">📋 ${esc(cfg.name)}</span>
+                <button class="btn-white-sm filter-apply-config" data-idx="${i}">应用</button>
+                <button class="btn-white-sm filter-delete-config" data-idx="${i}"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `).join('');
+        container.querySelectorAll('.filter-apply-config').forEach(b => b.addEventListener('click', e => {
+            const cfgs = loadConfigs();
+            applyFilterConfig(cfgs[e.target.dataset.idx].config);
+        }));
+        container.querySelectorAll('.filter-delete-config').forEach(b => b.addEventListener('click', e => {
+            const cfgs = loadConfigs();
+            cfgs.splice(e.target.dataset.idx, 1);
+            saveConfigsToStorage(cfgs);
+        }));
+    }
+
+    function saveCurrentFilterConfig() {
+        const nameInput = window.filterConfigNameInput;
+        if (!nameInput) return;
+        const name = nameInput.value.trim();
+        if (!name) { log('请输入配置名称', 'warning'); return; }
+        const configs = loadConfigs();
+        configs.push({ name, config: getCurrentFilterConfig() });
+        saveConfigsToStorage(configs);
+        nameInput.value = '';
+        log(`筛选配置“${name}”已保存`, 'success');
+    }
+
+    // ─────────── 初始化 ───────────
+    function initFilterPage() {
+        loadConditions();
+        renderConditionsUI();
+        renderConfigList();
+        initFilterConfigCollapse();
+
+        // 事件绑定
+        if (window.filterAddConditionBtn) {
+            window.filterAddConditionBtn.addEventListener('click', () => {
+                conditionGroups.unshift({ column: '', matchType: 'include', keywords: [] });
+                saveConditions();
+                renderConditionsUI();
+            });
+        }
+        if (window.filterRunBtn) {
+            window.filterRunBtn.addEventListener('click', runFilter);
+        }
+        if (window.filterCopyBtn) {
+            window.filterCopyBtn.addEventListener('click', copyFilteredSKUs);
+        }
+        if (window.filterDeleteBtn) {
+            window.filterDeleteBtn.addEventListener('click', deleteSelectedSKUs);
+        }
+        if (window.filterSaveConfigBtn) {
+            window.filterSaveConfigBtn.addEventListener('click', saveCurrentFilterConfig);
+        }
+        // 全选/取消全选
+        if (window.filterSelectAllBtn) {
+            window.filterSelectAllBtn.addEventListener('click', () => {
+                const all = document.querySelectorAll('.filter-sku-check');
+                const isAllSelected = window.filterSelectAllBtn.textContent.includes('取消全选');
+                all.forEach(cb => cb.checked = !isAllSelected);
+                window.filterSelectAllBtn.innerHTML = isAllSelected
+                    ? '<i class="fa-solid fa-check-double"></i> 全选'
+                    : '<i class="fa-solid fa-times"></i> 取消全选';
+            });
+        }
+    }
+
+    // ─────────── 筛选方案折叠 ───────────
+    function initFilterConfigCollapse() {
+        const toggle = document.getElementById('filterConfigToggleHeader');
+        const icon = document.getElementById('filterConfigToggleIcon');
+        const wrapper = document.getElementById('filterConfigCollapseWrapper');
+        if (!toggle || !icon || !wrapper) return;
+        const KEY = 'filter_config_collapsed_v1';
+        const saved = lsGet(KEY, true); // 默认折叠
+        wrapper.className = saved ? 'collapsed-content' : 'expanded-content';
+        icon.className = saved ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+        toggle.addEventListener('click', () => {
+            const now = wrapper.classList.contains('expanded-content');
+            wrapper.className = now ? 'collapsed-content' : 'expanded-content';
+            icon.className = now ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+            lsSet(KEY, now);
+        });
+    }
+
+    window.initFilterPage = initFilterPage;
+    window.runFilter = runFilter;
+    window.refreshFilterConditionsUI = renderConditionsUI;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/ui.js
+
+// ============== UI 交互、折叠、全屏、事件绑定 ==============
+(function() {
+    const { $, esc, lsGet, lsSet, log } = window;
+
+    function initCollapse(toggle, icon, wrapper, cls, key) {
+        const saved = lsGet(key, false);
+        wrapper.className = saved ? 'collapsed-content' : cls;
+        icon.className = saved ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+        toggle.addEventListener('click', () => {
+            const now = wrapper.classList.contains(cls);
+            wrapper.className = now ? 'collapsed-content' : cls;
+            icon.className = now ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+            lsSet(key, now);
+            if (window.mappingEditor && wrapper === window.mappingCollapseWrapper) setTimeout(() => window.mappingEditor.refresh(), 350);
+            if (window.codeEditor && wrapper === window.codeCollapseWrapper) setTimeout(() => window.codeEditor.refresh(), 350);
+            if (window.colorEnumEditor && wrapper === window.colorEnumCollapseWrapper) setTimeout(() => window.colorEnumEditor.refresh(), 350);
+        });
+    }
+
+    function toggleFullscreen(card, editor, btn) {
+        const is = card.classList.contains('fullscreen-card');
+        card.classList.toggle('fullscreen-card');
+        btn.innerHTML = is ? '<i class="fa-solid fa-expand"></i>' : '<i class="fa-solid fa-compress"></i>';
+        if (editor) setTimeout(() => {
+            editor.refresh();
+            editor.setSize('100%', is ? 'auto' : '100%');
+        }, 100);
+    }
+
+    // 标签切换
+    function switchTab(tab) {
+        window.mainPage.style.display = tab === 'main' ? 'block' : 'none';
+        window.filterPage.style.display = tab === 'filter' ? 'block' : 'none';
+        window.configPage.style.display = tab === 'config' ? 'block' : 'none';
+        window.tabMainBtn.classList.toggle('active', tab === 'main');
+        window.tabFilterBtn.classList.toggle('active', tab === 'filter');
+        window.tabConfigBtn.classList.toggle('active', tab === 'config');
+        if (tab === 'filter') {
+            // 刷新筛选器列下拉，确保最新列可见
+            if (window.refreshFilterConditionsUI) {
+                setTimeout(() => window.refreshFilterConditionsUI(), 50);
+            }
+        } else if (tab !== 'main') {
+            setTimeout(() => {
+                [window.mappingEditor, window.colorEnumEditor, window.codeEditor, window.priceFormulaEditor].forEach(ed => {
+                    if (ed) ed.refresh();
+                });
+            }, 100);
+        }
+    }
+
+    // 绑定所有事件
+    function bindEvents() {
+        window.tabMainBtn.addEventListener('click', () => switchTab('main'));
+        window.tabFilterBtn.addEventListener('click', () => switchTab('filter'));
+        window.tabConfigBtn.addEventListener('click', () => switchTab('config'));
+
+        // 价格计算相关事件已在 price-calculator.js 中绑定，这里只保留不冲突的部分。
+        // 去重执行
+        window.dedupRunBtn.addEventListener('click', window.runDedup);
+        window.dedupResetFieldsBtn.addEventListener('click', window.resetDedupFieldsToDefault);
+
+        // 去重字段变化
+        const dedupInputs = [window.dedupInputField, window.dedupGroupField, window.dedupOutputField, window.dedupMode];
+        dedupInputs.forEach(el => {
+            if (!el) return;
+            el.addEventListener('input', () => {
+                window.saveDedupFields();
+                window.updateDedupFieldHints();
+                window.updateDedupReadyStatus();
+            });
+            el.addEventListener('change', () => {
+                window.saveDedupFields();
+                window.updateDedupFieldHints();
+                window.updateDedupReadyStatus();
+            });
+            el.addEventListener('focus', () => window.updateDedupDatalist());
+        });
+
+        // 文件加载
+        window.fileInput.addEventListener('change', e => e.target.files[0] && window.handleFile(e.target.files[0]));
+        window.loadSheetBtn.addEventListener('click', () => {
+            if (window.workbook) {
+                window.currentSheetName = window.sheetSelect.value;
+                window.loadSheet();
+            }
+        });
+
+        // 处理 & 导出
+        window.runProcessBtn.addEventListener('click', window.runProcess);
+        window.exportBtn.addEventListener('click', window.exportData);
+
+        // 配置管理
+        window.saveConfigBtn.addEventListener('click', () => {
+            const name = prompt('方案名称：', window.currentConfig.name || '新方案');
+            if (!name) return;
+            const cfgs = window.loadConfigs();
+            const cfg = window.getCurrentFullConfig();
+            cfg.name = name;
+            const idx = cfgs.findIndex(c => c.name === name);
+            if (idx >= 0) {
+                // 已存在的方案，保留其原有的默认状态
+                cfg.isDefault = cfgs[idx].isDefault;
+                cfgs[idx] = cfg;
+            } else {
+                // 新建方案，不自动设为默认
+                cfg.isDefault = false;
+                cfgs.push(cfg);
+            }
+            window.saveConfigs(cfgs);
+            window.currentConfig.name = name;
+            log('方案已保存', 'success');
+        });
+        window.exportConfigBtn.addEventListener('click', () => {
+            const blob = new Blob([JSON.stringify(window.loadConfigs(), null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'variant_configs.json';
+            a.click();
+        });
+        window.importConfigFile.addEventListener('change', e => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                try {
+                    window.saveConfigs(JSON.parse(ev.target.result));
+                    log('导入成功', 'success');
+                } catch { log('无效JSON', 'error'); }
+                window.importConfigFile.value = '';
+            };
+            r.readAsText(f);
+        });
+
+        // 重置按钮
+        window.resetMappingBtn.addEventListener('click', () => window.mappingEditor.setValue(window.DEFAULT_MAPPING));
+        window.resetCodeBtn.addEventListener('click', () => window.codeEditor.setValue(window.DEFAULT_CODE));
+        window.resetColorEnumBtn.addEventListener('click', () => {
+            window.colorEnumEditor.setValue(JSON.stringify(window.DEFAULT_COLOR_ENUM, null, 2));
+            window.saveColorEnumFromEditor();
+            window.updateColorUnmappedMini();
+        });
+
+        // 拖拽上传
+        document.body.addEventListener('dragover', e => e.preventDefault());
+        document.body.addEventListener('drop', e => {
+            e.preventDefault();
+            if (e.dataTransfer.files[0]) window.handleFile(e.dataTransfer.files[0]);
+        });
+
+        // 全屏
+        window.mappingFullscreenBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleFullscreen(window.mappingCard, window.mappingEditor, window.mappingFullscreenBtn);
+        });
+        window.colorEnumFullscreenBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleFullscreen(window.colorEnumCard, window.colorEnumEditor, window.colorEnumFullscreenBtn);
+        });
+        window.codeFullscreenBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleFullscreen(window.codeCard, window.codeEditor, window.codeFullscreenBtn);
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                if (window.mappingCard.classList.contains('fullscreen-card')) toggleFullscreen(window.mappingCard, window.mappingEditor, window.mappingFullscreenBtn);
+                if (window.colorEnumCard.classList.contains('fullscreen-card')) toggleFullscreen(window.colorEnumCard, window.colorEnumEditor, window.colorEnumFullscreenBtn);
+                if (window.codeCard.classList.contains('fullscreen-card')) toggleFullscreen(window.codeCard, window.codeEditor, window.codeFullscreenBtn);
+            }
+        });
+
+        // AI 设置折叠
+        const aiCollapsed = lsGet(window.LK_AI_COLLAPSED, true);
+        window.aiSettingsContent.className = aiCollapsed ? 'collapsed-content' : 'expanded-content';
+        window.aiSettingsIcon.className = aiCollapsed ? 'fa-solid fa-chevron-right text-gray-500' : 'fa-solid fa-chevron-down text-gray-500';
+        window.aiSettingsToggle.addEventListener('click', () => {
+            const now = window.aiSettingsContent.classList.contains('expanded-content');
+            window.aiSettingsContent.className = now ? 'collapsed-content' : 'expanded-content';
+            window.aiSettingsIcon.className = now ? 'fa-solid fa-chevron-right text-gray-500' : 'fa-solid fa-chevron-down text-gray-500';
+            lsSet(window.LK_AI_COLLAPSED, now);
+        });
+
+        // 列变化时刷新下拉
+        window.skuColSelect.addEventListener('change', () => window.updateDedupDatalist());
+        window.parentColSelect.addEventListener('change', () => window.updateDedupDatalist());
+
+        // AI 分类按钮
+        window.aiClassifyBtn.addEventListener('click', async () => {
+            window.saveColorEnumFromEditor();
+            const unmapped = window.findUnmappedColors().map(u => u.display);
+            if (!unmapped.length) {
+                alert('没有未映射颜色');
+                return;
+            }
+            window.aiClassifyBtn.disabled = true;
+            const suggestions = await window.callAI(unmapped);
+            window.aiClassifyBtn.disabled = false;
+            if (suggestions && suggestions.length) window.showAISuggestions(suggestions);
+        });
+
+        // AI API Key 输入保存
+        window.aiApiKey.addEventListener('input', window.saveAISettings);
+        window.aiModel.addEventListener('change', window.saveAISettings);
+        window.aiPrompt.addEventListener('input', window.saveAISettings);
+
+        // 主页快捷按钮事件
+        window.quickPriceBtn.addEventListener('click', window.runPriceCalc);
+        window.quickDedupBtn.addEventListener('click', window.runDedup);
+
+        window.quickAiBtn.addEventListener('click', window.triggerQuickAIClassify);
+
+        // 枚举归类按钮
+        window.classifyRunBtn.addEventListener('click', window.runClassification);
+
+
+        // 筛选页初始化 (仅绑定事件，条件渲染在 filter.js)
+        if (window.initFilterPage) {
+            window.initFilterPage();
+        }
+
+        // 去重折叠
+        const dedupSaved = lsGet(window.LK_DEDUP_COLLAPSED, false);
+        window.dedupCollapseWrapper.className = dedupSaved ? 'collapsed-content' : 'expanded-content-dedup';
+        window.dedupToggleIcon.className = dedupSaved ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+        window.dedupToggleHeader.addEventListener('click', () => {
+            const now = window.dedupCollapseWrapper.classList.contains('expanded-content-dedup');
+            window.dedupCollapseWrapper.className = now ? 'collapsed-content' : 'expanded-content-dedup';
+            window.dedupToggleIcon.className = now ? 'fa-solid fa-chevron-right text-gray-400' : 'fa-solid fa-chevron-down text-gray-400';
+            lsSet(window.LK_DEDUP_COLLAPSED, now);
+        });
+    }
+
+    window.initCollapse = initCollapse;
+    window.toggleFullscreen = toggleFullscreen;
+    window.bindEvents = bindEvents;
+})();
+
+</script>
+<script  >
+// 虚拟工作区内联编译解析: lilsku/lilsku/js/main.js
+
+// ============== 主入口：初始化一切 ==============
+(function() {
+    window.initEditors();
+    window.loadAISettings();
+    window.loadDedupFieldsToUI();
+    window.bindEvents();
+
+    window.initCollapse(
+        window.mappingToggleHeader,
+        window.mappingToggleIcon,
+        window.mappingCollapseWrapper,
+        'expanded-content-mapping',
+        window.LK_MAPPING_COLLAPSED
+    );
+    window.initCollapse(
+        window.colorEnumToggleHeader,
+        window.colorEnumToggleIcon,
+        window.colorEnumCollapseWrapper,
+        'expanded-content-color-enum',
+        window.LK_COLOR_COLLAPSED
+    );
+    window.initCollapse(
+        window.codeToggleHeader,
+        window.codeToggleIcon,
+        window.codeCollapseWrapper,
+        'expanded-content',
+        window.LK_CODE_COLLAPSED
+    );
+
+    window.lastDedupColName = window.lsGet('last_dedup_col_name', '');
+    window.renderConfigList();
+    window.applyDefaultConfigOnStartup();
+    window.updateDedupDatalist();
+    window.updateDedupFieldHints();
+    window.updateDedupReadyStatus();
+
+    // 初始化价格计算器
+    window.initPriceCalculator();
+
+    window.log('🚀 系统就绪，上传Excel后依次执行“处理”、“颜色去重”、“价格计算”、“计数解析”，最后导出');
+})();
+
+</script>
+</body>
+</html>
