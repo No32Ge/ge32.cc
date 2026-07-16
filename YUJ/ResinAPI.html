@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>ResinAPI — 琥珀密钥库</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/feather-icons">
+  </script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js">
+  </script>
+  <style>
+    :root {
+      --bg-parchment: #f3ecdb;
+      --bg-card: #faf6ee;
+      --bg-card-hover: #fdf9f4;
+      --text-primary: #3b2314;
+      --text-secondary: #a08464;
+      --text-tertiary: #c4b393;
+      --accent-terracotta: #c0764a;
+      --accent-terracotta-hover: #a85d34;
+      --accent-ochre: #8b4a2b;
+      --border-tan: #d9ccb5;
+      --border-light: #e8dfce;
+      --shadow-card: 0 1px 4px rgba(139, 74, 43, 0.08);
+      --shadow-modal: 0 8px 32px rgba(139, 74, 43, 0.18);
+      --radius-md: 14px;
+      --radius-lg: 18px;
+      --radius-pill: 50px;
+      --font-display: 'Georgia', 'Noto Serif SC', 'STSong', 'Songti SC', serif;
+      --font-body: 'Georgia', 'Noto Serif SC', 'STSong', serif;
+      --transition-gentle: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html { font-size: 17px; }
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-parchment);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: 0.01em;
+      position: relative;
+    }
+    body::before {
+      content: ''; position: fixed; inset:0; pointer-events: none; z-index:0; opacity:0.03;
+      background-image: radial-gradient(ellipse at 20% 15%, rgba(139,74,43,0.25) 0%, transparent 60%),
+                      radial-gradient(ellipse at 75% 60%, rgba(192,118,74,0.2) 0%, transparent 55%);
+    }
+    .app-shell {
+      position: relative; z-index:1; display:flex; flex-direction:column; height:100vh; max-width:1500px; margin:0 auto; padding:16px 24px 0;
+    }
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between; gap:16px; flex-wrap: wrap;
+      padding: 14px 20px; background: var(--bg-card); border-radius: var(--radius-lg);
+      border: 1px solid var(--border-tan); box-shadow: var(--shadow-card); margin-bottom: 18px;
+    }
+    .header-left { display:flex; align-items:center; gap:12px; }
+    .logo-svg { width:40px; height:40px; }
+    .logo-svg .ring { fill:none; stroke:#c0764a; stroke-width:1.6; stroke-linecap:round; }
+    .logo-svg .tree-trunk { fill:none; stroke:#8b4a2b; stroke-width:1.3; stroke-linecap:round; }
+    .logo-svg .tree-branch { fill:none; stroke:#a85d34; stroke-width:1; stroke-linecap:round; }
+    .app-title { font-family:var(--font-display); font-size:1.5rem; font-weight:600; color:var(--text-primary); }
+    .header-actions { display:flex; gap:8px; align-items:center; }
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 20px;
+      border-radius:var(--radius-pill); font-family:var(--font-body); font-size:0.9rem; font-weight:500;
+      cursor:pointer; border:1.5px solid transparent; transition:all var(--transition-gentle); white-space:nowrap;
+      background:transparent; color:var(--text-secondary); outline:none;
+    }
+    .btn-primary { background:var(--accent-terracotta); color:#faf6ee; border-color:var(--accent-terracotta); }
+    .btn-primary:hover { background:var(--accent-terracotta-hover); border-color:var(--accent-terracotta-hover); }
+    .btn-secondary { border-color:var(--border-tan); color:var(--accent-terracotta); }
+    .btn-secondary:hover { background:rgba(192,118,74,0.07); border-color:var(--accent-terracotta); }
+    .btn-icon-only {
+      width:36px; height:36px; padding:0; border-radius:50%; background:transparent; border:1.5px solid transparent;
+      color:var(--text-secondary); display:inline-flex; align-items:center; justify-content:center;
+      transition:all var(--transition-gentle);
+    }
+    .btn-icon-only:hover { background:rgba(192,118,74,0.08); color:var(--accent-terracotta); border-color:var(--border-tan); }
+    .btn-sm { padding:6px 14px; font-size:0.82rem; }
+    .main-layout { display:flex; gap:20px; flex:1; min-height:0; }
+    .sidebar {
+      width: 270px; flex-shrink:0; background:var(--bg-card); border-radius:var(--radius-lg);
+      border:1px solid var(--border-tan); box-shadow:var(--shadow-card); padding:14px 12px;
+      display:flex; flex-direction:column; gap:4px; overflow-y:auto; max-height:calc(100vh - 130px);
+    }
+    .sidebar-label {
+      font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-tertiary);
+      padding:4px 10px 10px; border-bottom:1px solid var(--border-light); margin-bottom:6px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .sidebar-item {
+      display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:var(--radius-md);
+      cursor:pointer; font-size:0.9rem; color:var(--text-secondary); border:1.5px solid transparent;
+      transition:all var(--transition-gentle); position: relative;
+    }
+    .sidebar-item:hover { background:rgba(192,118,74,0.06); color:var(--text-primary); }
+    .sidebar-item.active { background:rgba(192,118,74,0.12); color:var(--accent-ochre); font-weight:600; border-color:var(--border-tan); }
+    .sidebar-item .cat-icon { width:18px; height:18px; flex-shrink:0; }
+    .sidebar-item .cat-name { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sidebar-item .badge { font-size:0.7rem; background:var(--border-light); color:var(--text-secondary); padding:2px 8px; border-radius:var(--radius-pill); margin-left:4px; }
+    .sidebar-item.active .badge { background:var(--accent-terracotta); color:#faf6ee; }
+    .sidebar-item-actions {
+      display: flex; gap:2px; margin-left: 4px; opacity:0; transition: opacity 0.2s;
+    }
+    .sidebar-item:hover .sidebar-item-actions { opacity:1; }
+    .sidebar-item-actions button {
+      background: none; border: none; width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-tertiary);
+    }
+    .sidebar-item-actions button:hover { color: var(--accent-terracotta); background: rgba(192,118,74,0.1); }
+    .content-area { flex:1; display:flex; flex-direction:column; gap:14px; min-width:0; }
+    .search-bar { display:flex; gap:10px; align-items:center; }
+    .search-wrap { flex:1; position:relative; }
+    .search-wrap svg { position:absolute; left:14px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--text-tertiary); }
+    .search-input {
+      width:100%; padding:11px 16px 11px 42px; border-radius:var(--radius-pill);
+      border:1.5px solid var(--border-tan); background:var(--bg-card); font-family:var(--font-body);
+      font-size:0.9rem; color:var(--text-primary); outline:none;
+    }
+    .search-input:focus { border-color:var(--accent-terracotta); box-shadow:0 0 0 4px rgba(192,118,74,0.08); }
+    .keys-table-container {
+      background:var(--bg-card); border-radius:var(--radius-lg); border:1px solid var(--border-tan);
+      box-shadow:var(--shadow-card); overflow-x:auto; flex:1;
+    }
+    table.keys-table { width:100%; border-collapse:collapse; }
+    table.keys-table th {
+      text-align:left; padding:14px 16px; font-size:0.8rem; font-weight:600; color:var(--text-secondary);
+      letter-spacing:0.05em; border-bottom:1.5px solid var(--border-tan); background:#fdfaf4;
+    }
+    table.keys-table td { padding:12px 16px; border-bottom:1px solid var(--border-light); vertical-align:middle; }
+    table.keys-table tbody tr:hover { background:var(--bg-card-hover); }
+    .key-icon-cell svg { width:20px; height:20px; color:var(--accent-terracotta); }
+    .key-name-cell { font-weight:600; font-family:var(--font-display); }
+    .key-tag { display:inline-block; padding:2px 10px; border-radius:var(--radius-pill); font-size:0.72rem; margin-right:4px; }
+    .tag-cat { background:#faf3e8; color:#8b5e3c; border:1px solid #e0cdb0; }
+    .tag-purp { background:#fdf7f0; color:#a0683a; border:1px solid #ead9c2; }
+    .key-value-cell { font-family:'SF Mono',monospace; font-size:0.8rem; color:var(--text-secondary); word-break:break-all; max-width:220px; }
+    .key-value-cell.masked { letter-spacing:0.1em; color:#b8a590; }
+    .actions-cell { white-space:nowrap; }
+    .empty-table { text-align:center; padding:48px; color:var(--text-tertiary); }
+    .modal-overlay {
+      position:fixed; inset:0; background:rgba(59,35,20,0.5); z-index:1000;
+      display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(2px);
+    }
+    .modal-dialog {
+      background:var(--bg-card); border-radius:var(--radius-xl); border:1.5px solid var(--border-tan);
+      box-shadow:var(--shadow-modal); padding:24px 28px; width:100%; max-width:560px; max-height:85vh; overflow-y:auto;
+      animation: modalIn 0.3s ease;
+    }
+    @keyframes modalIn { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+    .modal-dialog h2 { font-family:var(--font-display); font-size:1.3rem; margin-bottom:18px; border-bottom:1px solid var(--border-light); padding-bottom:12px; }
+    .form-group { margin-bottom:16px; display:flex; flex-direction:column; gap:5px; }
+    .form-group label { font-size:0.85rem; font-weight:500; color:var(--text-secondary); }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding:10px 14px; border-radius:var(--radius-md); border:1.5px solid var(--border-tan);
+      background:#fdfaf4; font-family:var(--font-body); font-size:0.9rem; color:var(--text-primary);
+      outline:none; transition:border-color var(--transition-gentle), box-shadow var(--transition-gentle);
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color:var(--accent-terracotta); box-shadow:0 0 0 4px rgba(192,118,74,0.08);
+    }
+    .form-group textarea { resize: vertical; min-height: 70px; line-height: 1.6; }
+    .icon-picker { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+    .icon-option {
+      width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+      border-radius:var(--radius-md); border:2px solid var(--border-tan); cursor:pointer; color:var(--text-secondary);
+    }
+    .icon-option.selected { border-color:var(--accent-terracotta); color:var(--accent-terracotta); background:rgba(192,118,74,0.1); }
+    .toast-container { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); z-index:2000; }
+    .toast {
+      padding:10px 22px; border-radius:var(--radius-pill); background:#3b2314; color:#faf6ee;
+      font-size:0.85rem; box-shadow:0 4px 16px rgba(139,74,43,0.2); animation: toastIn 0.3s ease, toastOut 0.3s 2.2s forwards;
+    }
+    @keyframes toastIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes toastOut { from{opacity:1;transform:translateY(0);} to{opacity:0;transform:translateY(-10px);} }
+    .hidden-file { display:none; }
+    @media (max-width:860px) {
+      .main-layout { flex-direction:column; }
+      .sidebar { width:100%; flex-direction:row; flex-wrap:wrap; gap:6px; max-height:none; padding:10px; }
+      .sidebar-item { border-radius:var(--radius-pill); padding:6px 10px; }
+      .sidebar-item-actions { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-left">
+      <svg class="logo-svg" viewBox="0 0 48 48"><circle class="ring" cx="24" cy="24" r="20"/><line class="tree-trunk" x1="24" y1="34" x2="24" y2="20"/><path class="tree-branch" d="M24 26 Q18 19 13 16"/><path class="tree-branch" d="M24 26 Q30 19 35 16"/><path class="tree-branch" d="M24 22 Q20 15 18 10"/><path class="tree-branch" d="M24 22 Q28 15 30 10"/><circle fill="#c0764a" opacity="0.85" cx="24" cy="18" r="2.2"/></svg>
+      <span class="app-title">ResinAPI</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-icon-only" id="btn-import-export" title="导入/导出 Excel"><i data-feather="more-vertical"></i></button>
+      <button class="btn btn-primary" id="btn-add-key"><i data-feather="plus"></i> 添加密钥</button>
+    </div>
+  </header>
+  <div class="main-layout">
+    <aside class="sidebar" id="sidebar"><div class="sidebar-label">分类</div></aside>
+    <main class="content-area">
+      <div class="search-bar">
+        <div class="search-wrap"><i data-feather="search"></i><input type="text" class="search-input" id="search-input" placeholder="搜索名称、用途..."></div>
+        <button class="btn btn-sm btn-secondary" id="btn-clear-search" style="display:none;">清除</button>
+      </div>
+      <div class="keys-table-container" id="keys-table-container"></div>
+    </main>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<div id="modal-container"></div>
+<input type="file" class="hidden-file" id="import-file-input" accept=".xlsx,.xls">
+
+<script>
+(function() {
+  const KEYS_STORAGE = 'bohemian-keys-v2';
+  const CATS_STORAGE = 'bohemian-categories-v2';
+  const DEFAULT_CATS = [
+    { name:'语音API', icon:'mic' }, { name:'翻译API', icon:'globe' },
+    { name:'时间API', icon:'clock' }, { name:'大模型API', icon:'cpu' }
+  ];
+  const ALL_ICONS = ['key','globe','clock','cpu','mic','file-text','edit-3','code','message-circle','book-open','zap','shield','server','cloud','map-pin','folder','archive','camera','rss','star'];
+
+  function loadKeys() { try { return JSON.parse(localStorage.getItem(KEYS_STORAGE)||'[]'); } catch { return []; } }
+  function saveKeys(keys) { localStorage.setItem(KEYS_STORAGE, JSON.stringify(keys)); }
+  function loadCategories() {
+    try {
+      const saved = localStorage.getItem(CATS_STORAGE);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [...DEFAULT_CATS];
+  }
+  function saveCategories(cats) { localStorage.setItem(CATS_STORAGE, JSON.stringify(cats)); }
+
+  let keys = loadKeys();
+  let categories = loadCategories();
+  let activeCategory = '全部';
+  let searchQuery = '';
+
+  const $sidebar = document.getElementById('sidebar');
+  const $tableContainer = document.getElementById('keys-table-container');
+  const $searchInput = document.getElementById('search-input');
+  const $btnClearSearch = document.getElementById('btn-clear-search');
+  const $btnAddKey = document.getElementById('btn-add-key');
+  const $btnImportExport = document.getElementById('btn-import-export');
+  const $importFile = document.getElementById('import-file-input');
+  const $toastContainer = document.getElementById('toast-container');
+  const $modalContainer = document.getElementById('modal-container');
+
+  function showToast(msg) {
+    const t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+    $toastContainer.appendChild(t); setTimeout(()=>t.remove(), 2600);
+  }
+  function escapeHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+  function maskKey(k) { return k && k.length>8 ? k.slice(0,4)+'••••••••'+k.slice(-4) : '••••••••'; }
+
+  function ensureCategoriesForKeys() {
+    const catNames = new Set(keys.map(k=>k.category || ''));
+    categories.forEach(c => catNames.add(c.name));
+    let changed = false;
+    catNames.forEach(name => {
+      if (name && !categories.find(c=>c.name===name)) {
+        categories.push({ name, icon: 'key' });
+        changed = true;
+      }
+    });
+    if (changed) saveCategories(categories);
+  }
+
+  function renderSidebar() {
+    ensureCategoriesForKeys();
+    const counts = {};
+    categories.forEach(c => counts[c.name] = 0);
+    let uncategorizedCount = 0;
+    keys.forEach(k => {
+      const cat = k.category || '';
+      if (cat && counts[cat] !== undefined) counts[cat]++;
+      else if (!cat) uncategorizedCount++;
+    });
+
+    let html = '<div class="sidebar-label"><span>分类</span></div>';
+    html += `<div class="sidebar-item${activeCategory==='全部'?' active':''}" data-cat="全部">
+      <i data-feather="folder" class="cat-icon"></i><span class="cat-name">全部</span><span class="badge">${keys.length}</span>
+    </div>`;
+
+    if (uncategorizedCount > 0) {
+      html += `<div class="sidebar-item${activeCategory==='__uncategorized__'?' active':''}" data-cat="__uncategorized__">
+        <i data-feather="help-circle" class="cat-icon"></i><span class="cat-name">未分类</span><span class="badge">${uncategorizedCount}</span>
+      </div>`;
+    }
+
+    categories.forEach(cat => {
+      const count = counts[cat.name] || 0;
+      html += `<div class="sidebar-item${activeCategory===cat.name?' active':''}" data-cat="${escapeHtml(cat.name)}">
+        <i data-feather="${cat.icon}" class="cat-icon"></i>
+        <span class="cat-name">${escapeHtml(cat.name)}</span>
+        <span class="badge">${count}</span>
+        <span class="sidebar-item-actions">
+          <button class="cat-edit-btn" data-catname="${escapeHtml(cat.name)}" title="编辑分类"><i data-feather="edit-3" style="width:14px;height:14px;"></i></button>
+          <button class="cat-delete-btn" data-catname="${escapeHtml(cat.name)}" title="删除分类"><i data-feather="trash-2" style="width:14px;height:14px;"></i></button>
+        </span>
+      </div>`;
+    });
+
+    $sidebar.innerHTML = html;
+    feather.replace();
+
+    $sidebar.querySelectorAll('.sidebar-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.sidebar-item-actions')) return;
+        activeCategory = el.dataset.cat;
+        renderAll();
+      });
+    });
+
+    document.querySelectorAll('.cat-edit-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openCategoryEditor(btn.dataset.catname);
+      });
+    });
+    document.querySelectorAll('.cat-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const catName = btn.dataset.catname;
+        if (!confirm(`确定删除分类「${catName}」吗？该分类下的密钥将变为未分类。`)) return;
+        keys.forEach(k => { if (k.category === catName) k.category = ''; });
+        categories = categories.filter(c => c.name !== catName);
+        saveKeys(keys); saveCategories(categories);
+        if (activeCategory === catName) activeCategory = '全部';
+        renderAll();
+        showToast(`分类「${catName}」已删除`);
+      });
+    });
+  }
+
+  function openCategoryEditor(catName) {
+    const cat = categories.find(c => c.name === catName) || { name: catName, icon: 'key' };
+    let pickerHtml = ALL_ICONS.map(ic => {
+      const sel = ic === cat.icon ? ' selected' : '';
+      return `<div class="icon-option${sel}" data-icon="${ic}"><i data-feather="${ic}"></i></div>`;
+    }).join('');
+
+    const html = `
+    <div class="modal-overlay" id="cat-modal-overlay">
+      <div class="modal-dialog" style="max-width:420px;">
+        <h2>编辑分类</h2>
+        <div class="form-group"><label>分类名称</label><input type="text" id="cat-name-input" value="${escapeHtml(cat.name)}"></div>
+        <div class="form-group"><label>图标</label><div class="icon-picker" id="cat-icon-picker">${pickerHtml}</div></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+          <button class="btn btn-secondary" id="cat-modal-cancel">取消</button>
+          <button class="btn btn-primary" id="cat-modal-save">保存</button>
+        </div>
+      </div>
+    </div>`;
+    $modalContainer.innerHTML = html;
+    feather.replace();
+
+    let selectedIcon = cat.icon;
+    document.getElementById('cat-icon-picker').addEventListener('click', (e) => {
+      const opt = e.target.closest('.icon-option');
+      if (!opt) return;
+      document.querySelectorAll('#cat-icon-picker .icon-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      selectedIcon = opt.dataset.icon;
+    });
+
+    document.getElementById('cat-modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'cat-modal-overlay') $modalContainer.innerHTML = ''; });
+    document.getElementById('cat-modal-cancel').addEventListener('click', () => $modalContainer.innerHTML = '');
+
+    document.getElementById('cat-modal-save').addEventListener('click', () => {
+      const newName = document.getElementById('cat-name-input').value.trim();
+      if (!newName) return showToast('名称不能为空');
+      const duplicate = categories.find(c => c.name === newName && c.name !== catName);
+      if (duplicate) return showToast('分类名称已存在');
+      
+      const idx = categories.findIndex(c => c.name === catName);
+      if (idx >= 0) {
+        categories[idx] = { name: newName, icon: selectedIcon };
+      } else {
+        categories.push({ name: newName, icon: selectedIcon });
+      }
+      keys.forEach(k => { if (k.category === catName) k.category = newName; });
+      saveKeys(keys); saveCategories(categories);
+      if (activeCategory === catName) activeCategory = newName;
+      $modalContainer.innerHTML = '';
+      renderAll();
+      showToast('分类已更新');
+    });
+  }
+
+  function renderTable() {
+    let filtered = [...keys];
+    if (activeCategory === '__uncategorized__') {
+      filtered = filtered.filter(k => !k.category);
+    } else if (activeCategory !== '全部') {
+      filtered = filtered.filter(k => k.category === activeCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(k => 
+        (k.name||'').toLowerCase().includes(q) || 
+        (k.purpose||'').toLowerCase().includes(q) || 
+        (k.category||'').toLowerCase().includes(q)
+      );
+    }
+
+    if (filtered.length === 0) {
+      $tableContainer.innerHTML = `<div class="empty-table"><i data-feather="folder" style="width:40px;height:40px;color:#d4c4b0;"></i><p>暂无密钥</p></div>`;
+      return;
+    }
+
+    let html = `<table class="keys-table"><thead><tr><th></th><th>名称</th><th>分类</th><th>用途</th><th>密钥</th><th>备注</th><th>操作</th></tr></thead><tbody>`;
+    filtered.forEach(k => {
+      const cat = categories.find(c => c.name === k.category) || { icon: 'help-circle' };
+      html += `<tr data-keyid="${k.id||''}">
+        <td class="key-icon-cell"><i data-feather="${k.icon || cat.icon}"></i></td>
+        <td class="key-name-cell">${escapeHtml(k.name||'')}</td>
+        <td>${k.category ? `<span class="key-tag tag-cat">${escapeHtml(k.category)}</span>` : '<span style="color:var(--text-tertiary);">未分类</span>'}</td>
+        <td>${k.purpose ? `<span class="key-tag tag-purp">${escapeHtml(k.purpose)}</span>` : ''}</td>
+        <td class="key-value-cell masked" data-full="${escapeHtml(k.key||'')}" data-masked="true">${maskKey(k.key)}</td>
+        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.8rem;color:var(--text-tertiary);">${escapeHtml(k.notes||'')}</td>
+        <td class="actions-cell">
+          <button class="btn-icon-only toggle-vis" data-kid="${k.id}"><i data-feather="eye"></i></button>
+          <button class="btn-icon-only copy-key" data-kid="${k.id}"><i data-feather="copy"></i></button>
+          <button class="btn-icon-only edit-key" data-kid="${k.id}"><i data-feather="edit-2"></i></button>
+          <button class="btn-icon-only delete-key" data-kid="${k.id}"><i data-feather="trash-2"></i></button>
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    $tableContainer.innerHTML = html;
+    feather.replace();
+    bindTableEvents();
+  }
+
+  function bindTableEvents() {
+    document.querySelectorAll('.toggle-vis').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cell = document.querySelector(`tr[data-keyid="${btn.dataset.kid}"] .key-value-cell`);
+        if (!cell) return;
+        const isMasked = cell.dataset.masked === 'true';
+        if (isMasked) {
+          cell.textContent = cell.dataset.full; cell.dataset.masked='false'; cell.classList.remove('masked');
+          btn.innerHTML = '<i data-feather="eye-off"></i>';
+        } else {
+          cell.textContent = maskKey(cell.dataset.full); cell.dataset.masked='true'; cell.classList.add('masked');
+          btn.innerHTML = '<i data-feather="eye"></i>';
+        }
+        feather.replace();
+      });
+    });
+    document.querySelectorAll('.copy-key').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const key = keys.find(k => k.id === btn.dataset.kid);
+        if (key) { await navigator.clipboard.writeText(key.key); showToast('已复制'); }
+      });
+    });
+    document.querySelectorAll('.edit-key').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const key = keys.find(k => k.id === btn.dataset.kid);
+        if (key) openKeyModal(key);
+      });
+    });
+    document.querySelectorAll('.delete-key').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const key = keys.find(k => k.id === btn.dataset.kid);
+        if (!key || !confirm(`删除密钥「${key.name}」？`)) return;
+        keys = keys.filter(k => k.id !== key.id);
+        saveKeys(keys); renderAll(); showToast('已删除');
+      });
+    });
+  }
+
+  function openKeyModal(keyData = null) {
+    const currentIcon = keyData?.icon || categories.find(c => c.name === keyData?.category)?.icon || 'key';
+    const catOptions = categories.map(c => 
+      `<option value="${escapeHtml(c.name)}" ${keyData?.category === c.name ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+    ).join('');
+    
+    let iconPickerHtml = ALL_ICONS.map(ic => 
+      `<div class="icon-option${ic === currentIcon ? ' selected' : ''}" data-icon="${ic}"><i data-feather="${ic}"></i></div>`
+    ).join('');
+
+    const html = `
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal-dialog">
+        <h2>${keyData ? '编辑密钥' : '添加密钥'}</h2>
+        <form id="key-form">
+          <div class="form-group"><label>名称</label><input type="text" id="key-name" value="${escapeHtml(keyData?.name||'')}" required></div>
+          <div class="form-group"><label>密钥值</label><input type="password" id="key-value" value="${escapeHtml(keyData?.key||'')}" required></div>
+          <div class="form-group"><label>分类</label>
+            <select id="key-category">${catOptions}<option value="__new__">+ 新建分类</option></select>
+            <input type="text" id="new-cat-name" placeholder="新分类名" style="display:none;margin-top:6px;">
+          </div>
+          <div class="form-group"><label>用途</label><input type="text" id="key-purpose" value="${escapeHtml(keyData?.purpose||'')}"></div>
+          <div class="form-group"><label>图标</label><div class="icon-picker" id="icon-picker">${iconPickerHtml}</div></div>
+          <div class="form-group"><label>备注</label><textarea id="key-notes" rows="3">${escapeHtml(keyData?.notes||'')}</textarea></div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+            <button type="button" class="btn btn-secondary" id="modal-cancel">取消</button>
+            <button type="submit" class="btn btn-primary">${keyData ? '保存' : '封存'}</button>
+          </div>
+        </form>
+      </div>
+    </div>`;
+    $modalContainer.innerHTML = html;
+    feather.replace();
+
+    const catSelect = document.getElementById('key-category');
+    const newCatInput = document.getElementById('new-cat-name');
+    catSelect.addEventListener('change', () => {
+      if (catSelect.value === '__new__') { newCatInput.style.display = 'block'; newCatInput.focus(); }
+      else { newCatInput.style.display = 'none'; newCatInput.value = ''; }
+    });
+
+    let selectedIcon = currentIcon;
+    document.getElementById('icon-picker').addEventListener('click', (e) => {
+      const opt = e.target.closest('.icon-option');
+      if (!opt) return;
+      document.querySelectorAll('#icon-picker .icon-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      selectedIcon = opt.dataset.icon;
+    });
+
+    document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'modal-overlay') $modalContainer.innerHTML = ''; });
+    document.getElementById('modal-cancel').addEventListener('click', () => $modalContainer.innerHTML = '');
+
+    document.getElementById('key-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('key-name').value.trim();
+      const keyValue = document.getElementById('key-value').value.trim();
+      let category = catSelect.value === '__new__' ? newCatInput.value.trim() : catSelect.value;
+      if (!category) category = '';
+      const purpose = document.getElementById('key-purpose').value.trim();
+      const notes = document.getElementById('key-notes').value.trim();
+      if (!name || !keyValue) return showToast('请填写名称和密钥值');
+
+      if (category && !categories.find(c => c.name === category)) {
+        categories.push({ name: category, icon: selectedIcon });
+        saveCategories(categories);
+      }
+
+      const now = new Date().toISOString();
+      if (keyData?.id) {
+        const idx = keys.findIndex(k => k.id === keyData.id);
+        if (idx >= 0) {
+          keys[idx] = { ...keys[idx], name, key: keyValue, category, purpose, notes, icon: selectedIcon, updatedAt: now };
+        }
+      } else {
+        keys.unshift({
+          id: Date.now().toString(36) + Math.random().toString(36).substring(2,8),
+          name, key: keyValue, category, purpose, notes, icon: selectedIcon,
+          createdAt: now, updatedAt: now
+        });
+      }
+      saveKeys(keys);
+      $modalContainer.innerHTML = '';
+      renderAll();
+      showToast(keyData?.id ? '已更新' : '已添加');
+    });
+  }
+
+  function openImportExportPanel() {
+    const html = `
+    <div class="modal-overlay" id="ie-overlay">
+      <div class="modal-dialog">
+        <h2>数据迁移</h2>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <button class="btn btn-secondary" id="btn-export-excel"><i data-feather="download"></i> 导出 Excel</button>
+          <button class="btn btn-secondary" id="btn-import-excel"><i data-feather="upload"></i> 导入 Excel</button>
+          <div id="import-result" style="display:none;background:#fdfaf4;padding:12px;border-radius:8px;font-size:0.85rem;"></div>
+        </div>
+        <div style="text-align:right;margin-top:16px;"><button class="btn btn-sm btn-secondary" id="ie-close">关闭</button></div>
+      </div>
+    </div>`;
+    $modalContainer.innerHTML = html;
+    feather.replace();
+    document.getElementById('ie-overlay').addEventListener('click', (e) => { if (e.target.id === 'ie-overlay') $modalContainer.innerHTML = ''; });
+    document.getElementById('ie-close').addEventListener('click', () => $modalContainer.innerHTML = '');
+    document.getElementById('btn-export-excel').addEventListener('click', () => {
+      if (keys.length === 0) return showToast('无数据');
+      const data = keys.map(k => ({ 名称:k.name, 密钥:k.key, 分类:k.category, 用途:k.purpose, 备注:k.notes, 图标:k.icon }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '密钥');
+      XLSX.writeFile(wb, `ResinAPI备份_${new Date().toISOString().slice(0,10)}.xlsx`);
+      showToast('导出成功');
+    });
+    document.getElementById('btn-import-excel').addEventListener('click', () => $importFile.click());
+    $importFile.onchange = (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          const imported = rows.map(r => ({
+            id: Date.now().toString(36) + Math.random().toString(36).substring(2,8),
+            name: r['名称'] || r['name'] || '', key: r['密钥'] || r['key'] || '',
+            category: r['分类'] || r['category'] || '', purpose: r['用途'] || r['purpose'] || '',
+            notes: r['备注'] || r['notes'] || '', icon: r['图标'] || r['icon'] || 'key',
+            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+          })).filter(r => r.name && r.key);
+          
+          const existingNames = new Set(keys.map(k => k.name.toLowerCase()));
+          const duplicates = []; const newOnes = [];
+          imported.forEach(r => {
+            if (existingNames.has(r.name.toLowerCase())) duplicates.push(r.name);
+            else { newOnes.push(r); existingNames.add(r.name.toLowerCase()); }
+          });
+          keys = [...newOnes, ...keys];
+          saveKeys(keys);
+          renderAll();
+          const res = document.getElementById('import-result'); res.style.display = 'block';
+          res.innerHTML = `导入成功 ${newOnes.length} 条` + (duplicates.length ? `<br><span style="color:var(--accent-ochre);">重复跳过: ${duplicates.map(escapeHtml).join(', ')}</span>` : '');
+          showToast(`导入 ${newOnes.length} 条`);
+        } catch (err) { showToast('解析失败'); console.error(err); }
+        $importFile.value = '';
+      };
+      reader.readAsArrayBuffer(file);
+    };
+  }
+
+  function renderAll() {
+    renderSidebar();
+    renderTable();
+    $btnClearSearch.style.display = searchQuery.trim() ? 'inline-flex' : 'none';
+  }
+
+  $btnAddKey.addEventListener('click', () => openKeyModal(null));
+  $btnImportExport.addEventListener('click', openImportExportPanel);
+  $searchInput.addEventListener('input', () => { searchQuery = $searchInput.value; renderTable(); });
+  $btnClearSearch.addEventListener('click', () => { $searchInput.value = ''; searchQuery = ''; renderAll(); });
+
+  renderAll();
+})();
+</script>
+<script>
+  (function() {
+    'use strict';
+    if (window.__GE32_LAZY_CLEANER) return;
+
+    let initialized = false;
+    let observer = null;
+
+    // 检查一个 input 元素是否为 Excel 文件输入框
+    function isExcelFileInput(input) {
+        if (!input || input.type !== 'file') return false;
+        const accept = (input.accept || '').toLowerCase();
+        return accept.includes('xlsx') || accept.includes('xls') || accept.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
+
+    // 核心初始化：加载 JSZip 并劫持 API
+    async function initCleaner() {
+        if (initialized) return;
+        initialized = true;
+
+        // 停止观察（既然已经初始化，不需要再监听）
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+
+        // 动态加载 JSZip
+        function loadJSZip() {
+            return new Promise((resolve, reject) => {
+                if (typeof JSZip !== 'undefined') return resolve(JSZip);
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                script.onload = () => resolve(window.JSZip);
+                script.onerror = () => reject(new Error('JSZip 加载失败'));
+                document.head.appendChild(script);
+            });
+        }
+
+        // 图片清理核心逻辑
+        async function stripImagesFromArrayBuffer(arrayBuffer, fileName) {
+            if (!fileName || !/\.xlsx?$/i.test(fileName)) return arrayBuffer;
+            try {
+                const JSZip = await loadJSZip();
+                const zip = await JSZip.loadAsync(arrayBuffer);
+                // 删除图片及绘图相关目录
+                const toDelete = Object.keys(zip.files).filter(p =>
+                    p.startsWith('xl/media/') ||
+                    p.startsWith('xl/drawings/') ||
+                    (p.startsWith('xl/worksheets/_rels/') && p.endsWith('.rels'))
+                );
+                for (const p of toDelete) zip.file(p, null);
+                // 清理工作表内的 drawing 标签
+                for (const p of Object.keys(zip.files).filter(p => p.startsWith('xl/worksheets/sheet') && p.endsWith('.xml'))) {
+                    let content = await zip.file(p).async('string');
+                    if (content.includes('<drawing')) {
+                        content = content.replace(/<drawing[^>]*(\/|>[^<]*<\/drawing>)/g, '');
+                        zip.file(p, content);
+                    }
+                }
+                // 清理 workbook 关系文件中的 drawing 引用
+                const relsPath = 'xl/_rels/workbook.xml.rels';
+                if (zip.files[relsPath]) {
+                    let rels = await zip.file(relsPath).async('string');
+                    rels = rels.replace(/<Relationship[^>]*Target="xl\/drawings\/[^"]*"[^>]*\/?>/g, '');
+                    zip.file(relsPath, rels);
+                }
+                const newBuf = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+                console.log(`[图片清理] ${fileName}: ${(arrayBuffer.byteLength / 1048576).toFixed(2)}MB → ${(newBuf.byteLength / 1048576).toFixed(2)}MB`);
+                return newBuf;
+            } catch (e) {
+                console.warn(`清理失败: ${fileName}`, e);
+                return arrayBuffer;
+            }
+        }
+
+        // 劫持 FileReader.readAsArrayBuffer
+        const originalReadAsArrayBuffer = FileReader.prototype.readAsArrayBuffer;
+        FileReader.prototype.readAsArrayBuffer = function(file) {
+            if (file && file.name && /\.xlsx?$/i.test(file.name)) {
+                const self = this;
+                (async () => {
+                    try {
+                        const originalBuf = await file.arrayBuffer();
+                        const cleaned = await stripImagesFromArrayBuffer(originalBuf, file.name);
+                        Object.defineProperty(self, 'result', { value: cleaned, configurable: true });
+                        self.readyState = FileReader.DONE;
+                        self.dispatchEvent(new ProgressEvent('load', { loaded: cleaned.byteLength, total: cleaned.byteLength }));
+                    } catch (err) {
+                        originalReadAsArrayBuffer.call(self, file);
+                    }
+                })();
+            } else {
+                originalReadAsArrayBuffer.call(this, file);
+            }
+        };
+
+        // 劫持 Blob.prototype.arrayBuffer
+        const originalBlobArrayBuffer = Blob.prototype.arrayBuffer;
+        Blob.prototype.arrayBuffer = async function() {
+            const isExcel = this.name && /\.xlsx?$/i.test(this.name);
+            const buf = await originalBlobArrayBuffer.call(this);
+            if (isExcel) return stripImagesFromArrayBuffer(buf, this.name);
+            return buf;
+        };
+
+        console.log('✅ 图片清理器已激活（按需加载），所有后续 Excel 文件上传将被自动清理');
+    }
+
+    // 扫描当前已存在的文件输入框
+    function scanExistingInputs() {
+        const inputs = document.querySelectorAll('input[type="file"]');
+        for (let input of inputs) {
+            if (isExcelFileInput(input)) {
+                initCleaner();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 监听未来动态添加的 input
+    function watchForNewInputs() {
+        observer = new MutationObserver((mutations) => {
+            for (let mutation of mutations) {
+                for (let node of mutation.addedNodes) {
+                    if (node.nodeType === 1) { // 元素节点
+                        if (node.matches && node.matches('input[type="file"]') && isExcelFileInput(node)) {
+                            initCleaner();
+                            return;
+                        }
+                        // 检查子元素
+                        if (node.querySelectorAll) {
+                            const inputs = node.querySelectorAll('input[type="file"]');
+                            for (let input of inputs) {
+                                if (isExcelFileInput(input)) {
+                                    initCleaner();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // 启动检测
+    if (!scanExistingInputs()) {
+        // 当前没有 Excel 文件输入框，开始监听未来添加的
+        watchForNewInputs();
+        console.log('🔍 未检测到 Excel 文件输入框，已开启动态监听，待出现后自动激活图片清理器');
+    }
+})();
+</script>
+</body>
+</html>
