@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExecLine - Excel转化器</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js">
+    </script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js">
+    </script>
+    <style>
+        /* ===== 暗夜模式（默认） ===== */
+        :root {
+            --bg-deep: #08080f;
+            --bg-panel: #0e0e18;
+            --bg-surface: #131320;
+            --bg-input: #0a0a14;
+            --border-heavy: #2a2a40;
+            --border-light: #1e1e32;
+            --border-accent: #3a3a55;
+            --text-primary: #c8c8d8;
+            --text-secondary: #9090a8;
+            --text-dim: #606078;
+            --accent-cold: #4a7a9a;
+            --accent-ice: #5a8ab8;
+            --accent-glow: #6aa0c8;
+            --accent-purple: #5a4a7a;
+            --accent-darkred: #6a3a3a;
+            --danger: #8a3a3a;
+            --danger-glow: #a04040;
+            --success: #3a6a4a;
+            --warning: #6a5a3a;
+            --scrollbar-bg: #0a0a14;
+            --scrollbar-thumb: #2a2a40;
+            --scrollbar-thumb-hover: #3a3a55;
+            --shadow-deep: 0 2px 12px rgba(0, 0, 0, 0.6);
+            --shadow-glow: 0 0 20px rgba(106, 160, 200, 0.4);
+            --btn-hover-bg: #1a1a2a;
+            --btn-hover-shadow: 0 2px 8px rgba(74, 122, 154, 0.3);
+            --overlay-bg: rgba(4, 4, 10, 0.95);
+            --font-gothic: 'Georgia', 'Times New Roman', 'Noto Serif SC', 'SimSun', serif;
+            --font-mono: 'Courier New', 'Consolas', 'Monaco', monospace;
+            --font-ui: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+
+        /* 白昼模式 */
+        body.light {
+            --bg-deep: #f0f2f5;
+            --bg-panel: #e8eaef;
+            --bg-surface: #ffffff;
+            --bg-input: #f7f8fa;
+            --border-heavy: #b0b5c0;
+            --border-light: #d0d5de;
+            --border-accent: #8b9bb4;
+            --text-primary: #1e1e2a;
+            --text-secondary: #4a4f5a;
+            --text-dim: #7a7f8a;
+            --accent-cold: #3a6a8a;
+            --accent-ice: #4a80a8;
+            --accent-glow: #306090;
+            --accent-purple: #4a3a6a;
+            --accent-darkred: #8a3a3a;
+            --danger: #a04040;
+            --danger-glow: #c05050;
+            --success: #3a6a4a;
+            --warning: #7a6a3a;
+            --scrollbar-bg: #e0e2e7;
+            --scrollbar-thumb: #b0b5c0;
+            --scrollbar-thumb-hover: #8b9bb4;
+            --shadow-deep: 0 2px 12px rgba(0, 0, 0, 0.15);
+            --shadow-glow: 0 0 20px rgba(48, 96, 144, 0.3);
+            --btn-hover-bg: #e8ecf2;
+            --btn-hover-shadow: 0 2px 8px rgba(58, 106, 138, 0.2);
+            --overlay-bg: rgba(240, 242, 245, 0.97);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: var(--font-ui);
+            font-size: 13px;
+            letter-spacing: 0.02em;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* 滚动条 - 哥特风格 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border: 2px solid var(--border-heavy);
+            border-radius: 0;
+            min-height: 40px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--scrollbar-thumb-hover);
+        }
+        ::-webkit-scrollbar-corner {
+            background: var(--bg-deep);
+        }
+
+        /* 主容器 */
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-deep);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ========== 顶部标题栏 ========== */
+        #title-bar {
+            height: 56px;
+            min-height: 56px;
+            background: var(--bg-panel);
+            border-bottom: 3px solid var(--border-heavy);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 12px;
+            position: relative;
+            z-index: 10;
+            box-shadow: var(--shadow-deep), 0 0 0 1px var(--border-light), 0 4px 0 -1px var(--bg-deep);
+        }
+        #title-bar::after {
+            content: '';
+            position: absolute;
+            bottom: -7px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent 0%, var(--accent-cold) 20%, var(--accent-purple) 50%, var(--accent-cold) 80%, transparent 100%);
+            opacity: 0.5;
+        }
+        #title-bar .title-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-input);
+            border: 2px solid var(--border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            clip-path: polygon(15% 0%, 85% 0%, 100% 25%, 100% 75%, 85% 100%, 15% 100%, 0% 75%, 0% 25%);
+            flex-shrink: 0;
+            color: var(--accent-glow);
+        }
+        #title-bar .title-text {
+            font-family: var(--font-gothic);
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 0.08em;
+            color: var(--accent-glow);
+            text-shadow: var(--shadow-glow);
+            flex-shrink: 0;
+        }
+        #title-bar .title-subtitle {
+            font-family: var(--font-gothic);
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 0.06em;
+            margin-left: 4px;
+            flex-shrink: 0;
+        }
+        #title-bar .spacer {
+            flex: 1;
+        }
+        #title-bar .btn-toolbar {
+            height: 34px;
+            padding: 0 14px;
+            background: var(--bg-surface);
+            border: 2px solid var(--border-heavy);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: var(--font-ui);
+            font-size: 11px;
+            letter-spacing: 0.04em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+            position: relative;
+            clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+        #title-bar .btn-toolbar:hover {
+            border-color: var(--accent-cold);
+            color: var(--accent-glow);
+            box-shadow: var(--btn-hover-shadow), 0 2px 4px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            background: var(--btn-hover-bg);
+        }
+        #title-bar .btn-toolbar:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        #title-bar .btn-toolbar.accent {
+            border-color: var(--accent-cold);
+            background: var(--btn-hover-bg);
+            color: var(--accent-glow);
+        }
+        #title-bar .btn-toolbar.danger-accent {
+            border-color: var(--accent-darkred);
+            background: var(--btn-hover-bg);
+            color: var(--danger-glow);
+        }
+        #title-bar .btn-toolbar.danger-accent:hover {
+            border-color: var(--danger-glow);
+            box-shadow: 0 2px 8px rgba(160, 40, 40, 0.3);
+        }
+
+        /* 主题切换按钮 */
+        #theme-toggle-btn {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            justify-content: center;
+            background: var(--bg-surface);
+            border: 2px solid var(--border-heavy);
+            color: var(--text-secondary);
+            cursor: pointer;
+            clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #theme-toggle-btn:hover {
+            border-color: var(--accent-cold);
+            color: var(--accent-glow);
+            background: var(--btn-hover-bg);
+            box-shadow: var(--btn-hover-shadow);
+        }
+
+        /* ========== 主内容区 ========== */
+        #main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+            min-height: 0;
+        }
+
+        /* 左侧面板 */
+        #left-panel {
+            width: 260px;
+            min-width: 220px;
+            background: var(--bg-panel);
+            border-right: 3px solid var(--border-heavy);
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset -2px 0 8px rgba(0, 0, 0, 0.15), 2px 0 0 var(--border-light);
+            position: relative;
+            z-index: 5;
+        }
+        #left-panel-header {
+            padding: 10px 12px;
+            border-bottom: 3px solid var(--border-heavy);
+            font-family: var(--font-gothic);
+            font-size: 13px;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            text-align: center;
+            background: var(--bg-surface);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        #left-panel-header::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: var(--border-accent);
+            opacity: 0.6;
+        }
+        #unit-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .unit-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            background: var(--bg-surface);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.12s;
+            position: relative;
+            min-height: 38px;
+            clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .unit-item:hover {
+            border-color: var(--border-accent);
+            background: var(--btn-hover-bg);
+        }
+        .unit-item.selected {
+            border-color: var(--accent-cold) !important;
+            background: var(--btn-hover-bg) !important;
+            box-shadow: 0 0 12px rgba(74, 122, 154, 0.2), 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .unit-item .unit-icon {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .unit-item.selected .unit-icon {
+            color: var(--accent-glow);
+        }
+        .unit-item .unit-name {
+            flex: 1;
+            font-size: 12px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+        }
+        .unit-item .unit-toggle {
+            width: 36px;
+            height: 20px;
+            flex-shrink: 0;
+            cursor: pointer;
+            position: relative;
+            background: var(--bg-input);
+            border: 2px solid var(--border-heavy);
+            transition: all 0.2s;
+            clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+        }
+        .unit-item .unit-toggle.active {
+            background: #1a2a24;
+            border-color: var(--success);
+            box-shadow: 0 0 8px rgba(58, 106, 74, 0.3);
+        }
+        .unit-item .unit-toggle::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--text-dim);
+            top: 3px;
+            left: 3px;
+            transition: all 0.2s;
+            clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+        }
+        .unit-item .unit-toggle.active::after {
+            background: #6aaa7a;
+            left: 19px;
+            box-shadow: 0 0 6px rgba(106, 170, 122, 0.5);
+        }
+        #left-panel-footer {
+            padding: 8px;
+            border-top: 3px solid var(--border-heavy);
+            display: flex;
+            gap: 6px;
+            background: var(--bg-surface);
+        }
+        #left-panel-footer button {
+            flex: 1;
+            height: 30px;
+            font-size: 10px;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            background: var(--bg-input);
+            border: 2px solid var(--border-heavy);
+            color: var(--text-secondary);
+            font-family: var(--font-ui);
+            transition: all 0.15s;
+            clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        #left-panel-footer button:hover {
+            border-color: var(--accent-cold);
+            color: var(--accent-glow);
+            background: var(--btn-hover-bg);
+        }
+
+        /* 右侧主区域 */
+        #right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: var(--bg-deep);
+            position: relative;
+        }
+        #right-panel-top {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            padding: 10px;
+            gap: 8px;
+            overflow: auto;
+        }
+
+        /* 上传区域 */
+        #upload-zone {
+            border: 3px dashed var(--border-heavy);
+            background: var(--bg-surface);
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-direction: column;
+        }
+        #upload-zone:hover {
+            border-color: var(--accent-cold);
+            box-shadow: 0 4px 16px rgba(74, 122, 154, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
+            background: var(--btn-hover-bg);
+        }
+        #upload-zone .upload-icon {
+            color: var(--text-dim);
+            width: 36px;
+            height: 36px;
+        }
+        #upload-zone:hover .upload-icon {
+            color: var(--accent-glow);
+        }
+        #upload-zone .upload-text {
+            font-family: var(--font-gothic);
+            font-size: 13px;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+        #upload-zone input[type="file"] {
+            display: none;
+        }
+
+        /* 预览区域 */
+        #preview-area {
+            flex: 1;
+            min-height: 150px;
+            background: var(--bg-surface);
+            border: 3px solid var(--border-heavy);
+            overflow: auto;
+            position: relative;
+            clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        #preview-area table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        #preview-area th {
+            background: var(--bg-input);
+            padding: 8px 10px;
+            border: 2px solid var(--border-heavy);
+            font-family: var(--font-gothic);
+            letter-spacing: 0.04em;
+            color: var(--accent-glow);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        #preview-area td {
+            padding: 6px 10px;
+            border: 1px solid var(--border-light);
+            color: var(--text-primary);
+            background: var(--bg-surface);
+        }
+        #preview-area tr:hover td {
+            background: var(--btn-hover-bg);
+        }
+        #preview-area .no-data {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-dim);
+            font-family: var(--font-gothic);
+            letter-spacing: 0.05em;
+            font-size: 13px;
+            min-height: 120px;
+        }
+
+        /* ========== LOG面板 ========== */
+        #log-panel {
+            height: 160px;
+            min-height: 100px;
+            background: var(--bg-input);
+            border-top: 3px solid var(--border-heavy);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 5;
+        }
+        #log-panel-header {
+            padding: 6px 12px;
+            background: var(--bg-surface);
+            border-bottom: 2px solid var(--border-heavy);
+            font-family: var(--font-gothic);
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        #log-panel-header .log-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-dim);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+        }
+        #log-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 10px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            background: var(--bg-input);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        #log-content .log-warn { color: #c0a060; }
+        #log-content .log-info { color: #6090a0; }
+        #log-content .log-success { color: #60a070; }
+        #log-content .log-error { color: #c06060; }
+        #log-content .log-highlight { color: #a0c0d0; font-weight: bold; }
+
+        /* ========== 全屏配置覆盖层 ========== */
+        #config-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--overlay-bg);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            backdrop-filter: blur(4px);
+        }
+        #config-overlay.active { display: flex; }
+        #config-overlay-header {
+            height: 50px;
+            min-height: 50px;
+            background: var(--bg-panel);
+            border-bottom: 3px solid var(--border-heavy);
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            gap: 10px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+            z-index: 2;
+        }
+        #config-overlay-header .config-title {
+            font-family: var(--font-gothic);
+            font-size: 16px;
+            letter-spacing: 0.07em;
+            color: var(--accent-glow);
+            text-shadow: var(--shadow-glow);
+        }
+        #config-overlay-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            min-height: 0;
+        }
+        #config-left {
+            width: 240px;
+            min-width: 200px;
+            background: var(--bg-panel);
+            border-right: 3px solid var(--border-heavy);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+            z-index: 1;
+        }
+        #config-left-header {
+            padding: 8px 10px;
+            border-bottom: 3px solid var(--border-heavy);
+            font-family: var(--font-gothic);
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            text-align: center;
+            background: var(--bg-surface);
+        }
+        #config-unit-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .config-unit-item {
+            padding: 7px 9px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            background: var(--bg-surface);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 11px;
+            transition: all 0.12s;
+            clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            min-height: 32px;
+        }
+        .config-unit-item:hover {
+            border-color: var(--border-accent);
+            background: var(--btn-hover-bg);
+        }
+        .config-unit-item.selected {
+            border-color: var(--accent-cold) !important;
+            background: var(--btn-hover-bg) !important;
+            box-shadow: 0 0 10px rgba(74, 122, 154, 0.2);
+        }
+        .config-unit-item .cfg-unit-name-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed transparent;
+            color: inherit;
+            font-size: 11px;
+            font-family: var(--font-ui);
+            padding: 2px 4px;
+            min-width: 0;
+            outline: none;
+            letter-spacing: 0.03em;
+        }
+        .config-unit-item .cfg-unit-name-input:focus {
+            border-bottom-color: var(--accent-cold);
+            color: var(--text-primary);
+        }
+        .config-unit-item .cfg-unit-delete {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            color: var(--text-dim);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s;
+            border: 1px solid transparent;
+            background: transparent;
+        }
+        .config-unit-item .cfg-unit-delete:hover {
+            color: #d06060;
+            border-color: #6a3a3a;
+            background: #1a1010;
+        }
+        #config-left-footer {
+            padding: 6px;
+            border-top: 3px solid var(--border-heavy);
+            background: var(--bg-surface);
+        }
+        #config-left-footer button {
+            width: 100%;
+            height: 30px;
+            font-size: 10px;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            background: var(--bg-input);
+            border: 2px solid var(--border-heavy);
+            color: var(--text-secondary);
+            font-family: var(--font-ui);
+            transition: all 0.15s;
+            clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        #config-left-footer button:hover {
+            border-color: var(--accent-cold);
+            color: var(--accent-glow);
+            background: var(--btn-hover-bg);
+        }
+
+        /* 配置右侧 - 映射编辑 */
+        #config-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: var(--bg-deep);
+        }
+        #config-right-header {
+            padding: 8px 12px;
+            border-bottom: 3px solid var(--border-heavy);
+            background: var(--bg-surface);
+            font-family: var(--font-gothic);
+            font-size: 12px;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+        #mapping-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-height: 0;
+        }
+        .mapping-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            background: var(--bg-surface);
+            border: 2px solid var(--border-heavy);
+            transition: all 0.15s;
+            cursor: default;
+            position: relative;
+            clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            min-height: 40px;
+        }
+        .mapping-row.drag-over {
+            border-color: var(--accent-glow) !important;
+            box-shadow: 0 0 16px rgba(106, 160, 200, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+        .mapping-row .drag-handle {
+            cursor: grab;
+            color: var(--text-dim);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            padding: 2px;
+            transition: color 0.15s;
+        }
+        .mapping-row .drag-handle:active {
+            cursor: grabbing;
+            color: var(--accent-glow);
+        }
+        .mapping-row .map-index {
+            width: 24px;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-dim);
+            flex-shrink: 0;
+            letter-spacing: 0;
+        }
+        .mapping-row .map-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            flex-shrink: 0;
+            font-family: var(--font-gothic);
+            min-width: 28px;
+        }
+        .mapping-row select {
+            background: var(--bg-input);
+            border: 2px solid var(--border-heavy);
+            color: var(--text-primary);
+            font-size: 11px;
+            padding: 4px 6px;
+            font-family: var(--font-ui);
+            cursor: pointer;
+            letter-spacing: 0.03em;
+            outline: none;
+            min-width: 70px;
+            clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+            transition: border-color 0.15s;
+            flex-shrink: 0;
+        }
+        .mapping-row select:focus {
+            border-color: var(--accent-cold);
+            box-shadow: 0 0 6px rgba(74, 122, 154, 0.3);
+        }
+        .mapping-row input[type="text"] {
+            background: var(--bg-input);
+            border: 2px solid var(--border-heavy);
+            color: var(--text-primary);
+            font-size: 11px;
+            padding: 4px 7px;
+            font-family: var(--font-mono);
+            letter-spacing: 0.03em;
+            outline: none;
+            flex: 1;
+            min-width: 60px;
+            clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+            transition: border-color 0.15s;
+        }
+        .mapping-row input[type="text"]:focus {
+            border-color: var(--accent-cold);
+            box-shadow: 0 0 6px rgba(74, 122, 154, 0.3);
+            color: var(--text-primary);
+        }
+        .mapping-row input[type="text"]:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: var(--bg-input);
+            color: var(--text-dim);
+        }
+        .mapping-row .map-delete-btn {
+            width: 26px;
+            height: 26px;
+            cursor: pointer;
+            color: var(--text-dim);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: 2px solid transparent;
+            transition: all 0.15s;
+            clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0% calc(100% - 3px), 0% 3px);
+        }
+        .mapping-row .map-delete-btn:hover {
+            color: #e06060;
+            border-color: #6a3a3a;
+            background: #1a1010;
+            box-shadow: 0 0 8px rgba(200, 60, 60, 0.25);
+        }
+        #config-right-footer {
+            padding: 8px 12px;
+            border-top: 3px solid var(--border-heavy);
+            background: var(--bg-surface);
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
+        }
+        #config-right-footer button {
+            height: 30px;
+            padding: 0 14px;
+            font-size: 10px;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            background: var(--bg-input);
+            border: 2px solid var(--border-heavy);
+            color: var(--text-secondary);
+            font-family: var(--font-ui);
+            transition: all 0.15s;
+            clip-path: polygon(4px 0%, calc(100% - 4px) 0%, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0% calc(100% - 4px), 0% 4px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #config-right-footer button:hover {
+            border-color: var(--accent-cold);
+            color: var(--accent-glow);
+            background: var(--btn-hover-bg);
+        }
+
+        button { outline: none; font-family: var(--font-ui); }
+
+        @media (max-width: 900px) {
+            #left-panel { width: 200px; min-width: 160px; }
+            #config-left { width: 180px; min-width: 150px; }
+            .mapping-row { flex-wrap: wrap; gap: 3px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <!-- ========== 顶部标题栏 ========== -->
+        <div id="title-bar">
+            <div class="title-icon">
+                <i data-lucide="hexagon" width="24" height="24"></i>
+            </div>
+            <span class="title-text">ExecLine</span>
+            <span class="title-subtitle">· EXCEL TRANSMOGRIFIER ·</span>
+            <span class="spacer"></span>
+            <button class="btn-toolbar" onclick="triggerUpload()" title="上传Excel文件">
+                <i data-lucide="upload" width="14" height="14"></i> 上传
+            </button>
+            <button class="btn-toolbar accent" onclick="openConfigOverlay()" title="打开转化配置">
+                <i data-lucide="settings" width="14" height="14"></i> 配置
+            </button>
+            <button class="btn-toolbar" onclick="exportConfigJSON()" title="导出配置JSON">
+                <i data-lucide="download" width="14" height="14"></i> 导出配置
+            </button>
+            <button class="btn-toolbar" onclick="importConfigJSON()" title="导入配置JSON">
+                <i data-lucide="file-json" width="14" height="14"></i> 导入配置
+            </button>
+            <button class="btn-toolbar accent" onclick="runConversion()" title="执行转化">
+                <i data-lucide="play" width="14" height="14"></i> 运行
+            </button>
+            <!-- 主题切换按钮 -->
+            <button id="theme-toggle-btn" onclick="toggleTheme()" title="切换白昼/暗夜模式">
+                <i id="theme-icon" data-lucide="moon" width="18" height="18"></i>
+            </button>
+            <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="handleFileUpload(event)">
+            <input type="file" id="config-file-input" accept=".json" style="display:none" onchange="handleConfigImport(event)">
+        </div>
+
+        <!-- ========== 主内容区 ========== -->
+        <div id="main-content">
+            <div id="left-panel">
+                <div id="left-panel-header">◆ 转化单元 ◆</div>
+                <div id="unit-list"></div>
+                <div id="left-panel-footer">
+                    <button onclick="openConfigOverlay()" title="管理转化单元">
+                        <i data-lucide="folder-cog" width="12" height="12"></i> 管理
+                    </button>
+                </div>
+            </div>
+            <div id="right-panel">
+                <div id="right-panel-top">
+                    <div id="upload-zone" onclick="triggerUpload()">
+                        <div class="upload-icon"><i data-lucide="file-spreadsheet" width="32" height="32"></i></div>
+                        <div class="upload-text">点击上传 Excel 文件 (.xlsx / .xls)</div>
+                        <div style="font-size:10px;color:var(--text-dim);">上传后将自动分析字段匹配情况</div>
+                    </div>
+                    <div id="preview-area">
+                        <div class="no-data"><span>◇ 等待上传 Excel 文件以预览数据 ◇</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== LOG面板 ========== -->
+        <div id="log-panel">
+            <div id="log-panel-header">
+                <div class="log-dot"></div> SYSTEM LOG
+                <span style="flex:1;"></span>
+                <button style="background:transparent;border:1px solid var(--border-heavy);color:var(--text-dim);cursor:pointer;font-size:9px;padding:2px 8px;clip-path:polygon(2px 0%,calc(100% - 2px) 0%,100% 2px,100% calc(100% - 2px),calc(100% - 2px) 100%,2px 100%,0% calc(100% - 2px),0% 2px);" onclick="clearLog()">清空</button>
+            </div>
+            <div id="log-content">◇ ExecLine 已就绪。请上传Excel文件并配置转化单元。<br>◇ 点击「配置」按钮管理转化规则。</div>
+        </div>
+    </div>
+
+    <!-- ========== 全屏配置覆盖层 ========== -->
+    <div id="config-overlay">
+        <div id="config-overlay-header">
+            <span class="config-title">⚙ EXECLINE 转化配置</span>
+            <span style="flex:1;"></span>
+            <button class="btn-toolbar" onclick="closeConfigOverlay()" style="height:30px;font-size:10px;">
+                <i data-lucide="x" width="14" height="14"></i> 关闭配置
+            </button>
+        </div>
+        <div id="config-overlay-body">
+            <div id="config-left">
+                <div id="config-left-header">◆ 转化单元管理 ◆</div>
+                <div id="config-unit-list"></div>
+                <div id="config-left-footer">
+                    <button onclick="addConversionUnit()">
+                        <i data-lucide="plus" width="12" height="12"></i> 新增转化单元
+                    </button>
+                </div>
+            </div>
+            <div id="config-right">
+                <div id="config-right-header">
+                    <i data-lucide="arrow-left-right" width="14" height="14"></i>
+                    <span id="config-right-title">请选择左侧转化单元</span>
+                </div>
+                <div id="mapping-list-container"></div>
+                <div id="config-right-footer">
+                    <button onclick="addMapping()" id="btn-add-mapping" disabled>
+                        <i data-lucide="plus-circle" width="12" height="12"></i> 添加映射字段
+                    </button>
+                    <span style="flex:1;"></span>
+                    <span style="font-size:9px;color:var(--text-dim);display:flex;align-items:center;gap:4px;">
+                        <i data-lucide="grip-vertical" width="10" height="10"></i> 拖动排序
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ============ 全局状态 ============
+            const STORAGE_KEY_CONFIG = 'execline_config';
+            const STORAGE_KEY_THEME = 'execline_theme';
+
+            let config = {
+                conversionUnits: []
+            };
+            let uploadedWorkbook = null;
+            let uploadedData = null;
+            let uploadedFileName = '';
+            let selectedConfigUnitId = null;
+            let draggedMappingIndex = null;
+
+            // ============ 本地存储 ============
+            function saveConfigToStorage() {
+                try {
+                    const data = {
+                        conversionUnits: config.conversionUnits.map(u => ({
+                            id: u.id,
+                            name: u.name,
+                            enabled: u.enabled,
+                            mappings: u.mappings.map(m => ({
+                                id: m.id,
+                                sourceType: m.sourceType,
+                                sourceField: m.sourceField,
+                                outputFieldName: m.outputFieldName || '',
+                                outputType: m.outputType,
+                                outputValue: m.outputValue
+                            }))
+                        }))
+                    };
+                    localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(data));
+                } catch (e) {
+                    addLog('警告: 无法保存配置到本地存储。', 'log-warn');
+                }
+            }
+
+            function loadConfigFromStorage() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY_CONFIG);
+                    if (raw) {
+                        const data = JSON.parse(raw);
+                        if (data.conversionUnits && Array.isArray(data.conversionUnits)) {
+                            config.conversionUnits = data.conversionUnits.map(u => ({
+                                id: u.id || generateId(),
+                                name: u.name || '未命名',
+                                enabled: u.enabled !== false,
+                                mappings: (u.mappings || []).map(m => ({
+                                    id: m.id || generateId(),
+                                    sourceType: m.sourceType === 'field' ? 'field' : 'none',
+                                    sourceField: m.sourceField || '',
+                                    outputFieldName: m.outputFieldName || m.sourceField || '',
+                                    outputType: m.outputType === 'source' ? 'source' : 'custom',
+                                    outputValue: m.outputValue || ''
+                                }))
+                            }));
+                            return true;
+                        }
+                    }
+                } catch (e) {
+                    addLog('配置加载失败，使用默认配置。', 'log-warn');
+                }
+                return false;
+            }
+
+            // ============ 主题管理 ============
+            function applyTheme(theme) {
+                if (theme === 'light') {
+                    document.body.classList.add('light');
+                    document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
+                } else {
+                    document.body.classList.remove('light');
+                    document.getElementById('theme-icon').setAttribute('data-lucide', 'moon');
+                }
+                // 重新初始化图标
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+                localStorage.setItem(STORAGE_KEY_THEME, theme);
+            }
+
+            function toggleTheme() {
+                const current = document.body.classList.contains('light') ? 'dark' : 'light';
+                applyTheme(current);
+                addLog(`主题已切换为${current === 'light' ? '白昼模式' : '暗夜模式'}`, 'log-info');
+            }
+            window.toggleTheme = toggleTheme;
+
+            function loadThemeFromStorage() {
+                const saved = localStorage.getItem(STORAGE_KEY_THEME);
+                applyTheme(saved === 'light' ? 'light' : 'dark');
+            }
+
+            // ============ 工具函数 ============
+            function generateId() {
+                return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 8);
+            }
+
+            function addLog(message, className = '') {
+                const logContent = document.getElementById('log-content');
+                const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+                const entry = document.createElement('span');
+                entry.className = className;
+                entry.textContent = `[${timestamp}] ${message}`;
+                logContent.appendChild(entry);
+                logContent.appendChild(document.createElement('br'));
+                logContent.scrollTop = logContent.scrollHeight;
+            }
+
+            function clearLog() {
+                const logContent = document.getElementById('log-content');
+                logContent.innerHTML = '';
+                addLog('Log 已清空。', 'log-info');
+            }
+            window.clearLog = clearLog;
+
+            function getUnitById(id) {
+                return config.conversionUnits.find(u => u.id === id);
+            }
+
+            // ============ 渲染主界面左侧转化单元列表 ============
+            function renderMainUnitList() {
+                const container = document.getElementById('unit-list');
+                container.innerHTML = '';
+                if (config.conversionUnits.length === 0) {
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.style.cssText = 'padding:16px;text-align:center;color:var(--text-dim);font-size:10px;letter-spacing:0.04em;';
+                    emptyDiv.textContent = '◇ 暂无转化单元 ◇\n请点击"管理"创建';
+                    container.appendChild(emptyDiv);
+                    return;
+                }
+                config.conversionUnits.forEach(unit => {
+                    const item = document.createElement('div');
+                    item.className = 'unit-item';
+                    item.innerHTML = `
+                        <span class="unit-icon"><i data-lucide="folder-tree" width="16" height="16"></i></span>
+                        <span class="unit-name" title="${escapeHTML(unit.name)}">${escapeHTML(unit.name)}</span>
+                        <div class="unit-toggle ${unit.enabled ? 'active' : ''}" data-unit-id="${unit.id}" title="${unit.enabled ? '已启用' : '已禁用'}"></div>
+                    `;
+                    const toggle = item.querySelector('.unit-toggle');
+                    toggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        unit.enabled = !unit.enabled;
+                        saveConfigToStorage();
+                        renderMainUnitList();
+                        addLog(`转化单元 "${unit.name}" ${unit.enabled ? '已启用' : '已禁用'}。`, unit.enabled ? 'log-success' : 'log-warn');
+                        if (uploadedData) analyzeUploadedData();
+                    });
+                    item.addEventListener('click', () => {
+                        document.querySelectorAll('#unit-list .unit-item').forEach(el => el.classList.remove('selected'));
+                        item.classList.add('selected');
+                    });
+                    container.appendChild(item);
+                });
+                if (window.lucide) lucide.createIcons();
+            }
+
+            function escapeHTML(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            // ============ 渲染配置覆盖层 ============
+            function renderConfigUnitList() {
+                const container = document.getElementById('config-unit-list');
+                container.innerHTML = '';
+                config.conversionUnits.forEach(unit => {
+                    const item = document.createElement('div');
+                    item.className = 'config-unit-item';
+                    if (unit.id === selectedConfigUnitId) item.classList.add('selected');
+                    item.innerHTML = `
+                        <i data-lucide="folder" width="14" height="14" style="flex-shrink:0;color:var(--text-dim);"></i>
+                        <input class="cfg-unit-name-input" value="${escapeHTML(unit.name)}" data-unit-id="${unit.id}" title="点击编辑名称">
+                        <button class="cfg-unit-delete" data-unit-id="${unit.id}" title="删除转化单元">
+                            <i data-lucide="trash-2" width="13" height="13"></i>
+                        </button>
+                    `;
+                    item.addEventListener('click', (e) => {
+                        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+                        selectConfigUnit(unit.id);
+                    });
+                    const nameInput = item.querySelector('.cfg-unit-name-input');
+                    nameInput.addEventListener('input', () => {
+                        unit.name = nameInput.value || '未命名';
+                        saveConfigToStorage();
+                        renderMainUnitList();
+                        if (unit.id === selectedConfigUnitId) updateConfigRightTitle();
+                    });
+                    nameInput.addEventListener('click', (e) => e.stopPropagation());
+                    const delBtn = item.querySelector('.cfg-unit-delete');
+                    delBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteConversionUnit(unit.id);
+                    });
+                    container.appendChild(item);
+                });
+                if (config.conversionUnits.length === 0) {
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.style.cssText = 'padding:16px;text-align:center;color:var(--text-dim);font-size:10px;letter-spacing:0.04em;';
+                    emptyDiv.textContent = '◇ 点击下方按钮创建转化单元 ◇';
+                    container.appendChild(emptyDiv);
+                }
+                if (window.lucide) lucide.createIcons();
+            }
+
+            function updateConfigRightTitle() {
+                const titleEl = document.getElementById('config-right-title');
+                const unit = getUnitById(selectedConfigUnitId);
+                if (unit) {
+                    titleEl.textContent = `转化单元: ${unit.name} (${unit.mappings.length} 个映射字段)`;
+                } else {
+                    titleEl.textContent = '请选择左侧转化单元';
+                }
+                document.getElementById('btn-add-mapping').disabled = !unit;
+            }
+
+            function selectConfigUnit(id) {
+                selectedConfigUnitId = id;
+                renderConfigUnitList();
+                renderMappingList();
+                updateConfigRightTitle();
+            }
+
+            function addConversionUnit() {
+                const newUnit = {
+                    id: generateId(),
+                    name: '新转化单元_' + (config.conversionUnits.length + 1),
+                    enabled: true,
+                    mappings: []
+                };
+                config.conversionUnits.push(newUnit);
+                selectedConfigUnitId = newUnit.id;
+                saveConfigToStorage();
+                renderConfigUnitList();
+                renderMappingList();
+                renderMainUnitList();
+                updateConfigRightTitle();
+                addLog(`已创建转化单元: "${newUnit.name}"`, 'log-info');
+            }
+            window.addConversionUnit = addConversionUnit;
+
+            function deleteConversionUnit(id) {
+                const unit = getUnitById(id);
+                if (!unit) return;
+                if (!confirm(`确定要删除转化单元 "${unit.name}" 及其所有映射配置吗？此操作不可撤销。`)) return;
+                config.conversionUnits = config.conversionUnits.filter(u => u.id !== id);
+                if (selectedConfigUnitId === id) {
+                    selectedConfigUnitId = config.conversionUnits.length > 0 ? config.conversionUnits[0].id : null;
+                }
+                saveConfigToStorage();
+                renderConfigUnitList();
+                renderMappingList();
+                renderMainUnitList();
+                updateConfigRightTitle();
+                addLog(`已删除转化单元: "${unit.name}"`, 'log-warn');
+            }
+
+            // ============ 渲染映射列表 ============
+            function renderMappingList() {
+                const container = document.getElementById('mapping-list-container');
+                const unit = getUnitById(selectedConfigUnitId);
+                if (!unit) {
+                    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:11px;letter-spacing:0.04em;">◇ 请在左侧选择或创建一个转化单元 ◇</div>';
+                    return;
+                }
+                if (unit.mappings.length === 0) {
+                    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:11px;letter-spacing:0.04em;">◇ 暂无映射字段，点击下方按钮添加 ◇</div>';
+                    return;
+                }
+                container.innerHTML = '';
+                unit.mappings.forEach((mapping, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'mapping-row';
+                    row.draggable = true;
+                    row.dataset.mapIndex = index;
+                    const isSourceNone = mapping.sourceType === 'none';
+                    const isOutputSource = mapping.outputType === 'source';
+                    row.innerHTML = `
+                        <span class="drag-handle" title="拖动排序"><i data-lucide="grip-vertical" width="16" height="16"></i></span>
+                        <span class="map-index">#${index + 1}</span>
+                        <span class="map-label">源:</span>
+                        <select class="map-source-type" data-index="${index}">
+                            <option value="none" ${mapping.sourceType === 'none' ? 'selected' : ''}>无</option>
+                            <option value="field" ${mapping.sourceType === 'field' ? 'selected' : ''}>字段</option>
+                        </select>
+                        <input type="text" class="map-source-field" data-index="${index}" value="${escapeHTML(mapping.sourceField || '')}" placeholder="字段名" ${isSourceNone ? 'disabled' : ''}>
+                        <span class="map-label">新字段名:</span>
+                        <input type="text" class="map-output-fieldname" data-index="${index}" value="${escapeHTML(mapping.outputFieldName || '')}" placeholder="新字段名">
+                        <span class="map-label">OUT:</span>
+                        <select class="map-output-type" data-index="${index}" ${isSourceNone ? 'disabled' : ''}>
+                            <option value="source" ${mapping.outputType === 'source' ? 'selected' : ''} ${isSourceNone ? 'disabled' : ''}>源</option>
+                            <option value="custom" ${mapping.outputType === 'custom' ? 'selected' : ''}>自定义</option>
+                        </select>
+                        <input type="text" class="map-output-value" data-index="${index}" value="${escapeHTML(mapping.outputValue || '')}" placeholder="${isOutputSource && !isSourceNone ? '(自动来自源)' : '输入字符或数字'}" ${isOutputSource && !isSourceNone ? 'disabled' : ''}>
+                        <button class="map-delete-btn" data-index="${index}" title="删除此映射"><i data-lucide="x-circle" width="14" height="14"></i></button>
+                    `;
+                    // 拖拽事件
+                    row.addEventListener('dragstart', (e) => {
+                        draggedMappingIndex = index;
+                        row.style.opacity = '0.5';
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', index.toString());
+                    });
+                    row.addEventListener('dragend', (e) => {
+                        row.style.opacity = '1';
+                        draggedMappingIndex = null;
+                        document.querySelectorAll('.mapping-row').forEach(r => r.classList.remove('drag-over'));
+                    });
+                    row.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        row.classList.add('drag-over');
+                    });
+                    row.addEventListener('dragleave', (e) => { row.classList.remove('drag-over'); });
+                    row.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        row.classList.remove('drag-over');
+                        const fromIndex = draggedMappingIndex;
+                        const toIndex = index;
+                        if (fromIndex !== null && fromIndex !== toIndex && unit) {
+                            const moved = unit.mappings.splice(fromIndex, 1)[0];
+                            unit.mappings.splice(toIndex, 0, moved);
+                            saveConfigToStorage();
+                            renderMappingList();
+                            addLog(`映射字段已重新排序 (${fromIndex + 1} → ${toIndex + 1})`, 'log-info');
+                        }
+                        draggedMappingIndex = null;
+                    });
+                    // 源类型变更
+                    const sourceTypeSelect = row.querySelector('.map-source-type');
+                    sourceTypeSelect.addEventListener('change', () => {
+                        mapping.sourceType = sourceTypeSelect.value;
+                        if (mapping.sourceType === 'none') {
+                            mapping.outputType = 'custom';
+                            mapping.sourceField = '';
+                        }
+                        saveConfigToStorage();
+                        renderMappingList();
+                    });
+                    // 源字段名变更
+                    const sourceFieldInput = row.querySelector('.map-source-field');
+                    sourceFieldInput.addEventListener('input', () => {
+                        const oldSource = mapping.sourceField;
+                        mapping.sourceField = sourceFieldInput.value;
+                        // 如果没有手动设置过新字段名，或者新字段名和之前的源字段一致，自动进行同步
+                        if (!mapping.outputFieldName || mapping.outputFieldName === oldSource) {
+                            mapping.outputFieldName = mapping.sourceField;
+                            const outFieldNameInput = row.querySelector('.map-output-fieldname');
+                            if (outFieldNameInput) {
+                                outFieldNameInput.value = mapping.outputFieldName;
+                            }
+                        }
+                        saveConfigToStorage();
+                    });
+                    // 新字段名变更
+                    const outputFieldNameInput = row.querySelector('.map-output-fieldname');
+                    outputFieldNameInput.addEventListener('input', () => {
+                        mapping.outputFieldName = outputFieldNameInput.value;
+                        saveConfigToStorage();
+                    });
+                    // 输出类型变更
+                    const outputTypeSelect = row.querySelector('.map-output-type');
+                    outputTypeSelect.addEventListener('change', () => {
+                        mapping.outputType = outputTypeSelect.value;
+                        if (mapping.outputType === 'source' && mapping.sourceType === 'none') {
+                            mapping.outputType = 'custom';
+                        }
+                        saveConfigToStorage();
+                        renderMappingList();
+                    });
+                    // 输出值变更
+                    const outputValueInput = row.querySelector('.map-output-value');
+                    outputValueInput.addEventListener('input', () => {
+                        mapping.outputValue = outputValueInput.value;
+                        saveConfigToStorage();
+                    });
+                    // 删除映射
+                    const deleteBtn = row.querySelector('.map-delete-btn');
+                    deleteBtn.addEventListener('click', () => {
+                        unit.mappings.splice(index, 1);
+                        saveConfigToStorage();
+                        renderMappingList();
+                        updateConfigRightTitle();
+                        addLog(`已删除映射字段 #${index + 1}`, 'log-warn');
+                    });
+                    container.appendChild(row);
+                });
+                if (window.lucide) lucide.createIcons();
+                updateConfigRightTitle();
+            }
+
+            function addMapping() {
+                const unit = getUnitById(selectedConfigUnitId);
+                if (!unit) return;
+                const newMapping = {
+                    id: generateId(),
+                    sourceType: 'none',
+                    sourceField: '',
+                    outputFieldName: '',
+                    outputType: 'custom',
+                    outputValue: ''
+                };
+                unit.mappings.push(newMapping);
+                saveConfigToStorage();
+                renderMappingList();
+                addLog(`已在 "${unit.name}" 中添加新映射字段`, 'log-info');
+            }
+            window.addMapping = addMapping;
+
+            // ============ 配置覆盖层开关 ============
+            function openConfigOverlay() {
+                document.getElementById('config-overlay').classList.add('active');
+                if (config.conversionUnits.length > 0 && !selectedConfigUnitId) {
+                    selectedConfigUnitId = config.conversionUnits[0].id;
+                }
+                renderConfigUnitList();
+                renderMappingList();
+                updateConfigRightTitle();
+                if (window.lucide) lucide.createIcons();
+                addLog('已打开转化配置面板。', 'log-info');
+            }
+            window.openConfigOverlay = openConfigOverlay;
+
+            function closeConfigOverlay() {
+                document.getElementById('config-overlay').classList.remove('active');
+                renderMainUnitList();
+                if (window.lucide) lucide.createIcons();
+                addLog('已关闭转化配置面板。', 'log-info');
+            }
+            window.closeConfigOverlay = closeConfigOverlay;
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('config-overlay').classList.contains('active')) {
+                    closeConfigOverlay();
+                }
+            });
+
+            // ============ 文件上传 ============
+            function triggerUpload() { document.getElementById('file-input').click(); }
+            window.triggerUpload = triggerUpload;
+
+            function handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                uploadedFileName = file.name.replace(/\.[^/.]+$/, ""); // 去除文件后缀
+                addLog(`正在读取文件: ${file.name} ...`, 'log-info');
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        uploadedWorkbook = XLSX.read(data, { type: 'array' });
+                        uploadedData = {};
+                        uploadedWorkbook.SheetNames.forEach(sheetName => {
+                            const sheet = uploadedWorkbook.Sheets[sheetName];
+                            const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                            if (jsonData.length > 0) {
+                                const headers = jsonData[0].map(h => String(h));
+                                const rows = jsonData.slice(1);
+                                uploadedData[sheetName] = { headers, rows };
+                            }
+                        });
+                        addLog(`文件 "${file.name}" 读取成功。包含 ${uploadedWorkbook.SheetNames.length} 个工作表: ${uploadedWorkbook.SheetNames.join(', ')}`, 'log-success');
+                        renderPreview();
+                        analyzeUploadedData();
+                    } catch (err) {
+                        addLog(`读取文件失败: ${err.message}`, 'log-error');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+                event.target.value = '';
+            }
+            window.handleFileUpload = handleFileUpload;
+
+            function renderPreview() {
+                const previewArea = document.getElementById('preview-area');
+                if (!uploadedData) {
+                    previewArea.innerHTML = '<div class="no-data"><span>◇ 等待上传 Excel 文件以预览数据 ◇</span></div>';
+                    return;
+                }
+                const firstSheet = Object.keys(uploadedData)[0];
+                if (!firstSheet) {
+                    previewArea.innerHTML = '<div class="no-data"><span>◇ 无法读取工作表数据 ◇</span></div>';
+                    return;
+                }
+                const { headers, rows } = uploadedData[firstSheet];
+                const displayRows = rows.slice(0, 50);
+                let html = '<table><thead><tr><th>#</th>';
+                headers.forEach(h => { html += `<th>${escapeHTML(h)}</th>`; });
+                html += '</tr></thead><tbody>';
+                displayRows.forEach((row, idx) => {
+                    html += '<tr>';
+                    html += `<td style="color:var(--text-dim);font-size:10px;">${idx + 1}</td>`;
+                    headers.forEach((h, colIdx) => {
+                        const val = row[colIdx] !== undefined ? String(row[colIdx]) : '';
+                        html += `<td>${escapeHTML(val)}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                if (rows.length > 50) {
+                    html += `<tr><td colspan="${headers.length + 1}" style="text-align:center;color:var(--text-dim);">... 共 ${rows.length} 行，仅显示前50行 ...</td></tr>`;
+                }
+                html += '</tbody></table>';
+                previewArea.innerHTML = html;
+            }
+
+            function analyzeUploadedData() {
+                if (!uploadedData) return;
+                addLog('========== 字段匹配分析 ==========', 'log-highlight');
+                config.conversionUnits.forEach(unit => {
+                    if (!unit.enabled) return;
+                    addLog(`--- 转化单元: "${unit.name}" ---`, 'log-info');
+                    const fieldMappings = unit.mappings.filter(m => m.sourceType === 'field' && m.sourceField.trim());
+                    if (fieldMappings.length === 0 && unit.mappings.length > 0) {
+                        addLog(`  所有映射均为"无"类型，无需匹配原始字段。`, 'log-info');
+                    }
+                    fieldMappings.forEach(mapping => {
+                        const matchedHeader = findOriginalHeaderCase(mapping.sourceField);
+                        if (matchedHeader) {
+                            addLog(`  ✓ 字段 "${mapping.sourceField}" → 匹配到原始列 "${matchedHeader}"`, 'log-success');
+                        } else {
+                            addLog(`  ⚠ 字段 "${mapping.sourceField}" → 未找到匹配的原始列（将使用空值填充）`, 'log-warn');
+                        }
+                    });
+                    if (unit.mappings.length === 0) {
+                        addLog(`  ⚠ 该转化单元无任何映射配置。`, 'log-warn');
+                    }
+                });
+                addLog('========== 分析完成 ==========', 'log-highlight');
+            }
+
+            function normalizeHeader(str) {
+                if (!str) return '';
+                return String(str)
+                    .toLowerCase()
+                    .replace(/[\s\u3000\u00a0\u200b\ufeff\r\n\t]+/g, '');
+            }
+
+            function findOriginalHeaderCase(searchField) {
+                if (!uploadedData) return null;
+                const searchNorm = normalizeHeader(searchField);
+                if (!searchNorm) return null;
+
+                // 1. 优先尝试标准化后完全一致的匹配
+                for (const sheetName in uploadedData) {
+                    for (const h of uploadedData[sheetName].headers) {
+                        if (normalizeHeader(h) === searchNorm) return h;
+                    }
+                }
+
+                // 2. 兜底尝试包含匹配
+                for (const sheetName in uploadedData) {
+                    for (const h of uploadedData[sheetName].headers) {
+                        const hNorm = normalizeHeader(h);
+                        if (hNorm.includes(searchNorm) || searchNorm.includes(hNorm)) return h;
+                    }
+                }
+                return null;
+            }
+
+            // ============ 运行转化 ============
+            function runConversion() {
+                if (!uploadedData) { addLog('错误: 请先上传Excel文件。', 'log-error'); return; }
+                const enabledUnits = config.conversionUnits.filter(u => u.enabled);
+                if (enabledUnits.length === 0) { addLog('错误: 没有启用的转化单元。', 'log-error'); return; }
+                addLog('========== 开始执行转化 ==========', 'log-highlight');
+                
+                const baseName = uploadedFileName || '原始表';
+                let fileCount = 0;
+
+                enabledUnits.forEach(unit => {
+                    addLog(`处理转化单元: "${unit.name}" ...`, 'log-info');
+                    if (unit.mappings.length === 0) { addLog(`  跳过: 无映射配置。`, 'log-warn'); return; }
+
+                    // 为每个启用的转化单元单独构建和下载对应工作簿
+                    const outputWorkbook = XLSX.utils.book_new();
+                    const outputHeaders = [];
+                    const outputData = [];
+
+                    unit.mappings.forEach((mapping, idx) => {
+                        const headerName = mapping.outputFieldName || mapping.sourceField || `列${idx + 1}`;
+                        outputHeaders.push(headerName);
+                    });
+
+                    let totalRows = 0;
+                    const firstSheetData = Object.values(uploadedData)[0];
+                    if (firstSheetData) totalRows = firstSheetData.rows.length;
+
+                    for (let rowIdx = 0; rowIdx < totalRows; rowIdx++) {
+                        const outputRow = [];
+                        unit.mappings.forEach(mapping => {
+                            let cellValue = '';
+                            if (mapping.sourceType === 'none') {
+                                cellValue = mapping.outputValue || '';
+                            } else if (mapping.sourceType === 'field') {
+                                let sourceData = '';
+                                const matchedHeader = findOriginalHeaderCase(mapping.sourceField);
+                                if (matchedHeader && uploadedData) {
+                                    for (const sheetName in uploadedData) {
+                                        const sheetData = uploadedData[sheetName];
+                                        const colIndex = sheetData.headers.findIndex(h => h === matchedHeader);
+                                        if (colIndex >= 0 && rowIdx < sheetData.rows.length) {
+                                            const val = sheetData.rows[rowIdx][colIndex];
+                                            sourceData = val !== undefined ? String(val) : '';
+                                            break;
+                                        }
+                                    }
+                                }
+                                cellValue = mapping.outputType === 'source' ? sourceData : mapping.outputValue || '';
+                            }
+                            outputRow.push(cellValue);
+                        });
+                        outputData.push(outputRow);
+                    }
+
+                    const wsData = [outputHeaders, ...outputData];
+                    const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+                    const colWidths = outputHeaders.map(h => ({ wch: Math.max(String(h).length * 2, 12) }));
+                    worksheet['!cols'] = colWidths;
+                    
+                    const sheetName = sanitizeSheetName(unit.name);
+                    XLSX.utils.book_append_sheet(outputWorkbook, worksheet, sheetName);
+
+                    // 写入并触发下载
+                    const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'array' });
+                    const blob = new Blob([wbout], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // 新的表命名规则: 输入的原始表名-对应的转化单元名-EXECLINE-sheet的名字
+                    const downloadFileName = `${baseName}-${unit.name}-EXECLINE-${sheetName}.xlsx`;
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = downloadFileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    addLog(`  ✓ 已导出文件 "${downloadFileName}" (${outputHeaders.length} 列, ${outputData.length} 行)`, 'log-success');
+                    fileCount++;
+                });
+
+                addLog(`========== 转化完成！共成功导出 ${fileCount} 个 Excel 文件 ==========`, 'log-success');
+            }
+            window.runConversion = runConversion;
+
+            function sanitizeSheetName(name) {
+                let sanitized = name.replace(/[\[\]:*?/\\]/g, '_');
+                if (sanitized.length > 31) sanitized = sanitized.substring(0, 31);
+                if (!sanitized.trim()) sanitized = 'Sheet';
+                return sanitized;
+            }
+
+            // ============ 配置JSON导入导出 ============
+            function exportConfigJSON() {
+                const exportData = {
+                    version: '1.0',
+                    appName: 'ExecLine',
+                    exportedAt: new Date().toISOString(),
+                    conversionUnits: config.conversionUnits.map(u => ({
+                        id: u.id, name: u.name, enabled: u.enabled,
+                        mappings: u.mappings.map(m => ({
+                            id: m.id, sourceType: m.sourceType, sourceField: m.sourceField,
+                            outputFieldName: m.outputFieldName || '',
+                            outputType: m.outputType, outputValue: m.outputValue
+                        }))
+                    }))
+                };
+                const jsonStr = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ExecLine_Config_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                addLog('配置已导出为JSON文件。', 'log-success');
+            }
+            window.exportConfigJSON = exportConfigJSON;
+
+            function importConfigJSON() { document.getElementById('config-file-input').click(); }
+            window.importConfigJSON = importConfigJSON;
+
+            function handleConfigImport(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                addLog(`正在导入配置: ${file.name} ...`, 'log-info');
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importData = JSON.parse(e.target.result);
+                        if (!importData.conversionUnits || !Array.isArray(importData.conversionUnits)) throw new Error('配置格式无效');
+                        const validUnits = importData.conversionUnits.filter(u => u.name && Array.isArray(u.mappings));
+                        validUnits.forEach(u => {
+                            u.id = u.id || generateId();
+                            u.enabled = u.enabled !== false;
+                            u.mappings = u.mappings.map(m => ({
+                                id: m.id || generateId(),
+                                sourceType: m.sourceType === 'field' ? 'field' : 'none',
+                                sourceField: m.sourceField || '',
+                                outputFieldName: m.outputFieldName || m.sourceField || '',
+                                outputType: m.outputType === 'source' ? 'source' : 'custom',
+                                outputValue: m.outputValue || ''
+                            }));
+                        });
+                        config.conversionUnits = validUnits;
+                        selectedConfigUnitId = validUnits.length > 0 ? validUnits[0].id : null;
+                        saveConfigToStorage();
+                        renderMainUnitList();
+                        renderConfigUnitList();
+                        renderMappingList();
+                        updateConfigRightTitle();
+                        if (window.lucide) lucide.createIcons();
+                        addLog(`配置导入成功！共导入 ${validUnits.length} 个转化单元。`, 'log-success');
+                        if (uploadedData) analyzeUploadedData();
+                    } catch (err) {
+                        addLog(`配置导入失败: ${err.message}`, 'log-error');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            }
+            window.handleConfigImport = handleConfigImport;
+
+            // ============ 初始化 ============
+            function init() {
+                loadThemeFromStorage();
+                if (!loadConfigFromStorage()) {
+                    // 使用默认示例配置
+                    config.conversionUnits = [{
+                        id: generateId(),
+                        name: '示例转化单元',
+                        enabled: true,
+                        mappings: [
+                            { id: generateId(), sourceType: 'field', sourceField: '姓名', outputFieldName: '姓名', outputType: 'source', outputValue: '' },
+                            { id: generateId(), sourceType: 'field', sourceField: '年龄', outputFieldName: '年龄', outputType: 'custom', outputValue: '保密' },
+                            { id: generateId(), sourceType: 'none', sourceField: '', outputFieldName: '自定义列', outputType: 'custom', outputValue: '默认值' }
+                        ]
+                    }];
+                    saveConfigToStorage();
+                }
+                selectedConfigUnitId = config.conversionUnits.length > 0 ? config.conversionUnits[0].id : null;
+                renderMainUnitList();
+                renderConfigUnitList();
+                renderMappingList();
+                updateConfigRightTitle();
+                if (window.lucide) lucide.createIcons();
+                addLog('ExecLine 初始化完成。配置已自动保存至本地。', 'log-info');
+            }
+
+            init();
+
+            // 暴露全局函数
+            window.addConversionUnit = addConversionUnit;
+            window.addMapping = addMapping;
+            window.openConfigOverlay = openConfigOverlay;
+            window.closeConfigOverlay = closeConfigOverlay;
+            window.triggerUpload = triggerUpload;
+            window.handleFileUpload = handleFileUpload;
+            window.exportConfigJSON = exportConfigJSON;
+            window.importConfigJSON = importConfigJSON;
+            window.handleConfigImport = handleConfigImport;
+            window.runConversion = runConversion;
+            window.clearLog = clearLog;
+            window.toggleTheme = toggleTheme;
+        })();
+    </script>
+</body>
+</html>
