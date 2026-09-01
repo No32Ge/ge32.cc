@@ -1,0 +1,2 @@
+web-pick.min ： 敏感行为监控
+web-vitals.min： 登录监控
