@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A专业代·诚信接单海报</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 替换底层：引入现代无损渲染引擎 html-to-image -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&family=Noto+Sans+SC:wght@500;700;900&display=swap');
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
+      background-color: #0f172a;
+    }
+
+    /* 潮酷贴纸立体描边阴影 */
+    .sticker-tag {
+      box-shadow: 2.5px 2.5px 0px #000000;
+    }
+    .sticker-tag-lg {
+      box-shadow: 3px 3px 0px #000000;
+    }
+    .sticker-card {
+      box-shadow: 3.5px 3.5px 0px #000000;
+    }
+    .sticker-sm {
+      box-shadow: 1.5px 1.5px 0px #000000;
+    }
+
+    /* 文字防背景穿透白色描边 */
+    .text-stroke-white {
+      text-shadow: 
+        -2px -2px 0 #fff,  
+         2px -2px 0 #fff,
+        -2px  2px 0 #fff,
+         2px  2px 0 #fff,
+         0px  2px 0 #fff,
+         0px -2px 0 #fff;
+    }
+
+    /* 可编辑文字悬浮交互 */
+    [contenteditable="true"]:hover {
+      outline: 2px dashed #22c55e;
+      background: rgba(34, 197, 94, 0.08);
+      border-radius: 4px;
+      cursor: text;
+    }
+    [contenteditable="true"]:focus {
+      outline: 2px solid #16a34a;
+      background: #ffffff;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen py-6 flex flex-col items-center justify-center p-2">
+
+  <!-- 操作按钮栏 -->
+  <div class="mb-4 flex gap-4 items-center justify-center">
+    <button id="exportBtn" onclick="downloadPoster()" class="bg-[#10b981] hover:bg-[#059669] active:scale-95 text-white text-sm font-black px-7 py-2.5 rounded-xl shadow-xl transition flex items-center gap-2 cursor-pointer">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+      <span>导出高清标准比例海报 (PNG)</span>
+    </button>
+  </div>
+
+  <!-- 海报主体：严格标准海报比例 (480px * 680px) -->
+  <div id="poster" class="relative w-[480px] h-[680px] bg-[#f8fafc] text-slate-900 border-2 border-black shadow-2xl overflow-hidden px-6 py-5 rounded-2xl flex flex-col justify-between shrink-0 box-border">
+    
+    <!-- 背景流线与装饰 -->
+    <div class="absolute inset-0 pointer-events-none z-0">
+      <svg class="w-full h-full" viewBox="0 0 480 680" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 230 100 C 130 140, 20 180, 25 280 C 30 380, 440 330, 440 440 C 440 540, 100 500, 490 600" stroke="#22c55e" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.95"/>
+        <path d="M 230 100 C 130 140, 20 180, 25 280 C 30 380, 440 330, 440 440 C 440 540, 100 500, 490 600" stroke="#dcfce7" stroke-width="5" stroke-dasharray="12 10" stroke-linecap="round" fill="none"/>
+        
+        <path d="M 38 185 Q 46 185 46 177 Q 46 185 54 185 Q 46 185 46 193 Q 46 185 38 185 Z" fill="#38bdf8"/>
+        <path d="M 425 330 Q 435 330 435 320 Q 435 330 445 330 Q 435 330 435 340 Q 435 330 425 330 Z" fill="#fbbf24"/>
+        <path d="M 175 300 Q 182 300 182 293 Q 182 300 189 300 Q 182 300 182 307 Q 182 300 175 300 Z" fill="#f43f5e"/>
+        <path d="M 38 460 Q 45 460 45 453 Q 45 460 52 460 Q 45 460 45 467 Q 45 460 38 460 Z" fill="#a855f7"/>
+      </svg>
+    </div>
+
+    <!-- 1. 顶部 Header 标题 + 原版高精矢量人物插图 -->
+    <div class="relative z-10 flex justify-between items-start">
+      <div class="space-y-1 z-10">
+        <h1 class="text-3xl font-black tracking-tight text-slate-950 leading-[1.08] text-stroke-white" contenteditable="true">
+          A专业代<br>
+          <span class="text-[42px] text-black font-black tracking-tight leading-none">诚信靠谱</span>
+        </h1>
+        <div class="pt-1 flex items-center gap-2">
+          <span class="border-2 border-black bg-[#facc15] px-2 py-0.5 text-[11px] font-black uppercase tracking-wider inline-block sticker-tag rounded" contenteditable="true">
+            CAMPUS VIBES
+          </span>
+          <span class="text-[10px] font-black text-slate-800 bg-white border border-black px-2 py-0.5 rounded-full sticker-sm" contenteditable="true">
+            🔥 24H秒回
+          </span>
+        </div>
+      </div>
+
+      <!-- 保留原图：右上角插画保持不变 -->
+      <div class="w-40 h-40 -mr-2 -mt-2 relative shrink-0">
+        <img 
+          id="heroImg"
+          src="https://stories.freepiklabs.com/storage/28383/Learning-01.svg" 
+          crossorigin="anonymous"
+          alt="Campus Character" 
+          class="w-full h-full object-contain pointer-events-none drop-shadow-md"
+        />
+      </div>
+    </div>
+
+    <!-- 2. 业务项目 1：刷课代刷 -->
+    <div class="relative z-10 ml-0.5 max-w-[340px]">
+      <div class="inline-flex items-center gap-2 mb-1.5">
+        <div class="border-2 border-black bg-white px-4 py-1 rounded-full text-xl font-black tracking-tight text-slate-950 sticker-tag-lg flex items-center gap-1.5" contenteditable="true">
+          <span>刷课代刷</span>
+        </div>
+        <div class="w-8 h-8 bg-amber-100 rounded-full border-2 border-black flex items-center justify-center text-amber-600 sticker-tag">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+            <path d="M4 6H20V16H4zM2 18H22V20H2z"/>
+            <polygon points="10,8 16,11 10,14" fill="#ffffff"/>
+          </svg>
+        </div>
+      </div>
+      <div class="pl-1 flex flex-col items-start gap-1" contenteditable="true">
+        <div class="bg-white/95 backdrop-blur-sm border-2 border-black px-2.5 py-0.5 rounded-md sticker-sm inline-block">
+          <p class="text-[13px] font-black text-slate-900 tracking-tight">全国学习软件均可 · 全面覆盖</p>
+        </div>
+        <div class="bg-emerald-50 border-2 border-black px-2.5 py-0.5 rounded-md sticker-sm inline-flex items-center gap-1.5">
+          <span class="bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded">保过</span>
+          <span class="text-[13px] font-black text-emerald-950 tracking-tight">包高分 · 不过包退！</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 业务项目 2：服装潮牌 -->
+    <div class="relative z-10 flex flex-col items-end text-right pr-0.5">
+      <div class="inline-flex items-center gap-2 mb-1.5 flex-row-reverse">
+        <div class="border-2 border-black bg-white px-4 py-1 rounded-full text-xl font-black tracking-tight text-slate-950 sticker-tag-lg" contenteditable="true">
+          <span>服装潮牌</span>
+        </div>
+        <div class="w-8 h-8 bg-pink-100 rounded-full border-2 border-black flex items-center justify-center text-pink-600 sticker-tag">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+        </div>
+      </div>
+      <div class="pr-1 flex flex-col items-end gap-1" contenteditable="true">
+        <div class="bg-white/95 backdrop-blur-sm border-2 border-black px-2.5 py-0.5 rounded-md sticker-sm inline-block">
+          <p class="text-[13px] font-black text-slate-900 tracking-tight">衣服 · 鞋子 · 包包 · 潮流配饰</p>
+        </div>
+        <div class="bg-rose-50 border-2 border-black px-2.5 py-0.5 rounded-md sticker-sm inline-flex items-center gap-1.5">
+          <span class="text-[13px] font-black text-rose-950 tracking-tight">主打性价比 · 品质保证</span>
+          <span class="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded">7天无理由</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 业务项目 3：兼职创业 -->
+    <div class="relative z-10 ml-0.5 max-w-[340px]">
+      <div class="inline-flex items-center gap-2 mb-1.5">
+        <div class="border-2 border-black bg-white px-4 py-1 rounded-full text-xl font-black tracking-tight text-slate-950 sticker-tag-lg" contenteditable="true">
+          <span>兼职创业</span>
+        </div>
+        <div class="w-8 h-8 bg-emerald-100 rounded-full border-2 border-black flex items-center justify-center text-emerald-700 sticker-tag">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+      </div>
+      <div class="pl-1 flex flex-col items-start gap-1" contenteditable="true">
+        <div class="bg-white/95 backdrop-blur-sm border-2 border-black px-2.5 py-0.5 rounded-md sticker-sm inline-block">
+          <p class="text-[13px] font-black text-slate-900 tracking-tight">关注朋友圈最新兼职与代理动态</p>
+        </div>
+        <div class="bg-amber-50 border-2 border-black px-2.5 py-0.5 rounded-md sticker-sm inline-block">
+          <p class="text-[13px] font-black text-slate-900 tracking-tight">
+            给自己一个 <span class="text-emerald-700 font-black">零成本兼职赚钱</span> 的机会！
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. 底部加好友号召 + 二维码互动区 -->
+    <div class="relative z-10 pt-2 border-t-2 border-dashed border-slate-300 flex items-end justify-between">
+      <div class="flex flex-col justify-end pl-0.5">
+        <div class="mb-1">
+          <span class="inline-block bg-white border border-black text-[10px] font-black text-slate-800 px-2 py-0.5 rounded sticker-sm" contenteditable="true">
+            ⚡ 随叫随到 · 诚信售后
+          </span>
+        </div>
+        <svg class="w-28 h-12" viewBox="0 0 140 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="10,55 40,10 70,55" fill="#fde68a" stroke="#000" stroke-width="2"/>
+          <polygon points="40,10 50,55 70,55" fill="#fbbf24" stroke="#000" stroke-width="1.5"/>
+          <rect x="22" y="32" width="14" height="12" fill="#78350F" stroke="#000" stroke-width="1" rx="1"/>
+          <circle cx="85" cy="35" r="3.5" fill="#38bdf8"/>
+          <circle cx="105" cy="20" r="4.5" fill="#f43f5e"/>
+        </svg>
+      </div>
+
+      <div class="flex flex-col items-end">
+        <div class="text-right mb-1" contenteditable="true">
+          <div class="text-[11px] font-black text-slate-800 tracking-tight bg-white border border-black px-1.5 py-0.2 rounded inline-block sticker-sm">
+            加个好友备用吧 ✌️
+          </div>
+          <div class="text-sm font-black text-emerald-600 tracking-tight leading-none text-stroke-white mt-0.5">
+            俺是专业滴！
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center">
+          <div class="relative group w-20 h-20 bg-white border-2 border-black rounded-xl flex flex-col items-center justify-center cursor-pointer overflow-hidden sticker-card hover:bg-slate-50 transition">
+            <input type="file" id="qrUploader" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-20" title="点击上传二维码图片">
+            <img id="qrPreview" class="w-full h-full object-contain hidden z-10 p-1" alt="二维码" />
+            <div id="uploadPlaceholder" class="flex flex-col items-center justify-center text-center p-1 z-0">
+              <div class="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center mb-0.5 text-emerald-600">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m8-8H4"/></svg>
+              </div>
+              <span class="text-[9px] font-black text-slate-900 leading-none">上传二维码</span>
+            </div>
+          </div>
+          <span class="text-[9px] font-black text-slate-500 mt-1 tracking-wider bg-white/90 px-1 rounded" contenteditable="true">扫一扫 · 立即联系</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 导出交互脚本 -->
+  <script>
+    // 二维码图片上传预览
+    const qrUploader = document.getElementById('qrUploader');
+    const qrPreview = document.getElementById('qrPreview');
+    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+
+    qrUploader.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          qrPreview.src = event.target.result;
+          qrPreview.classList.remove('hidden');
+          uploadPlaceholder.classList.add('hidden');
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 导出高清标准比例海报（采用浏览器原生渲染，杜绝字体重叠与图片丢失）
+    async function downloadPoster() {
+      const btn = document.getElementById('exportBtn');
+      const poster = document.getElementById('poster');
+      
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<span>⏳ 正在高清渲染中...</span>`;
+      btn.disabled = true;
+
+      try {
+        // 确保所有外部字体加载就绪
+        await document.fonts.ready;
+
+        // 生成 3 倍高清像素图 (1440 x 2040)
+        const dataUrl = await htmlToImage.toPng(poster, {
+          pixelRatio: 3,
+          cacheBust: true,
+          quality: 1,
+          backgroundColor: '#f8fafc'
+        });
+
+        const link = document.createElement('a');
+        link.download = 'A专业代_标准海报.png';
+        link.href = dataUrl;
+        link.click();
+      } catch (error) {
+        console.error('导出海报失败:', error);
+        alert('导出失败，请检查网络或控制台日志！');
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
