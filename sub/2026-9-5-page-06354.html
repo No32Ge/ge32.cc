@@ -1,0 +1,487 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>线上兼职大学生招募海报</title>
+  <!-- 引入现代无损截图库 html-to-image -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+  <style>
+    /* 全局基础设置 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #1e1e24;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 15px;
+    }
+
+    /* 顶部操作工具条 */
+    .toolbar {
+      margin-bottom: 20px;
+    }
+    .btn-download {
+      background-color: #F8A878;
+      color: #000;
+      border: 2px solid #000;
+      font-size: 14px;
+      font-weight: 900;
+      padding: 10px 24px;
+      cursor: pointer;
+      box-shadow: 3px 3px 0px #000;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-download:hover {
+      background-color: #ff9a60;
+      transform: translateY(-2px);
+      box-shadow: 4px 4px 0px #000;
+    }
+    .btn-download:active {
+      transform: translateY(0);
+      box-shadow: 1px 1px 0px #000;
+    }
+
+    /* 海报主体画布 (标准定宽，防止不同屏幕拉伸变形) */
+    #poster-canvas {
+      width: 480px;
+      background-color: #8573B7;
+      border: 2.5px solid #000000;
+      padding: 24px 20px 20px 20px;
+      position: relative;
+      overflow: hidden;
+      color: #000000;
+    }
+
+    /* 左上角指针光标 */
+    .top-left-cursor {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 40px;
+      height: 40px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    /* 顶部区域 */
+    .header-section {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    /* 右上角喇叭与彩带 */
+    .megaphone-wrapper {
+      position: absolute;
+      top: -15px;
+      right: -10px;
+      width: 220px;
+      height: 160px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* 标题黑色大招牌 */
+    .title-box {
+      background-color: #000;
+      color: #fff;
+      display: inline-block;
+      padding: 10px 18px 8px 14px;
+      border: 2px solid #000;
+      box-shadow: 4px 4px 0px #000;
+      position: relative;
+      z-index: 2;
+    }
+    .title-box h1 {
+      font-size: 32px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: 1px;
+    }
+
+    /* 标题下方小标签 */
+    .subtitle-badge {
+      background-color: #000;
+      color: #fff;
+      display: inline-block;
+      font-size: 15px;
+      font-weight: 900;
+      padding: 4px 12px;
+      margin-top: 8px;
+      letter-spacing: 0.5px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* 引导副标题 */
+    .guide-title {
+      font-size: 19px;
+      font-weight: 900;
+      color: #000;
+      margin-top: 18px;
+      letter-spacing: 0.5px;
+    }
+
+    /* 卡片通用布局规范 */
+    .card {
+      border: 2px solid #000;
+      border-radius: 16px;
+      box-shadow: 3px 3px 0px #000;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    /* 橙色操作卡片 */
+    .card-orange {
+      background-color: #F8A878;
+      padding: 14px 16px;
+    }
+    .card-orange .item-list {
+      font-size: 13.5px;
+      font-weight: 900;
+      line-height: 1.6;
+      color: #000;
+    }
+
+    /* 白色卡片 */
+    .card-white {
+      background-color: #FFFFFF;
+      padding: 14px 16px;
+    }
+
+    /* 黑色药丸标签 (优势、门槛) */
+    .pill-badge {
+      background-color: #000;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 2px 14px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .card-white .item-list {
+      font-size: 12.5px;
+      font-weight: 800;
+      line-height: 1.55;
+      color: #000;
+    }
+
+    /* 门槛与二维码两栏排版 */
+    .card-flex-split {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background-color: #FFFFFF;
+      padding: 14px 16px;
+    }
+    .split-left {
+      flex: 1;
+    }
+
+    /* 二维码容器与右上方箭头 */
+    .qr-container {
+      position: relative;
+      flex-shrink: 0;
+      width: 105px;
+      height: 105px;
+    }
+    .qr-cursor-icon {
+      position: absolute;
+      top: -16px;
+      right: -10px;
+      width: 32px;
+      height: 32px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .qr-box {
+      width: 100%;
+      height: 100%;
+      background-color: #fff;
+      border: 2px solid #000;
+      box-shadow: 2.5px 2.5px 0px #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+      padding: 4px;
+    }
+    .qr-box:hover {
+      background-color: #faf5ff;
+    }
+    .qr-box input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 5;
+    }
+    .qr-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .qr-text-tip {
+      font-size: 8.5px;
+      color: #666;
+      margin-top: 2px;
+      text-align: center;
+      font-weight: bold;
+      transform: scale(0.9);
+    }
+
+    /* 底部橙色结语卡片 */
+    .card-footer {
+      background-color: #F8A878;
+      padding: 12px 14px;
+      font-size: 11.5px;
+      font-weight: 900;
+      line-height: 1.5;
+      color: #000;
+      margin-bottom: 0;
+    }
+
+    /* 可编辑元素悬浮提示 */
+    [contenteditable="true"] {
+      outline: none;
+      transition: background 0.2s;
+    }
+    [contenteditable="true"]:hover {
+      outline: 1.5px dashed rgba(0, 0, 0, 0.4);
+    }
+    [contenteditable="true"]:focus {
+      background: rgba(255, 255, 255, 0.3);
+      outline: 2px solid #000;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 工具栏 -->
+  <div class="toolbar">
+    <button class="btn-download" onclick="exportPoster()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      保存高清招募海报 (PNG)
+    </button>
+  </div>
+
+  <!-- 海报主体容器 -->
+  <div id="poster-canvas">
+
+    <!-- 1. 左上角复古光标 SVG -->
+    <div class="top-left-cursor">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+        <path d="M8 4 L26 22 L17 23 L25 34 L19 37 L11 26 L4 33 Z" fill="#FFFDF0" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M5 5 L5 30 L11 24 L18 34 L22 32 L15 22 L23 21 Z" fill="#FFFFFF"/>
+      </svg>
+    </div>
+
+    <!-- 2. 头部主招牌与喇叭 -->
+    <div class="header-section">
+      <!-- 喇叭及声波彩带 SVG -->
+      <div class="megaphone-wrapper">
+        <svg viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+          <!-- 喇叭音浪与放射彩带 -->
+          <path d="M75 60 L38 35" stroke="#F43F5E" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M68 76 L22 76" stroke="#F43F5E" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M75 92 L35 112" stroke="#F43F5E" stroke-width="4.5" stroke-linecap="round"/>
+          <!-- 彩色碎屑 -->
+          <polygon points="42,20 52,32 38,36" fill="#38BDF8"/>
+          <polygon points="26,54 36,62 24,68" fill="#FACC15"/>
+          <polygon points="52,108 64,118 48,124" fill="#34D399"/>
+          <rect x="65" y="24" width="9" height="9" fill="#FACC15" transform="rotate(25 65 24)"/>
+          
+          <!-- 金黄色大喇叭主体 -->
+          <g transform="translate(68, 16) rotate(24)">
+            <!-- 扩音口内外圈 -->
+            <ellipse cx="62" cy="50" rx="16" ry="34" fill="#FEF08A" stroke="#000" stroke-width="3"/>
+            <ellipse cx="62" cy="50" rx="8" ry="24" fill="#EAB308" stroke="#000" stroke-width="2.5"/>
+            <!-- 喇叭锥体 -->
+            <path d="M62 16 L154 42 V58 L62 84 Z" fill="#FACC15" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+            <!-- 把手手柄 -->
+            <path d="M112 50 L126 102 H142 L134 54 Z" fill="#FEF08A" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+            <rect x="122" y="78" width="18" height="6" rx="2" fill="#CA8A04"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 标题招牌 -->
+      <div class="title-box">
+        <h1 contenteditable="true">寻找线上</h1>
+        <h1 contenteditable="true">兼职大学生</h1>
+      </div>
+      <div>
+        <div class="subtitle-badge" contenteditable="true">寻找与众不同的你！</div>
+      </div>
+
+      <div class="guide-title" contenteditable="true">
+        给自己一个赚钱的机会，主要操作如下
+      </div>
+    </div>
+
+    <!-- 3. 第一大板块：暖桃色卡片 (主要操作) -->
+    <div class="card card-orange">
+      <div class="item-list">
+        <div contenteditable="true">1、抢购各大电商平台补贴产品：手机、平板、电脑、鞋子、美妆等</div>
+        <div contenteditable="true">2、抢各类演唱会、剧场、演出门票</div>
+        <div contenteditable="true">3、抢购茅台酒、五粮液、茶叶、等有差价的物品</div>
+        <div contenteditable="true">4、预约茅台小程序潮鞋、纪念币等</div>
+      </div>
+    </div>
+
+    <!-- 4. 第二大板块：白色卡片 (优势) -->
+    <div class="card card-white">
+      <div class="pill-badge" contenteditable="true">优势</div>
+      <div class="item-list">
+        <div contenteditable="true">1、一单佣金几十到上千，看你的能力，每个项目都参与你就肯定能赚到钱</div>
+        <div contenteditable="true">2、抢到的东西全部我负责垫款给你，不需要你出一分钱去买，0风险。抢到到货结佣金给你</div>
+        <div contenteditable="true">3、群里会定期发红包和各种福利抽奖，比如鞋子，化妆品，酒水礼品等等</div>
+      </div>
+    </div>
+
+    <!-- 5. 第三大板块：白卡门槛 + 二维码区域 -->
+    <div class="card card-flex-split">
+      <div class="split-left">
+        <div class="pill-badge" contenteditable="true">门槛</div>
+        <div class="item-list">
+          <div style="margin-bottom: 4px;" contenteditable="true">一、人必须靠谱，你以诚信待我，我必诚信待你。</div>
+          <div contenteditable="true">二、必须在校大学生，非学生不合作，如果朋友介绍是合作过并且有人担保可以合作</div>
+        </div>
+      </div>
+
+      <!-- 二维码区 -->
+      <div class="qr-container">
+        <!-- 二维码右上角小光标 -->
+        <div class="qr-cursor-icon">
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+            <path d="M28 6 L12 22 L17 24 L10 33 L15 35 L22 26 L27 30 Z" fill="#FFFDF0" stroke="#000" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="qr-box" title="点击或拖拽更换二维码">
+          <input type="file" id="qr-input" accept="image/*">
+          <!-- 默认高清微信风格二维码 SVG，开箱即用 -->
+          <svg id="qr-preview" class="qr-image" viewBox="0 0 100 100" fill="#000">
+            <rect width="100" height="100" fill="#fff"/>
+            <!-- 定位角 1 -->
+            <rect x="8" y="8" width="28" height="28" fill="#000"/>
+            <rect x="12" y="12" width="20" height="20" fill="#fff"/>
+            <rect x="16" y="16" width="12" height="12" fill="#000"/>
+            <!-- 定位角 2 -->
+            <rect x="64" y="8" width="28" height="28" fill="#000"/>
+            <rect x="68" y="12" width="20" height="20" fill="#fff"/>
+            <rect x="72" y="16" width="12" height="12" fill="#000"/>
+            <!-- 定位角 3 -->
+            <rect x="8" y="64" width="28" height="28" fill="#000"/>
+            <rect x="12" y="68" width="20" height="20" fill="#fff"/>
+            <rect x="16" y="72" width="12" height="12" fill="#000"/>
+            <!-- 散列仿真码点 -->
+            <rect x="42" y="10" width="6" height="6"/>
+            <rect x="52" y="14" width="6" height="12"/>
+            <rect x="42" y="24" width="10" height="6"/>
+            <rect x="10" y="42" width="14" height="6"/>
+            <rect x="30" y="42" width="6" height="16"/>
+            <rect x="42" y="36" width="16" height="6"/>
+            <rect x="42" y="48" width="6" height="14"/>
+            <rect x="54" y="48" width="14" height="6"/>
+            <rect x="64" y="40" width="8" height="12"/>
+            <rect x="78" y="42" width="12" height="6"/>
+            <rect x="84" y="52" width="6" height="12"/>
+            <rect x="42" y="68" width="12" height="6"/>
+            <rect x="60" y="68" width="6" height="14"/>
+            <rect x="72" y="68" width="18" height="6"/>
+            <rect x="42" y="82" width="16" height="8"/>
+            <rect x="68" y="80" width="8" height="10"/>
+            <rect x="82" y="82" width="8" height="8"/>
+            <!-- 中心微信图标遮罩 -->
+            <circle cx="50" cy="50" r="10" fill="#fff" stroke="#000" stroke-width="1.5"/>
+            <path d="M47 48c0-1.8 1.8-3.2 4-3.2s4 1.4 4 3.2c0 1.8-1.8 3.2-4 3.2-.5 0-1-.1-1.4-.3l-1.6.8.4-1.4c-.9-.6-1.4-1.4-1.4-2.3z" fill="#07C160"/>
+          </svg>
+          <div class="qr-text-tip">扫二维码，添加我为朋友。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. 底部暖桃色寄语 -->
+    <div class="card card-footer" contenteditable="true">
+      如有兴趣，并且觉得手速比较快，参与活动积极，喜欢购物，想赚零花钱的加我微信，或者直接扫码入群，相信我进群以后会有意外惊喜
+    </div>
+
+  </div>
+
+  <script>
+    // 监听本地二维码上传预览
+    const qrInput = document.getElementById('qr-input');
+    const qrPreview = document.getElementById('qr-preview');
+
+    qrInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          // 如果当前是 SVG，替换为 img
+          if (qrPreview.tagName.toLowerCase() === 'svg') {
+            const img = document.createElement('img');
+            img.id = 'qr-preview';
+            img.className = 'qr-image';
+            img.src = event.target.result;
+            qrPreview.parentNode.replaceChild(img, qrPreview);
+          } else {
+            qrPreview.src = event.target.result;
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 现代无损海报导出 (基于 html-to-image 矢量渲染)
+    function exportPoster() {
+      const node = document.getElementById('poster-canvas');
+      
+      // 导出高倍图保证超清
+      const scale = 3;
+      const options = {
+        width: node.offsetWidth * scale,
+        height: node.offsetHeight * scale,
+        style: {
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          width: `${node.offsetWidth}px`,
+          height: `${node.offsetHeight}px`
+        }
+      };
+
+      htmlToImage.toPng(node, options)
+        .then(function (dataUrl) {
+          const link = document.createElement('a');
+          link.download = '大学生兼职招募海报.png';
+          link.href = dataUrl;
+          link.click();
+        })
+        .catch(function (error) {
+          console.error('海报生成失败:', error);
+          alert('生成海报失败，请刷新页面重试！');
+        });
+    }
+  </script>
+</body>
+</html>
