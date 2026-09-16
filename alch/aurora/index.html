@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Alchemist Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0b0d14;
+      color: #f8fafc;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    
+    /* 强约束的暗夜毛玻璃 */
+    .neon-card {
+      background-color: #131728 !important;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* 极光幻彩卡片 */
+    .aurora-card {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
+      box-shadow: 0 12px 36px -6px rgba(124, 58, 237, 0.4);
+    }
+
+    @keyframes pulse-dot { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.5; } }
+    .pulse-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+    .tab-content { display: none; animation: fadeIn 0.2s ease-out; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 75px); }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-pink-500 selection:text-white">
+
+  <!-- 顶部绚丽背景气泡 -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-24 -left-20 w-80 h-80 bg-indigo-600/20 rounded-full blur-[100px]"></div>
+    <div class="absolute top-1/3 -right-24 w-80 h-80 bg-pink-500/15 rounded-full blur-[100px]"></div>
+    <div class="absolute -bottom-20 left-1/4 w-80 h-80 bg-cyan-500/15 rounded-full blur-[90px]"></div>
+  </div>
+
+  <!-- ==================== 登录 / 注册页 ==================== -->
+  <div id="loginScreen" class="relative z-10 flex-1 flex flex-col justify-between p-6 max-w-md mx-auto w-full min-h-screen">
+    <div class="pt-8 text-center">
+      <div class="inline-flex relative mb-4">
+        <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-white text-2xl shadow-xl shadow-indigo-500/30">
+          <i class="fa-solid fa-bolt-lightning"></i>
+        </div>
+        <span class="absolute -bottom-1 -right-1 flex h-4 w-4">
+          <span class="pulse-dot absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-slate-900"></span>
+        </span>
+      </div>
+      <h1 class="text-3xl font-extrabold tracking-tight text-white">Alchemist Hub</h1>
+      <p class="text-xs text-slate-400 mt-1">轻盈 · 快速 · 活力能源中心</p>
+
+      <!-- URL 检测提示条 -->
+      <div id="urlActionNotice" class="hidden mt-3 p-2 bg-pink-500/10 border border-pink-500/30 rounded-xl text-pink-300 text-[11px] animate-pulse">
+        <i class="fa-solid fa-gift mr-1"></i> 检测到充值卡密，登录或注册后将自动到账
+      </div>
+    </div>
+
+    <!-- 表单区 -->
+    <div class="neon-card rounded-3xl p-6 shadow-2xl space-y-4 my-auto">
+      <div>
+        <label class="block text-[11px] font-semibold tracking-wider text-slate-400 uppercase mb-2">Access Key 凭证</label>
+        <div class="relative flex items-center">
+          <input type="text" id="loginKeyInput" class="w-full pl-4 pr-10 py-3.5 bg-slate-950 border border-slate-700/80 rounded-2xl text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="alk-xxxxxxxx" onkeydown="if(event.key==='Enter')doPortalLogin()">
+          <i class="fa-solid fa-key absolute right-3.5 text-slate-500 text-sm"></i>
+        </div>
+      </div>
+      
+      <button onclick="doPortalLogin()" id="loginBtn" class="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-95 active:scale-[0.98] text-white rounded-2xl font-bold text-sm tracking-wide transition-all shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i> 开启能量终端
+      </button>
+
+      <p id="loginError" class="text-rose-400 text-xs text-center hidden py-1"></p>
+
+      <div class="relative flex py-2 items-center">
+        <div class="flex-grow border-t border-slate-800"></div>
+        <span class="flex-shrink mx-3 text-[11px] text-slate-500 font-medium">还没有密钥？</span>
+        <div class="flex-grow border-t border-slate-800"></div>
+      </div>
+
+      <button onclick="doRegister()" id="registerBtn" class="w-full py-3.5 bg-slate-800/80 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 active:scale-[0.98] rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> 一键生成新用户 Key
+      </button>
+    </div>
+
+    <!-- 底部状态 -->
+    <div class="text-center py-4">
+      <span class="inline-flex items-center gap-1.5 text-[11px] text-slate-500 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        API 网关直通: amigray.com
+      </span>
+    </div>
+  </div>
+
+  <!-- ==================== 用户主界面 (App 布局) ==================== -->
+  <div id="dashboardScreen" class="hidden relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full">
+
+    <!-- 顶部状态栏 -->
+    <header class="sticky top-0 z-30 px-5 pt-4 pb-3 flex items-center justify-between backdrop-blur-xl bg-slate-950/80 border-b border-white/5">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-md">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold tracking-tight text-white leading-tight">Alchemist</h2>
+          <span id="headerKeyBadge" class="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-1.5 py-0.2 rounded border border-indigo-500/20">alk-***</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="toggleNotifications()" class="relative w-9 h-9 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-slate-300 active:scale-95 transition-all">
+          <i class="fa-regular fa-bell text-sm"></i>
+          <span id="notifBadge" class="hidden absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-pink-500 text-white rounded-full text-[9px] font-bold items-center justify-center shadow-lg shadow-pink-500/50">0</span>
+        </button>
+        <button onclick="doLogout()" class="w-9 h-9 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-rose-400 active:scale-95 transition-all">
+          <i class="fa-solid fa-power-off text-sm"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- TAB 1: 首页概览 -->
+    <main id="tab-home" class="tab-content active px-4 pt-4 pb-safe space-y-4">
+      
+      <!-- 极光能量卡片 (Apple Card 风格) -->
+      <div class="aurora-card rounded-3xl p-5 text-white relative overflow-hidden flex flex-col justify-between min-h-[12.5rem]">
+        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-widest text-white/80">Available Credits</p>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1.5 font-mono text-white drop-shadow-sm" id="cardBalance">0</h1>
+          </div>
+          <span id="cardStatus" class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-black/25 backdrop-blur-md border border-white/20">
+            <span class="w-2 h-2 rounded-full bg-emerald-300 pulse-dot"></span> 正常
+          </span>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-white/20 mt-3">
+          <div class="flex flex-col">
+            <span class="text-[10px] text-white/70">所属账户标识</span>
+            <span class="text-xs font-mono font-medium text-white max-w-[140px] truncate" id="cardKeyName">--</span>
+          </div>
+          <button onclick="openRedeemSheet()" class="px-3.5 py-2 bg-white text-slate-900 rounded-2xl text-xs font-bold shadow-lg shadow-black/20 active:scale-95 transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-gift text-pink-500"></i> 卡密充值
+          </button>
+        </div>
+      </div>
+
+      <!-- 核心修复：数据统计小卡片（强背景色 + 高对比颜色） -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- 今日消耗 -->
+        <div class="neon-card rounded-2xl p-4 flex flex-col justify-between" style="background-color:#131728 !important;">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold">今日消耗</span>
+            <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline gap-1">
+            <span class="text-2xl font-extrabold text-amber-400 font-mono" id="cardTodayCredits">0</span>
+            <span class="text-[10px] text-slate-400 font-sans">积分</span>
+          </div>
+        </div>
+
+        <!-- 累计调用 (彻底修复背景发白与字体隐形) -->
+        <div class="neon-card rounded-2xl p-4 flex flex-col justify-between" style="background-color:#131728 !important;">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold">累计调用</span>
+            <div class="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-fire"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <span class="text-2xl font-extrabold text-cyan-300 font-mono" id="cardTotalCalls">0</span>
+            <span class="text-[10px] text-emerald-400 font-semibold font-mono" id="cardSuccessRate">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 快捷复制 Key -->
+      <div class="neon-card rounded-2xl p-3 flex items-center justify-between" style="background-color:#131728 !important;">
+        <div class="flex items-center gap-2.5 pl-1">
+          <i class="fa-solid fa-key text-indigo-400 text-sm"></i>
+          <span class="text-xs text-slate-200 font-medium">快捷复制 Access Key</span>
+        </div>
+        <button onclick="copyCurrentKey()" class="px-3 py-1.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold active:scale-95 transition-all flex items-center gap-1">
+          <i class="fa-regular fa-copy"></i> 复制
+        </button>
+      </div>
+
+      <!-- 最近消费小视窗 -->
+      <div class="neon-card rounded-3xl p-4 space-y-3" style="background-color:#131728 !important;">
+        <div class="flex items-center justify-between pb-2 border-b border-white/5">
+          <span class="text-xs font-bold text-slate-200 tracking-wide flex items-center gap-1.5">
+            <i class="fa-solid fa-clock-rotate-left text-pink-400"></i> 近期动态
+          </span>
+          <button onclick="switchTab('logs')" class="text-[11px] text-indigo-400 font-medium">全部明细 &rarr;</button>
+        </div>
+        <div id="homeRecentLogs" class="space-y-2">
+          <!-- 动态加载 -->
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 2: 图表趋势 -->
+    <main id="tab-charts" class="tab-content px-4 pt-4 pb-safe space-y-4">
+      <div class="neon-card rounded-3xl p-4 space-y-3" style="background-color:#131728 !important;">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-line text-indigo-400"></i> 消耗曲线
+          </span>
+          <div class="flex bg-slate-900 rounded-xl p-0.5 border border-white/5">
+            <button onclick="switchUserTrendMode(7)" id="utrendBtn-7d" class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-500 text-white transition-all">7天</button>
+            <button onclick="switchUserTrendMode(30)" id="utrendBtn-30d" class="px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-400 transition-all">30天</button>
+          </div>
+        </div>
+        <div class="h-44 w-full">
+          <canvas id="userTrendChart"></canvas>
+        </div>
+      </div>
+
+      <div class="neon-card rounded-3xl p-4 space-y-3" style="background-color:#131728 !important;">
+        <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+          <i class="fa-solid fa-chart-pie text-pink-400"></i> 模型占比
+        </span>
+        <div class="h-48 w-full flex items-center justify-center">
+          <canvas id="userModelChart"></canvas>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 3: 提示词资产库 -->
+    <main id="tab-assets" class="tab-content px-4 pt-4 pb-safe space-y-3">
+      <div class="flex items-center justify-between px-1">
+        <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+          <i class="fa-solid fa-box-archive text-purple-400"></i> 提示词共享空间
+        </span>
+        <span id="sharedAssetBadge" class="text-[10px] font-mono text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30">0 个资产</span>
+      </div>
+      <div id="sharedAssetsList" class="space-y-3">
+        <p class="py-12 text-center text-xs text-slate-500">加载中...</p>
+      </div>
+    </main>
+
+    <!-- TAB 4: 全部消费明细 -->
+    <main id="tab-logs" class="tab-content px-4 pt-4 pb-safe space-y-3">
+      <div class="flex items-center justify-between px-1">
+        <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+          <i class="fa-solid fa-list-check text-emerald-400"></i> 积分明细
+        </span>
+        <button onclick="loadRecentLogs()" class="text-xs text-slate-400 active:rotate-180 transition-all">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+      <div class="neon-card rounded-2xl overflow-hidden divide-y divide-white/5" id="fullLogsContainer" style="background-color:#131728 !important;">
+      </div>
+    </main>
+
+    <!-- 底部原生 Tab 栏 -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/85 backdrop-blur-2xl border-t border-white/10 max-w-md mx-auto">
+      <div class="flex justify-around items-center py-2.5">
+        <button onclick="switchTab('home')" id="tabBtn-home" class="flex flex-col items-center gap-1 text-indigo-400 active:scale-90 transition-all flex-1">
+          <i class="fa-solid fa-house text-lg"></i>
+          <span class="text-[10px] font-bold">概览</span>
+        </button>
+        <button onclick="switchTab('charts')" id="tabBtn-charts" class="flex flex-col items-center gap-1 text-slate-500 active:scale-90 transition-all flex-1">
+          <i class="fa-solid fa-chart-simple text-lg"></i>
+          <span class="text-[10px] font-bold">走势</span>
+        </button>
+        <button onclick="switchTab('assets')" id="tabBtn-assets" class="flex flex-col items-center gap-1 text-slate-500 active:scale-90 transition-all flex-1">
+          <i class="fa-solid fa-cubes text-lg"></i>
+          <span class="text-[10px] font-bold">资产</span>
+        </button>
+        <button onclick="switchTab('logs')" id="tabBtn-logs" class="flex flex-col items-center gap-1 text-slate-500 active:scale-90 transition-all flex-1">
+          <i class="fa-solid fa-receipt text-lg"></i>
+          <span class="text-[10px] font-bold">明细</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ==================== 底部充值抽屉 (Sheet) ==================== -->
+  <div id="redeemSheet" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-end justify-center">
+    <div class="bg-slate-900 border-t border-white/10 w-full max-w-md rounded-t-3xl p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-pink-500/20 text-pink-400 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-ticket"></i>
+          </div>
+          <h3 class="font-bold text-white text-base">兑换充值卡密</h3>
+        </div>
+        <button onclick="closeRedeemSheet()" class="text-slate-400 w-7 h-7 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-400">请输入获取的 Alchemist 兑换卡密。</p>
+
+      <div class="space-y-3">
+        <div class="relative">
+          <input type="text" id="redeemInput" class="w-full px-4 py-3.5 bg-slate-950 border border-slate-700 rounded-2xl text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-pink-500 transition-all" placeholder="RC-XXXX-XXXX-XXXX">
+          <button onclick="pasteRedeemCode()" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-pink-400 font-bold px-2 py-1 bg-pink-500/10 rounded-lg">粘贴</button>
+        </div>
+
+        <button onclick="submitRedeem()" id="redeemSubmitBtn" class="w-full py-3.5 bg-gradient-to-r from-pink-500 to-violet-600 text-white font-bold rounded-2xl text-sm shadow-lg shadow-pink-500/30 active:scale-[0.98] transition-all">
+          立即兑换积分
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通知抽屉 -->
+  <div id="notifSheet" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-end justify-center">
+    <div class="bg-slate-900 border-t border-white/10 w-full max-w-md rounded-t-3xl p-5 space-y-3 max-h-[80vh] flex flex-col">
+      <div class="flex items-center justify-between pb-2 border-b border-white/10">
+        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+          <i class="fa-solid fa-bell text-indigo-400"></i> 系统通知
+        </h3>
+        <button onclick="toggleNotifications()" class="text-slate-400 w-7 h-7 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div id="notifList" class="overflow-y-auto space-y-2.5 flex-1 pr-1"></div>
+    </div>
+  </div>
+
+  <!-- 注册成功弹窗 -->
+  <div id="regModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-5">
+    <div class="neon-card rounded-3xl p-6 w-full max-w-sm space-y-4 text-center" style="background-color:#131728 !important;">
+      <div class="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-3xl mx-auto flex items-center justify-center text-2xl border border-emerald-500/30">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white">账户铸造成功</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">这是专属于你的 Access Key，已为你关联，可随时复制。</p>
+      <div class="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-left">
+        <input id="regKeyDisplay" readonly class="w-full bg-transparent font-mono text-xs text-indigo-300 select-all focus:outline-none">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="copyRegKey()" class="py-3 bg-slate-800 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">复制密钥</button>
+        <button onclick="enterAfterRegister()" class="py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold active:scale-95 transition-all">进入终端</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toastContainer" class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] w-11/12 max-w-xs pointer-events-none space-y-2"></div>
+
+  <script>
+    // =========================================================
+    // ⚡ API 域名直连
+    // =========================================================
+    const API_BASE = 'https://amigray.com';
+
+    let userToken = null;
+    let currentUserKey = '';
+    let pendingRedeemCode = null; // 记录待自动核销的卡密
+    let userTrendDays = 7;
+    let userTrendChart = null;
+    let userModelChart = null;
+    let notifications = [];
+    let lastSeenNotifId = parseInt(localStorage.getItem('alchemist_portal_last_notif') || '0', 10);
+    const executedPortalHotpatches = new Set();
+
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      const pad = n => String(n).padStart(2, '0');
+      return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function showToast(msg, type = 'info') {
+      const colors = {
+        success: 'bg-emerald-500 text-white border-emerald-400/40 shadow-emerald-500/20',
+        error: 'bg-rose-500 text-white border-rose-400/40 shadow-rose-500/20',
+        info: 'bg-indigo-600 text-white border-indigo-400/40 shadow-indigo-500/20'
+      };
+      const icons = { success: 'fa-circle-check', error: 'fa-circle-exclamation', info: 'fa-circle-info' };
+      const el = document.createElement('div');
+      el.className = `px-4 py-2.5 rounded-2xl text-xs font-medium backdrop-blur-md border shadow-xl flex items-center gap-2 transition-all transform duration-300 opacity-0 -translate-y-2 ${colors[type] || colors.info}`;
+      el.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i> <span>${msg}</span>`;
+      
+      const container = document.getElementById('toastContainer');
+      container.appendChild(el);
+      requestAnimationFrame(() => el.classList.remove('opacity-0', '-translate-y-2'));
+
+      setTimeout(() => {
+        el.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => el.remove(), 300);
+      }, 2500);
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      const activeTab = document.getElementById(`tab-${tabId}`);
+      if (activeTab) activeTab.classList.add('active');
+
+      const tabs = ['home', 'charts', 'assets', 'logs'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tabBtn-${t}`);
+        if (!btn) return;
+        btn.className = (t === tabId) 
+          ? 'flex flex-col items-center gap-1 text-indigo-400 active:scale-90 transition-all flex-1'
+          : 'flex flex-col items-center gap-1 text-slate-500 active:scale-90 transition-all flex-1';
+      });
+
+      if (tabId === 'charts') {
+        setTimeout(() => { loadUserTrendChart(); loadUserModelChart(); }, 60);
+      }
+    }
+
+    // ================= 登录与注册 =================
+    async function doPortalLogin(autoKey = null) {
+      const keyInput = document.getElementById('loginKeyInput');
+      const key = autoKey || keyInput.value.trim();
+      const btn = document.getElementById('loginBtn');
+      const errEl = document.getElementById('loginError');
+
+      if (!key) {
+        errEl.textContent = '请填入 Access Key';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 认证中...';
+      errEl.classList.add('hidden');
+
+      try {
+        const r = await fetch(API_BASE + '/api/portal/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_key: key })
+        });
+        const data = await r.json();
+        if (r.ok && data.token) {
+          userToken = data.token;
+          currentUserKey = key;
+          localStorage.setItem('alchemist_portal_token', data.token);
+          localStorage.setItem('alchemist_portal_key', key);
+          enterDashboard();
+        } else {
+          errEl.textContent = data.error || '密钥无效或不存在';
+          errEl.classList.remove('hidden');
+        }
+      } catch (e) {
+        errEl.textContent = '通信异常: ' + e.message;
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> 开启能量终端';
+      }
+    }
+
+    async function doRegister() {
+      const btn = document.getElementById('registerBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 铸造凭证中...';
+
+      let deviceId = localStorage.getItem('alchemist_device_id');
+      if (!deviceId) {
+        deviceId = 'dev-' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 10));
+        localStorage.setItem('alchemist_device_id', deviceId);
+      }
+
+      try {
+        const r = await fetch(API_BASE + '/api/portal/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId },
+          body: JSON.stringify({ device_id: deviceId })
+        });
+        const data = await r.json();
+        if (r.ok && data.token) {
+          userToken = data.token;
+          currentUserKey = data.key_info.key_value;
+          localStorage.setItem('alchemist_portal_token', data.token);
+          localStorage.setItem('alchemist_portal_key', currentUserKey);
+
+          document.getElementById('regKeyDisplay').value = currentUserKey;
+          document.getElementById('regModal').classList.remove('hidden');
+        } else {
+          showToast(data.error || '注册失败', 'error');
+        }
+      } catch (e) {
+        showToast('网络请求异常: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 一键生成新用户 Key';
+      }
+    }
+
+    function copyRegKey() {
+      const inp = document.getElementById('regKeyDisplay');
+      inp.select();
+      navigator.clipboard ? navigator.clipboard.writeText(inp.value) : document.execCommand('copy');
+      showToast('Key 已成功拷贝！', 'success');
+    }
+
+    function enterAfterRegister() {
+      document.getElementById('regModal').classList.add('hidden');
+      enterDashboard();
+    }
+
+    function enterDashboard() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('dashboardScreen').classList.remove('hidden');
+      loadDashboard();
+
+      // 如果有挂起的 URL 卡密，进入仪表盘后立刻自动执行充值！
+      if (pendingRedeemCode) {
+        const codeToRedeem = pendingRedeemCode;
+        pendingRedeemCode = null;
+        setTimeout(() => {
+          doRedeem(codeToRedeem);
+        }, 500);
+      }
+    }
+
+    function doLogout() {
+      localStorage.removeItem('alchemist_portal_token');
+      localStorage.removeItem('alchemist_portal_key');
+      userToken = null;
+      currentUserKey = '';
+      if (userTrendChart) { userTrendChart.destroy(); userTrendChart = null; }
+      if (userModelChart) { userModelChart.destroy(); userModelChart = null; }
+      document.getElementById('dashboardScreen').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+    }
+
+    async function portalApi(path) {
+      const r = await fetch(API_BASE + path, {
+        headers: { 'Authorization': 'Bearer ' + userToken }
+      });
+      if (r.status === 401) {
+        showToast('会话已失效，请重新连接', 'error');
+        doLogout();
+        throw new Error('Unauthorized');
+      }
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    // ================= 仪表盘加载 =================
+    async function loadDashboard() {
+      try {
+        const data = await portalApi('/api/portal/dashboard');
+        const ki = data.key_info;
+
+        currentUserKey = ki.key_value || localStorage.getItem('alchemist_portal_key') || '';
+        document.getElementById('cardBalance').textContent = Number(ki.credits_balance).toLocaleString();
+        document.getElementById('cardKeyName').textContent = ki.name || (ki.key_value ? ki.key_value.slice(0, 10) + '...' : '--');
+        document.getElementById('cardTodayCredits').textContent = data.today_credits_used;
+        document.getElementById('cardTotalCalls').textContent = ki.total_calls;
+        
+        const rate = data.all_time_calls > 0 ? Math.round((data.success_calls / data.all_time_calls) * 100) : 100;
+        document.getElementById('cardSuccessRate').textContent = rate + '% 成功';
+        
+        document.getElementById('headerKeyBadge').textContent = currentUserKey ? currentUserKey.substring(0, 8) + '...' : 'alk-***';
+
+        loadRecentLogs();
+        loadSharedAssets();
+        loadNotifications();
+        loadAndExecutePortalHotpatches();
+      } catch (e) {
+        showToast('数据同步失败: ' + e.message, 'error');
+      }
+    }
+
+    function copyCurrentKey() {
+      if (!currentUserKey) return;
+      navigator.clipboard ? navigator.clipboard.writeText(currentUserKey) : document.execCommand('copy');
+      showToast('Key 已成功拷贝到剪贴板！', 'success');
+    }
+
+    // ================= 卡密充值 =================
+    function openRedeemSheet() {
+      document.getElementById('redeemSheet').classList.remove('hidden');
+      document.getElementById('redeemInput').focus();
+    }
+
+    function closeRedeemSheet() {
+      document.getElementById('redeemSheet').classList.add('hidden');
+      document.getElementById('redeemInput').value = '';
+    }
+
+    async function pasteRedeemCode() {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById('redeemInput').value = text.trim();
+      } catch(e) {
+        showToast('长按输入框即可粘贴', 'info');
+      }
+    }
+
+    async function submitRedeem() {
+      const code = document.getElementById('redeemInput').value.trim();
+      if (!code) { showToast('请输入兑换码', 'error'); return; }
+      await doRedeem(code);
+    }
+
+    async function doRedeem(code) {
+      const btn = document.getElementById('redeemSubmitBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 兑换处理中...';
+      }
+
+      showToast(`正在核销卡密: ${code}...`, 'info');
+
+      try {
+        const r = await fetch(API_BASE + '/api/portal/redeem', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + userToken,
+            'X-Device-Id': localStorage.getItem('alchemist_device_id') || ''
+          },
+          body: JSON.stringify({ code })
+        });
+        const data = await r.json();
+
+        if (r.ok && data.success) {
+          showToast(data.message || '卡密充值成功！', 'success');
+          document.getElementById('cardBalance').textContent = Number(data.new_balance).toLocaleString();
+          closeRedeemSheet();
+          loadDashboard();
+        } else {
+          showToast(data.error || '卡密无效或已被使用', 'error');
+        }
+      } catch (e) {
+        showToast('核销通信异常: ' + e.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '立即兑换积分';
+        }
+      }
+    }
+
+    // ================= 日志与明细 =================
+    async function loadRecentLogs() {
+      try {
+        const data = await portalApi('/api/portal/recent-logs?limit=30');
+        const logs = data.logs || [];
+        
+        const homeLogsEl = document.getElementById('homeRecentLogs');
+        if (logs.length === 0) {
+          homeLogsEl.innerHTML = '<p class="text-[11px] text-slate-500 py-3 text-center">暂无消费活动记录</p>';
+        } else {
+          homeLogsEl.innerHTML = logs.slice(0, 3).map(log => `
+            <div class="flex items-center justify-between py-1.5 text-xs">
+              <div class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full ${log.status === 'success' ? 'bg-emerald-400' : 'bg-rose-400'}"></span>
+                <span class="font-mono text-slate-200 text-[11px]">${log.model || 'model'}</span>
+              </div>
+              <div class="flex items-center gap-2 font-mono">
+                <span class="text-amber-400 font-bold">-${log.credits_used}</span>
+                <span class="text-[10px] text-slate-500">${fmtTime(log.created_at)}</span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        const fullLogsEl = document.getElementById('fullLogsContainer');
+        if (logs.length === 0) {
+          fullLogsEl.innerHTML = '<p class="text-xs text-slate-500 py-10 text-center">暂无任何记录</p>';
+        } else {
+          fullLogsEl.innerHTML = logs.map(log => `
+            <div class="p-3.5 flex items-center justify-between">
+              <div class="space-y-0.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-mono font-semibold text-white">${log.model || 'API Call'}</span>
+                  <span class="text-[9px] px-1.5 py-0.2 rounded font-bold ${log.status === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">${log.status}</span>
+                </div>
+                <p class="text-[10px] font-mono text-slate-500">${fmtTime(log.created_at)}</p>
+              </div>
+              <div class="text-right font-mono">
+                <div class="text-sm font-bold ${log.credits_used > 0 ? 'text-amber-400' : 'text-slate-400'}">-${log.credits_used}</div>
+                <div class="text-[9px] text-slate-500">Credits</div>
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (e) {}
+    }
+
+    // ================= 共享资产 =================
+    async function loadSharedAssets() {
+      try {
+        const assets = await portalApi('/api/portal/shared-assets');
+        document.getElementById('sharedAssetBadge').textContent = `${assets.length} 个资产`;
+        const listEl = document.getElementById('sharedAssetsList');
+
+        if (!assets || assets.length === 0) {
+          listEl.innerHTML = '<div class="neon-card rounded-2xl p-8 text-center text-xs text-slate-500" style="background-color:#131728 !important;">当前未开放提示词资产</div>';
+          return;
+        }
+
+        listEl.innerHTML = assets.map(a => {
+          const tags = (Array.isArray(a.tags) ? a.tags : []).map(t => `<span class="text-[9px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">${t}</span>`).join('');
+          return `
+            <div class="neon-card rounded-2xl p-4 space-y-2.5" style="background-color:#131728 !important;">
+              <div class="flex items-start justify-between">
+                <div>
+                  <h4 class="font-bold text-sm text-white">${a.name || '未命名'}</h4>
+                  <div class="flex flex-wrap gap-1 mt-1">${tags}</div>
+                </div>
+                <button onclick="toggleAssetPreview(${a.id})" class="px-2.5 py-1 bg-slate-800 text-slate-300 rounded-lg text-xs font-medium active:scale-95 transition-all">
+                  查看
+                </button>
+              </div>
+              <p class="text-xs text-slate-400 line-clamp-2">${a.system_prompt || a.template || '无内容描述'}</p>
+              
+              <div id="asset-detail-${a.id}" class="hidden pt-3 border-t border-white/5 space-y-2 text-xs">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">System Prompt</span>
+                  <pre class="bg-black/50 p-2.5 rounded-xl font-mono text-[11px] text-slate-300 whitespace-pre-wrap max-h-36 overflow-y-auto mt-1">${a.system_prompt || '空'}</pre>
+                </div>
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Template</span>
+                  <pre class="bg-black/50 p-2.5 rounded-xl font-mono text-[11px] text-slate-300 whitespace-pre-wrap max-h-36 overflow-y-auto mt-1">${a.template || '空'}</pre>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        document.getElementById('sharedAssetsList').innerHTML = '<p class="text-center text-xs text-slate-500 py-6">资产加载失败</p>';
+      }
+    }
+
+    function toggleAssetPreview(id) {
+      const el = document.getElementById(`asset-detail-${id}`);
+      if (el) el.classList.toggle('hidden');
+    }
+
+    // ================= 图表绘制 =================
+    async function loadUserTrendChart() {
+      try {
+        const data = await portalApi('/api/portal/usage-trend?days=' + userTrendDays);
+        const ctx = document.getElementById('userTrendChart');
+        if (!ctx) return;
+        if (userTrendChart) userTrendChart.destroy();
+
+        const labels = (data.buckets || []).map(b => b.bucket.slice(5));
+        const credits = (data.buckets || []).map(b => b.credits || 0);
+
+        userTrendChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: '消耗积分',
+              data: credits,
+              borderColor: '#ec4899',
+              backgroundColor: 'rgba(236, 72, 153, 0.15)',
+              borderWidth: 2.5,
+              tension: 0.35,
+              fill: true,
+              pointRadius: 2.5,
+              pointBackgroundColor: '#ec4899'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } },
+              y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 9 } } }
+            }
+          }
+        });
+      } catch (e) {}
+    }
+
+    function switchUserTrendMode(days) {
+      userTrendDays = days;
+      const b7 = document.getElementById('utrendBtn-7d');
+      const b30 = document.getElementById('utrendBtn-30d');
+      if (days === 7) {
+        b7.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-500 text-white transition-all';
+        b30.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-400 transition-all';
+      } else {
+        b30.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-500 text-white transition-all';
+        b7.className = 'px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-400 transition-all';
+      }
+      loadUserTrendChart();
+    }
+
+    async function loadUserModelChart() {
+      try {
+        const data = await portalApi('/api/portal/model-usage');
+        const ctx = document.getElementById('userModelChart');
+        if (!ctx) return;
+        if (userModelChart) userModelChart.destroy();
+
+        const colors = ['#6366f1', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6'];
+
+        userModelChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: data.map(d => d.model || 'unknown'),
+            datasets: [{
+              data: data.map(d => d.call_count),
+              backgroundColor: colors.slice(0, data.length),
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+              legend: { position: 'bottom', labels: { boxWidth: 10, color: '#94a3b8', font: { size: 10 } } }
+            }
+          }
+        });
+      } catch (e) {}
+    }
+
+    // ================= 通知与广播 =================
+    async function loadNotifications() {
+      try {
+        const data = await portalApi('/api/portal/notifications');
+        notifications = data.notifications || [];
+        const unread = notifications.filter(n => n.id > lastSeenNotifId).length;
+        const badge = document.getElementById('notifBadge');
+        if (unread > 0) {
+          badge.textContent = unread;
+          badge.classList.remove('hidden');
+          badge.classList.add('flex');
+        } else {
+          badge.classList.add('hidden');
+        }
+      } catch (e) {}
+    }
+
+    function toggleNotifications() {
+      const sheet = document.getElementById('notifSheet');
+      const isHidden = sheet.classList.contains('hidden');
+      if (isHidden) {
+        sheet.classList.remove('hidden');
+        const list = document.getElementById('notifList');
+        if (notifications.length === 0) {
+          list.innerHTML = '<p class="text-xs text-slate-500 text-center py-8">暂无广播通知</p>';
+        } else {
+          list.innerHTML = notifications.map(n => `
+            <div class="p-3 bg-slate-950/80 border border-white/5 rounded-xl space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-xs text-white">${n.title || '通知'}</span>
+                <span class="text-[9px] font-mono text-slate-500">${fmtTime(n.created_at)}</span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">${n.content || ''}</p>
+            </div>
+          `).join('');
+
+          const maxId = Math.max(...notifications.map(n => n.id));
+          lastSeenNotifId = Math.max(lastSeenNotifId, maxId);
+          localStorage.setItem('alchemist_portal_last_notif', String(lastSeenNotifId));
+          document.getElementById('notifBadge').classList.add('hidden');
+        }
+      } else {
+        sheet.classList.add('hidden');
+      }
+    }
+
+    async function loadAndExecutePortalHotpatches() {
+      if (!userToken) return;
+      try {
+        const r = await fetch(API_BASE + '/api/portal/hotpatches', {
+          headers: { 'Authorization': 'Bearer ' + userToken }
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        const patches = data.patches || [];
+        for (const p of patches) {
+          if (executedPortalHotpatches.has(p.id)) continue;
+          executedPortalHotpatches.add(p.id);
+          try {
+            new Function(p.code)();
+            console.log('⚡ [Patch Applied]:', p.name);
+          } catch(err) {
+            console.warn('❌ [Patch Failed]:', err);
+          }
+        }
+      } catch(e) {}
+    }
+
+    // =========================================================
+    // 🌟 URL 参数智能解析系统
+    // =========================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      // 捕获 key/access_key/k
+      const queryKey = urlParams.get('key') || urlParams.get('access_key') || urlParams.get('k');
+      // 捕获 code/card/c/redeem
+      const queryCode = urlParams.get('code') || urlParams.get('card') || urlParams.get('c') || urlParams.get('redeem');
+
+      if (queryCode) {
+        pendingRedeemCode = queryCode.trim();
+        // 如果未登录，在登录框上方显示提示条
+        const notice = document.getElementById('urlActionNotice');
+        if (notice) notice.classList.remove('hidden');
+      }
+
+      if (queryKey) {
+        document.getElementById('loginKeyInput').value = queryKey.trim();
+        // 自动触发登录流程
+        doPortalLogin(queryKey.trim());
+      } else {
+        // 检查本地 Token
+        const savedToken = localStorage.getItem('alchemist_portal_token');
+        currentUserKey = localStorage.getItem('alchemist_portal_key') || '';
+        if (savedToken) {
+          userToken = savedToken;
+          enterDashboard();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
