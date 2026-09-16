@@ -1,0 +1,268 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>服务额度充值</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #08090d;
+      color: #f1f5f9;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* 高对比硬朗卡片 */
+    .solid-card {
+      background: #11131c;
+      border: 1px solid #252a3d;
+      box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.85);
+    }
+
+    /* 独立深凹输入框 */
+    .field-box {
+      background: #08090d !important;
+      border: 1.5px solid #2a3148;
+      color: #ffffff;
+    }
+    .field-box:focus {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+    }
+
+    /* 琥珀高光操作按钮 */
+    .btn-action {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #000000;
+      font-weight: 800;
+      box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.4);
+    }
+    .btn-action:active {
+      transform: scale(0.98);
+      filter: brightness(0.92);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 sm:p-6 antialiased">
+
+  <!-- 顶部简明 Header -->
+  <header class="w-full max-w-md mx-auto flex items-center justify-between pb-4">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-black font-extrabold text-sm shadow-md shadow-amber-500/20">
+        <i class="fa-solid fa-bolt"></i>
+      </div>
+      <h1 class="text-sm font-extrabold text-white tracking-wide">服务额度兑换</h1>
+    </div>
+    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 text-[10px]">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+      安全连接
+    </span>
+  </header>
+
+  <!-- 主卡片区 -->
+  <main class="w-full max-w-md mx-auto my-auto">
+    <div class="solid-card rounded-2xl p-6 sm:p-7">
+
+      <!-- 场景 A：缺少卡密时，明确显示“暂时不可充值” -->
+      <div id="noCardState" class="hidden text-center py-6 space-y-4">
+        <div class="w-14 h-14 mx-auto bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-500 text-2xl">
+          <i class="fa-solid fa-ban"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-extrabold text-white">暂时不可充值</h2>
+          <p class="text-xs text-slate-400 mt-1.5 leading-relaxed px-4">
+            当前访问缺少有效额度凭证，无法办理充值业务。请联系发放人员获取充值专用链接。
+          </p>
+        </div>
+      </div>
+
+      <!-- 场景 B：卡密已就绪，仅呈现密钥输入框与提交按钮 -->
+      <div id="readyFormState" class="hidden space-y-5">
+        
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-extrabold uppercase tracking-wider text-slate-300">
+              存入目标 Access Key
+            </label>
+            <span class="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-circle-check"></i> 额度已就绪
+            </span>
+          </div>
+          
+          <div class="relative flex items-center">
+            <input 
+              type="text" 
+              id="userKeyInput" 
+              autocomplete="off"
+              spellcheck="false"
+              class="field-box w-full pl-3.5 pr-14 py-3.5 rounded-xl text-sm font-mono placeholder-slate-600 focus:outline-none transition-all"
+              placeholder="请输入你的 alk-xxxxxxxx"
+              onkeydown="if(event.key==='Enter')executeTopup()"
+            >
+            <button 
+              type="button" 
+              onclick="pasteKey()" 
+              class="absolute right-2 px-2.5 py-1 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-lg transition-all"
+            >
+              粘贴
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1.5">本页面不会记录或缓存你的 Key，充值完成后无痕清除。</p>
+        </div>
+
+        <button 
+          type="button"
+          onclick="executeTopup()" 
+          id="topupBtn" 
+          class="btn-action w-full py-3.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 cursor-pointer transition-all"
+        >
+          立即充值到该 Key
+        </button>
+
+        <!-- 错误提示 -->
+        <div id="errorBox" class="hidden p-3 bg-red-950/60 border border-red-500/80 text-red-200 rounded-xl text-xs flex items-center gap-2">
+          <i class="fa-solid fa-circle-exclamation shrink-0 text-red-400"></i>
+          <span id="errorText"></span>
+        </div>
+      </div>
+
+      <!-- 场景 C：充值成功结果展示 -->
+      <div id="successPanel" class="hidden text-center py-4 space-y-4">
+        <div class="w-14 h-14 mx-auto bg-emerald-500/20 border-2 border-emerald-400 rounded-2xl flex items-center justify-center text-emerald-400 text-2xl">
+          <i class="fa-solid fa-check"></i>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-extrabold text-white">充值成功</h3>
+          <p class="text-xs text-slate-400 mt-1" id="successDesc">服务额度已实时到账</p>
+        </div>
+
+        <div class="bg-[#08090d] border border-[#252a3d] p-4 rounded-xl space-y-1">
+          <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">充值后最新余额</span>
+          <div class="text-3xl font-extrabold text-amber-400 font-mono" id="newBalanceDisplay">--</div>
+        </div>
+
+        <p class="text-[11px] text-slate-500">页面未保存任何身份凭据，关闭此页即可安全退出。</p>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="w-full max-w-md mx-auto text-center py-2">
+    <p class="text-[10px] text-slate-600 font-mono">Gateway: amigray.com &bull; End-to-End Encrypted</p>
+  </footer>
+
+  <script>
+    const API_BASE = 'https://amigray.com';
+    let activeCode = null; // 仅保存在当前闭包内存变量中，不存 localStorage
+
+    async function pasteKey() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('userKeyInput').value = text.trim();
+        }
+      } catch (e) {
+        alert('请长按输入框直接粘贴');
+      }
+    }
+
+    async function executeTopup() {
+      const keyInput = document.getElementById('userKeyInput');
+      const userKey = keyInput.value.trim();
+      const errBox = document.getElementById('errorBox');
+      const errText = document.getElementById('errorText');
+      const btn = document.getElementById('topupBtn');
+
+      errBox.classList.add('hidden');
+
+      if (!activeCode) {
+        errText.textContent = '充值凭证失效，请重新打开有效链接。';
+        errBox.classList.remove('hidden');
+        return;
+      }
+      if (!userKey) {
+        errText.textContent = '请输入目标 Access Key！';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在办理充值...';
+
+      try {
+        // 1. 临时鉴权校验用户 Key（不持久化）
+        const loginRes = await fetch(API_BASE + '/api/portal/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_key: userKey })
+        });
+        const loginData = await loginRes.json();
+
+        if (!loginRes.ok || !loginData.token) {
+          throw new Error(loginData.error || 'Access Key 无效或不存在，请仔细核对！');
+        }
+
+        // 2. 注入充值
+        const redeemRes = await fetch(API_BASE + '/api/portal/redeem', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + loginData.token,
+            'X-Device-Id': 'direct-topup-client'
+          },
+          body: JSON.stringify({ code: activeCode })
+        });
+        const redeemData = await redeemRes.json();
+
+        if (!redeemRes.ok || !redeemData.success) {
+          throw new Error(redeemData.error || '该卡密无效或已被使用');
+        }
+
+        // 3. 立即清空输入框和内存中的密钥，不留痕迹
+        keyInput.value = '';
+        activeCode = null;
+
+        // 4. 展示结果
+        document.getElementById('readyFormState').classList.add('hidden');
+        document.getElementById('successPanel').classList.remove('hidden');
+        document.getElementById('newBalanceDisplay').textContent = Number(redeemData.new_balance).toLocaleString();
+        document.getElementById('successDesc').textContent = redeemData.message || '服务额度已实时到账';
+
+        if (window.confetti) {
+          confetti({ particleCount: 70, spread: 60, origin: { y: 0.65 } });
+        }
+
+      } catch (err) {
+        errText.textContent = err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '立即充值到该 Key';
+      }
+    }
+
+    // 页面进入时：仅读取当前 URL 里的参数，不查任何本地存储
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const codeParam = params.get('code') || params.get('card') || params.get('c') || params.get('redeem');
+
+      if (codeParam && codeParam.trim()) {
+        // 抓到了卡密参数 -> 开放充值
+        activeCode = codeParam.trim();
+        document.getElementById('readyFormState').classList.remove('hidden');
+        document.getElementById('userKeyInput').focus();
+      } else {
+        // 没有传参 -> 坚决不给充值入口，直接告知暂时不可充值
+        document.getElementById('noCardState').classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
