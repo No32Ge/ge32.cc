@@ -14,7 +14,6 @@
             padding: 0.375rem 0.5rem; outline: none; transition: border-color 0.2s;
         }
         .workspace-input:focus { border-color: #6366f1; ring: 2px; ring-color: #e0e7ff; }
-        /* 隐藏滚动条让 ResizeObserver 测量更准 */
         html { overflow-y: hidden; }
     </style>
 </head>
@@ -38,7 +37,8 @@
             <div class="flex gap-1.5 items-center">
                 <div class="relative flex-1">
                     <i class="fa-solid fa-link absolute left-2 top-2 text-[0.65rem] text-slate-400"></i>
-                    <input type="url" id="remoteConfigUrl" class="workspace-input !py-1 !pl-6 text-xs font-mono text-slate-700" placeholder="https://.../*.js (方案直链)">
+                    <input type="url" id="remoteConfigUrl" class="workspace-input !py-1 !pl-6 text-xs font-mono text-slate-700" 
+                           placeholder="https://.../pipeline.preset.xxx.js (服务器/OSS 方案直链)">
                 </div>
                 <button type="button" id="btnMountRemote" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shrink-0 flex items-center gap-1">
                     <i class="fa-solid fa-plus"></i> 挂载方案
@@ -152,16 +152,13 @@
 
     <!-- 核心逻辑控制 -->
     <script>
-        // 获取 URL 传参里的 cardId
         const urlParams = new URLSearchParams(window.location.search);
         const CARD_ID = urlParams.get('cardId');
         document.getElementById('loadTime').innerText = new Date().toLocaleTimeString();
 
-        // 宿主数据镜像
         let hostHeaders = [];
         let hostRows = [];
 
-        // 宿主通信协议封装
         function postToHost(action, payload = {}) {
             if (window.parent) {
                 window.parent.postMessage({ cardId: CARD_ID, action, ...payload }, '*');
@@ -172,7 +169,59 @@
         }
 
         // =========================================================================
-        // 自动高度同步机制 (ResizeObserver)
+        // 核心一：挂载全局引擎注册中心 (让远程 pipeline.preset.xxx.js 可以自注册)
+        // =========================================================================
+        const GLOBAL_ENGINE_KEY = '__EXCEL_PIPELINE_ENGINE__';
+        const STORAGE_KEY = 'EXCEL_PIPELINE_CUSTOM_PRESETS_V6';
+        const internalRegistry = new Map();
+        const registryListeners = new Set();
+
+        const hubController = {
+            version: '6.2.0',
+            register(manifest) {
+                if (!manifest || !manifest.id || !manifest.name || !Array.isArray(manifest.steps)) {
+                    console.error(`[Pipeline Engine] 拒绝注册不合规配置:`, manifest);
+                    return false;
+                }
+                const cleanManifest = {
+                    id: String(manifest.id).trim(),
+                    name: String(manifest.name).trim(),
+                    version: manifest.version || '1.0.0',
+                    externalScripts: Array.isArray(manifest.externalScripts) ? manifest.externalScripts : [],
+                    steps: manifest.steps.map(s => ({ colName: String(s.colName || '').trim(), code: String(s.code || '') })),
+                    registeredAt: new Date().toISOString()
+                };
+
+                internalRegistry.set(cleanManifest.id, Object.freeze(cleanManifest));
+                console.log(`[Pipeline Engine] ✅ iframe 内成功挂载原子方案: 【${cleanManifest.name}】(${cleanManifest.id})`);
+
+                registryListeners.forEach(fn => {
+                    try { fn(cleanManifest); } catch(e) { console.error(e); }
+                });
+                return true;
+            },
+            get(id) { return internalRegistry.get(id); },
+            getAll() { return Array.from(internalRegistry.values()); },
+            subscribe(fn) {
+                registryListeners.add(fn);
+                return () => registryListeners.delete(fn);
+            }
+        };
+
+        // 挂载到当前 iframe 的 window 上
+        window[GLOBAL_ENGINE_KEY] = Object.freeze({
+            version: '6.2.0',
+            hub: hubController
+        });
+
+        // 检查是否有先于 Hub 加载的早期插件
+        if (window.__PIPELINE_EARLY_PLUGINS__ && Array.isArray(window.__PIPELINE_EARLY_PLUGINS__)) {
+            window.__PIPELINE_EARLY_PLUGINS__.forEach(p => hubController.register(p));
+            window.__PIPELINE_EARLY_PLUGINS__ = [];
+        }
+
+        // =========================================================================
+        // 高度自适应同步
         // =========================================================================
         const rootContainer = document.getElementById('pipeline-root');
         const resizeObserver = new ResizeObserver(entries => {
@@ -184,10 +233,9 @@
         resizeObserver.observe(rootContainer);
 
         // =========================================================================
-        // 引擎配置与沙箱
+        // 沙箱与脚本嗅探加载器
         // =========================================================================
-        const STORAGE_KEY = 'EXCEL_PIPELINE_CUSTOM_PRESETS_V6';
-        let isSandboxActive = false; // 默认解除，适配电商字典
+        let isSandboxActive = false;
 
         function compileCodeEngine(codeStr, isSandbox) {
             let code = (codeStr || '').trim();
@@ -228,11 +276,10 @@
             };
         }
 
-        // 外部脚本加载器与全局变量嗅探器
         const scriptAuditCache = new Map();
         async function loadScriptWithPollutionAudit(url, timeoutMs = 8000) {
             url = (url || '').trim();
-            if (!url || !/^https?:\/\//i.test(url)) return { url, status: 'invalid', message: 'URL 非法' };
+            if (!url || !/^https?:\/\//i.test(url)) return { url, status: 'invalid', message: 'URL 非法', injectedProps: [] };
             if (scriptAuditCache.has(url)) return scriptAuditCache.get(url);
 
             const beforeProps = new Set(Object.getOwnPropertyNames(window));
@@ -243,7 +290,7 @@
                 s.crossOrigin = "anonymous";
 
                 let timer = setTimeout(() => {
-                    resolve({ url, status: 'timeout', message: '超时', injectedProps: [] });
+                    resolve({ url, status: 'timeout', message: '加载超时', injectedProps: [] });
                 }, timeoutMs);
 
                 s.onload = () => {
@@ -254,7 +301,7 @@
                 };
                 s.onerror = () => {
                     clearTimeout(timer);
-                    resolve({ url, status: 'error', message: 'CORS/网络错误', injectedProps: [] });
+                    resolve({ url, status: 'error', message: '跨域 CORS 或网络错误', injectedProps: [] });
                 };
                 document.head.appendChild(s);
             });
@@ -264,7 +311,37 @@
         }
 
         // =========================================================================
-        // UI 元素绑定与业务逻辑
+        // 本地方案储存管理
+        // =========================================================================
+        const PresetStore = {
+            getCustomList() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    return raw ? JSON.parse(raw) : [];
+                } catch(e) { return []; }
+            },
+            saveCustom(name, steps, externalScripts = [], customId = '') {
+                const list = this.getCustomList();
+                const safeId = customId.trim() || 'custom-' + Date.now();
+                const newPreset = {
+                    id: safeId,
+                    name: name.trim(),
+                    createdAt: new Date().toISOString(),
+                    externalScripts: externalScripts.filter(url => url.trim()),
+                    steps: steps.map(s => ({ colName: s.colName, code: s.code }))
+                };
+                list.unshift(newPreset);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+                return newPreset;
+            },
+            deleteCustom(id) {
+                let list = this.getCustomList().filter(p => p.id !== id);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+            }
+        };
+
+        // =========================================================================
+        // UI 元素与方案下拉选单绑定
         // =========================================================================
         const stepsListEl = document.getElementById('steps-list');
         const btnAddStep = document.getElementById('btnAddStep');
@@ -279,10 +356,15 @@
         const scriptCountBadge = document.getElementById('scriptCountBadge');
         const scriptStatusBadge = document.getElementById('scriptStatusBadge');
         const injectedGlobalsBox = document.getElementById('injectedGlobalsBox');
+        
+        const remoteConfigUrlInput = document.getElementById('remoteConfigUrl');
+        const btnMountRemote = document.getElementById('btnMountRemote');
         const presetSelect = document.getElementById('presetSelect');
         const btnLoadPreset = document.getElementById('btnLoadPreset');
+        const btnDeletePreset = document.getElementById('btnDeletePreset');
+        const btnSaveCurrent = document.getElementById('btnSaveCurrent');
+        const btnExportJS = document.getElementById('btnExportJS');
 
-        // 构建行对象
         function buildFullRows() {
             return hostRows.map(item => {
                 const obj = {};
@@ -303,6 +385,7 @@
             }
             runPipelinePreview();
         }
+        updateSandboxUI();
 
         btnToggleSandbox.onclick = () => {
             isSandboxActive = !isSandboxActive;
@@ -310,7 +393,6 @@
             emitToast(isSandboxActive ? "🛡️ 已开启严格沙箱防护" : "⚠️ 已解除沙箱限制", 'info');
         };
 
-        // 折叠面板切换
         document.getElementById('toggleScriptsHeader').onclick = () => {
             const body = document.getElementById('scriptsBody');
             const isHidden = body.classList.toggle('hidden');
@@ -326,7 +408,7 @@
                 <span class="script-item-status text-[0.65rem] text-slate-400 font-mono w-14 text-center shrink-0">待就绪</span>
                 <button type="button" class="btn-del-script text-slate-400 hover:text-red-500 p-1 text-xs shrink-0"><i class="fa-solid fa-xmark"></i></button>
             `;
-            row.querySelector('.btn-del-script').onclick = () => { row.remove(); updateScriptStats(); };
+            row.querySelector('.btn-del-script').onclick = () => { row.remove(); updateScriptStats(); ensureScriptsLoaded(); };
             row.querySelector('.script-url-input').onchange = () => ensureScriptsLoaded();
             scriptItemsContainer.appendChild(row);
             updateScriptStats();
@@ -334,6 +416,10 @@
 
         function updateScriptStats() {
             scriptCountBadge.innerText = scriptItemsContainer.querySelectorAll('.script-url-row').length;
+        }
+
+        function getScriptUrls() {
+            return Array.from(scriptItemsContainer.querySelectorAll('.script-url-input')).map(i => i.value.trim()).filter(Boolean);
         }
 
         async function ensureScriptsLoaded() {
@@ -361,6 +447,7 @@
                 } else {
                     allOk = false;
                     statusSpan.innerText = '🔴 失败';
+                    statusSpan.title = res.message || '';
                 }
             }
 
@@ -393,7 +480,7 @@
                         <input type="text" class="step-col-name workspace-input !py-1 text-xs font-semibold text-indigo-700" value="${colName}">
                     </div>
                     <div class="md:col-span-2">
-                        <label class="text-[0.63rem] font-bold text-slate-600 block mb-0.5">JS 转换表达式：</label>
+                        <label class="text-[0.63rem] font-bold text-slate-600 block mb-0.5">JS 转换逻辑：</label>
                         <textarea class="step-code workspace-input !py-1 text-xs font-mono text-slate-800 h-14 resize-none leading-tight">${code}</textarea>
                     </div>
                 </div>
@@ -418,12 +505,126 @@
             }));
         }
 
-        // 核心试跑与计算
+        // =========================================================================
+        // 核心二：挂载远程直连方案逻辑
+        // =========================================================================
+        btnMountRemote.onclick = async () => {
+            const url = remoteConfigUrlInput.value.trim();
+            if (!url) return alert("请输入远程原子配置 JS 文件的完整 URL！");
+            if (!/^https?:\/\//i.test(url)) return alert("配置链接必须以 http:// 或 https:// 开头！");
+
+            btnMountRemote.disabled = true;
+            btnMountRemote.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 挂载中...`;
+
+            const prevCount = hubController.getAll().length;
+            const res = await loadScriptWithPollutionAudit(url, 10000);
+
+            btnMountRemote.disabled = false;
+            btnMountRemote.innerHTML = `<i class="fa-solid fa-plus"></i> 挂载方案`;
+
+            if (res.status !== 'loaded') {
+                return alert(`远程方案拉取失败: ${res.message}`);
+            }
+
+            const all = hubController.getAll();
+            const latestMounted = (all.length > prevCount) ? all[all.length - 1] : null;
+
+            if (latestMounted) {
+                emitToast(`🎉 成功挂载方案【${latestMounted.name}】！正在准备依赖...`, 'success');
+                refreshPresetDropdown(latestMounted.id);
+                await applyPresetToUI(latestMounted);
+                remoteConfigUrlInput.value = '';
+            } else {
+                alert("⚠️ 脚本未调用 window.__EXCEL_PIPELINE_ENGINE__.hub.register() 注册！请检查插件代码。");
+            }
+        };
+
+        // 订阅 Hub 注册事件，自动刷新下拉选单
+        hubController.subscribe((preset) => {
+            refreshPresetDropdown(preset.id);
+        });
+
+        function refreshPresetDropdown(selectedId = null) {
+            const hubPresets = hubController.getAll();
+            const customs = PresetStore.getCustomList();
+
+            let html = '';
+            if (hubPresets.length > 0) {
+                html += `<optgroup label="🌐 远程原子方案 (${hubPresets.length})">`;
+                hubPresets.forEach(p => {
+                    html += `<option value="${p.id}">[原子插件] ${p.name}</option>`;
+                });
+                html += `</optgroup>`;
+            }
+
+            if (customs.length > 0) {
+                html += `<optgroup label="👤 本地保存方案 (${customs.length})">`;
+                customs.forEach(p => {
+                    html += `<option value="${p.id}">${p.name} (${p.steps.length}步)</option>`;
+                });
+                html += `</optgroup>`;
+            }
+
+            if (!html) {
+                html = `<option value="">暂无方案，请挂载或新建</option>`;
+            }
+
+            presetSelect.innerHTML = html;
+            if (selectedId) presetSelect.value = selectedId;
+            btnDeletePreset.style.display = (presetSelect.value && presetSelect.value.startsWith('custom-')) ? 'inline-block' : 'none';
+        }
+
+        presetSelect.onchange = () => {
+            btnDeletePreset.style.display = (presetSelect.value && presetSelect.value.startsWith('custom-')) ? 'inline-block' : 'none';
+        };
+
+        async function applyPresetToUI(preset) {
+            scriptItemsContainer.innerHTML = '';
+            (preset.externalScripts || []).forEach(u => addScriptUrlRow(u));
+            stepsListEl.innerHTML = '';
+            (preset.steps || []).forEach(s => addStepDOM(s.colName, s.code));
+            await ensureScriptsLoaded();
+        }
+
+        btnLoadPreset.onclick = async () => {
+            const targetId = presetSelect.value;
+            if (!targetId) return;
+
+            const allPresets = [...hubController.getAll(), ...PresetStore.getCustomList()];
+            const found = allPresets.find(p => p.id === targetId);
+            if (found) {
+                emitToast(`正在载入方案【${found.name}】...`, 'info');
+                await applyPresetToUI(found);
+            }
+        };
+
+        btnSaveCurrent.onclick = () => {
+            const steps = getCurrentSteps();
+            if (steps.length === 0) return alert("当前卡片没有步骤，无法保存！");
+            const name = prompt("请输入方案显示名称：", "自定义业务清洗");
+            if (!name || !name.trim()) return;
+
+            const scripts = getScriptUrls();
+            const saved = PresetStore.saveCustom(name, steps, scripts);
+            refreshPresetDropdown(saved.id);
+            emitToast(`🎉 方案【${saved.name}】已成功保存在本地！`, 'success');
+        };
+
+        btnDeletePreset.onclick = () => {
+            const targetId = presetSelect.value;
+            if (!targetId || !targetId.startsWith('custom-')) return;
+            if (!confirm("确定要删除该本地方案吗？")) return;
+            PresetStore.deleteCustom(targetId);
+            refreshPresetDropdown();
+            emitToast("已删除方案", 'info');
+        };
+
+        // 试跑与计算
         function runPipelinePreview() {
             const steps = getCurrentSteps();
             if (steps.length === 0 || hostRows.length === 0) {
                 previewThead.innerHTML = `<tr><th class="p-1.5 w-10 text-center">#</th><th class="p-1.5">原始快照</th></tr>`;
-                previewTbody.innerHTML = `<tr><td colspan="2" class="p-2 text-center text-slate-400">暂无数据或步骤</td></tr>`;
+                previewTbody.innerHTML = `<tr><td colspan="2" class="p-2 text-center text-slate-400">请配置步骤并等待数据同步</td></tr>`;
                 statusEl.innerText = "等待就绪...";
                 return;
             }
@@ -445,14 +646,12 @@
                     }
                 }
 
-                // 渲染表头
                 previewThead.innerHTML = `<tr class="bg-slate-100 border-b border-slate-200 text-slate-600">
                     <th class="p-1.5 w-10 text-center">#</th>
                     <th class="p-1.5 min-w-[120px]">原始数据快照</th>
                     ${steps.map(s => `<th class="p-1.5 text-indigo-600 bg-indigo-50/50">${s.colName || '未命名'}</th>`).join('')}
                 </tr>`;
 
-                // 渲染前 3 行
                 previewTbody.innerHTML = workingData.slice(0, 3).map((row, idx) => {
                     const snapTxt = Object.entries(fullSnapshot[idx]).slice(0, 2).map(([k, v]) => `${k}:${v}`).join(' | ');
                     return `<tr class="border-b border-slate-100 last:border-none">
@@ -473,7 +672,6 @@
 
         btnAddStep.onclick = () => addStepDOM('', '');
 
-        // 提交全表数据计算 -> 通知宿主
         btnApply.onclick = async () => {
             const steps = getCurrentSteps();
             if (steps.length === 0) return alert("请先配置步骤！");
@@ -494,7 +692,6 @@
                     }
                 }
 
-                // 通过 postMessage 发送回宿主追加到 Excel
                 postToHost('APPLY_CHANGES', {
                     payload: {
                         compiledColNames: steps.map(s => s.colName),
@@ -509,13 +706,12 @@
             }
         };
 
-        // 撤销
         btnUndo.onclick = () => {
             postToHost('UNDO_CHANGES');
         };
 
         // =========================================================================
-        // 监听来自宿主的消息
+        // 宿主消息通道
         // =========================================================================
         window.addEventListener('message', function(e) {
             const data = e.data;
@@ -526,9 +722,8 @@
                     hostHeaders = data.headers || [];
                     hostRows = data.rawExcelData || [];
                     btnApply.innerHTML = `<i class="fa-solid fa-play text-[0.65rem]"></i> 链式全量计算并写入 (${hostRows.length} 行)`;
-                    
-                    // 加载默认沃尔玛方案
-                    initDefaultPreset();
+                    refreshPresetDropdown();
+                    runPipelinePreview();
                     break;
                 }
                 case 'APPLY_SUCCESS': {
@@ -547,28 +742,7 @@
             }
         });
 
-        // 默认预设载入
-        function initDefaultPreset() {
-            scriptItemsContainer.innerHTML = '';
-            stepsListEl.innerHTML = '';
-
-            const defaultScripts = [
-                'https://www.ge32.cc/cdn/ge/simple-classifier.js',
-                'https://www.ge32.cc/cdn/ge/dict/dict.color.js.js',
-                'https://www.ge32.cc/cdn/ge/dict/dict.shipping-rate.js'
-            ];
-            defaultScripts.forEach(u => addScriptUrlRow(u));
-
-            addStepDOM('assembledProductLength', "const val = parseFloat(String(row['长'] || row['长(cm)'] || row['length'] || 0).replace(/[^0-9.]/g, '')) || 0;\nreturn Number((val / 2.54).toFixed(2));");
-            addStepDOM('assembledProductWidth', "const val = parseFloat(String(row['宽'] || row['宽(cm)'] || row['width'] || 0).replace(/[^0-9.]/g, '')) || 0;\nreturn Number((val / 2.54).toFixed(2));");
-            addStepDOM('assembledProductHeight', "const val = parseFloat(String(row['高'] || row['高(cm)'] || row['height'] || 0).replace(/[^0-9.]/g, '')) || 0;\nreturn Number((val / 2.54).toFixed(2));");
-            addStepDOM('netContentStatement', "const val = parseFloat(String(row['重量'] || row['重量(g)'] || row['实际重量'] || 0).replace(/[^0-9.]/g, '')) || 0;\nconst lbs = (val / 453.59237).toFixed(2);\nreturn lbs + ' lb';");
-            addStepDOM('Color Classification', "if (window.__CUSTOM_ENUM_CLASSIFIER_TOOL__ && window.__DICTS__) {\n    return window.__CUSTOM_ENUM_CLASSIFIER_TOOL__.create(window.__DICTS__.color).classify(row['亚马逊美国站颜色'] || row['颜色'], 'Multicolor');\n}\nreturn row['亚马逊美国站颜色'] || 'Multicolor';");
-
-            ensureScriptsLoaded();
-        }
-
-        // 初始化通知宿主：iframe 已装载完成
+        // 告知父级 iframe 装载完毕
         postToHost('IFRAME_READY');
     </script>
 </body>
