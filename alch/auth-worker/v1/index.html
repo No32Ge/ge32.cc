@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Alchemist Silent Auth Worker</title>
+</head>
+<body style="display: none; margin: 0; padding: 0;">
+  <script>
+    (function () {
+      // 内部专用的独立持久化存储字段（绝不与原有 token/key 冲突）
+      const CACHED_KEY_STORAGE = 'alc_backup_registered_access_key';
+      const DEVICE_ID_STORAGE = 'alchemist_device_id';
+
+      // 1. 获取或生成稳定的 Device ID
+      function getOrCreateDeviceId() {
+        let devId = localStorage.getItem(DEVICE_ID_STORAGE);
+        if (!devId) {
+          try {
+            devId = 'dev-' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15));
+          } catch(e) {
+            devId = 'dev-' + Math.random().toString(36).substring(2, 15);
+          }
+          localStorage.setItem(DEVICE_ID_STORAGE, devId);
+        }
+        return devId;
+      }
+
+      // 2. 统一向宿主 (父级工作台) 发送数据与状态
+      function notifyHost(type, payload) {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: type,
+            payload: payload
+          }, '*');
+        }
+      }
+
+      // 3. 核心执行注册逻辑
+      async function executeRegister(relayBaseUrl) {
+        const deviceId = getOrCreateDeviceId();
+        const base = (relayBaseUrl || '').replace(/\/+$/, '');
+        const registerEndpoint = base + '/api/portal/register';
+
+        try {
+          const res = await fetch(registerEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Device-Id': deviceId
+            },
+            body: JSON.stringify({ device_id: deviceId })
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          // 成功获取新 Key
+          if (res.ok && data.key_info && data.key_info.key_value) {
+            const newlyKey = data.key_info.key_value;
+
+            // 内部独立存储字段存一份
+            localStorage.setItem(CACHED_KEY_STORAGE, newlyKey);
+            if (data.token) {
+              localStorage.setItem('alchemist_portal_token', data.token);
+            }
+
+            // 往宿主外传 Key
+            notifyHost('ALC_ACTION_FILL_KEY', {
+              key: newlyKey,
+              isFallback: false,
+              msg: data.message || '注册成功！'
+            });
+            return;
+          }
+
+          // 注册未成功（例如超频限速、429、500 等）
+          handleRegisterFailure(data.error || `HTTP ${res.status}: 注册请求未通过`);
+
+        } catch (err) {
+          // 网络断开或服务不可达
+          handleRegisterFailure('连接认证服务器失败: ' + err.message);
+        }
+      }
+
+      // 4. 注册失败时的降级与兜底逻辑
+      function handleRegisterFailure(errorMessage) {
+        const cachedBackupKey = localStorage.getItem(CACHED_KEY_STORAGE);
+
+        if (cachedBackupKey) {
+          // 兜底命中：如果以前已经成功生成过，直接传回旧的 Key 供工作台激活
+          notifyHost('ALC_ACTION_FILL_KEY', {
+            key: cachedBackupKey,
+            isFallback: true,
+            msg: '操作过于频繁，已自动装载此前生成的有效 Key！'
+          });
+        } else {
+          // 真正注册失败且本地无备份，通知宿主弹出错误提示
+          notifyHost('ALC_ACTION_TOAST', {
+            msg: errorMessage || '注册失败，请稍后重试',
+            toastType: 'error'
+          });
+        }
+      }
+
+      // 5. 监听宿主 (Parent Window) 派发的触发指令
+      window.addEventListener('message', function (event) {
+        const data = event.data;
+        if (!data || typeof data !== 'object') return;
+
+        // 收到宿主发来的注册命令
+        if (data.type === 'ALC_TRIGGER_REGISTER') {
+          const relayBase = data.payload?.relayBaseUrl || '';
+          executeRegister(relayBase);
+        }
+
+        // 仅检查是否存在本地已注册的备份
+        if (data.type === 'ALC_CHECK_CACHED_KEY') {
+          const backupKey = localStorage.getItem(CACHED_KEY_STORAGE);
+          if (backupKey) {
+            notifyHost('ALC_ACTION_FILL_KEY', {
+              key: backupKey,
+              isFallback: true
+            });
+          }
+        }
+      });
+
+      // 6. Iframe 准备完毕通知
+      window.addEventListener('DOMContentLoaded', function () {
+        notifyHost('ALC_IFRAME_READY', {});
+      });
+    })();
+  </script>
+</body>
+</html>
