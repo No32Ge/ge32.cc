@@ -1,12 +1,14 @@
-// ==UserScript== / 宿主桥接脚本 bridge.js (增强穿透版)
+// ==UserScript== / 宿主桥接脚本 bridge.js (修复参数拼接与握手版)
 (function() {
     'use strict';
     console.log("⚡ [Pipeline Bridge] 正在装载管线桥接加载器...");
 
-    const IFRAME_SOURCE_URL = 'https://www.ge32.cc/alch/plug/iframe/pipeline/?catalog=https://www.ge32.cc/cdn/ge/pipeline/pipeline.catalog.js';
+    const IFRAME_BASE_URL = 'https://www.ge32.cc/alch/plug/iframe/pipeline/';
+    const CATALOG_URL = 'https://www.ge32.cc/cdn/ge/pipeline/pipeline.catalog.js';
+
     const activeInstances = new Map();
 
-    // 安全穿透提取宿主顶层变量（兼容 let、const、var 及 window 属性）
+    // 安全穿透提取宿主顶层变量
     function getHostVar(varName) {
         try {
             if (typeof window[varName] !== 'undefined') return window[varName];
@@ -34,6 +36,12 @@
         const cardId = 'pipeline-iframe-card-' + Date.now();
         const chatArea = document.getElementById('chatArea') || document.querySelector('.chat-messages') || document.body;
 
+        // 【关键修复】：使用 URL 与 URLSearchParams 安全拼接参数，杜绝双问号破坏 cardId
+        const targetUrl = new URL(IFRAME_BASE_URL, window.location.href);
+        targetUrl.searchParams.set('catalog', CATALOG_URL);
+        targetUrl.searchParams.set('cardId', cardId);
+        targetUrl.searchParams.set('t', Date.now().toString());
+
         const cardHTML = `
             <div class="chat-msg" id="${cardId}">
                 <div class="avatar" style="background: linear-gradient(135deg, #4f46e5, #06b6d4); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
@@ -41,7 +49,7 @@
                 </div>
                 <div class="bubble border-indigo-100 bg-white shadow-lg" style="width: 100%; max-width: 800px; padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid #e0e7ff;">
                     <iframe id="${cardId}-iframe" 
-                            src="${IFRAME_SOURCE_URL}?cardId=${cardId}&t=${Date.now()}" 
+                            src="${targetUrl.toString()}" 
                             style="width: 100%; height: 520px; border: none; display: block;"
                             allow="clipboard-read; clipboard-write">
                     </iframe>
@@ -54,6 +62,21 @@
 
         const iframeEl = document.getElementById(`${cardId}-iframe`);
         activeInstances.set(cardId, { iframeEl, rollbackSnapshot: null });
+
+        // iframe 加载完成后的保底数据推送
+        iframeEl.onload = () => {
+            setTimeout(() => {
+                const { headers, rawExcelData } = getTableData();
+                if (iframeEl.contentWindow) {
+                    iframeEl.contentWindow.postMessage({
+                        action: 'INIT_DATA',
+                        cardId: cardId,
+                        headers: headers,
+                        rawExcelData: rawExcelData
+                    }, '*');
+                }
+            }, 200);
+        };
     };
 
     // 2. 跨文档通信
