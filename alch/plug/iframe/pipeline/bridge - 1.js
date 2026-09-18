@@ -3,7 +3,7 @@
     'use strict';
     console.log("⚡ [Pipeline Bridge] 正在装载管线桥接加载器...");
 
-    const IFRAME_SOURCE_URL = 'https://www.ge32.cc/alch/plug/iframe/pipeline/?catalog=https://www.ge32.cc/cdn/ge/pipeline/pipeline.catalog.js';
+    const IFRAME_SOURCE_URL = 'https://www.ge32.cc/alch/plug/iframe/pipeline/index.html';
     const activeInstances = new Map();
 
     // 安全穿透提取宿主顶层变量（兼容 let、const、var 及 window 属性）
