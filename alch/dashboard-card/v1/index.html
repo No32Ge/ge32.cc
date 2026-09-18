@@ -1,161 +1,328 @@
-<div id="alc-dynamic-dashboard-card-wrapper" class="w-full select-none -my-1">
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alchemist Dynamic Dashboard Widget</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .system-message-body:has(#alc-dynamic-dashboard-card-wrapper) {
-            padding: 0 !important;
-            margin-top: 6px !important;
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            overflow-y: hidden; /* 防止内部产生原生滚动条，高度由通信自动计算 */
         }
-        .bubble:has(#alc-dynamic-dashboard-card-wrapper) {
-            background: #ffffff !important;
-            box-shadow: 0 12px 36px -6px rgba(15, 23, 42, 0.08) !important;
-            border: 1px solid #e2e8f0 !important;
-            padding: 0 !important;
-            overflow: hidden !important;
+        @keyframes alcCardFade {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes alcGlowBorder {
-            0%, 100% { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); }
-            50% { border-color: #4f46e5; box-shadow: 0 0 0 6px rgba(99,102,241,0.45); }
-        }
-        .alc-input-glow {
-            animation: alcGlowBorder 1.6s ease-in-out infinite;
+        .alc-view-active {
+            display: block !important;
+            animation: alcCardFade 0.3s ease-out;
         }
     </style>
+</head>
+<body class="select-none">
 
-    <!-- 独立的仪表盘 Iframe 视口 -->
-    <iframe id="alc-dashboard-iframe"
-            src="https://ge32.cc/alch/dashboard-card/v1"
-            class="w-full border-0 block"
-            style="min-height: 180px; height: 260px; transition: height 0.25s ease;"
-            allow="clipboard-read; clipboard-write">
-    </iframe>
-</div>
+    <div id="widget-container" class="w-full bg-white">
+        <!-- ===================== 状态 0: 校验检测中 ===================== -->
+        <div id="alc-view-loading" class="hidden p-6 text-center text-slate-400 text-xs font-mono">
+            正在检验接入凭证有效性...
+        </div>
 
-<script>
-(function initAlcIframeBridge() {
-    const frame = document.getElementById('alc-dashboard-iframe');
-    const inputKey = document.getElementById('cfgAccessKey');
+        <!-- ===================== 状态 1: 未填写密钥 -> 新手注册引导 ===================== -->
+        <div id="alc-view-unregistered" class="hidden w-full bg-gradient-to-b from-slate-50/95 via-slate-100/60 to-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/80">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-200/70 flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-800 tracking-wide">新手开通专享礼遇</span>
+                    <span class="inline-flex items-center text-[0.62rem] font-bold text-amber-700 bg-gradient-to-r from-amber-50 to-orange-50 px-2 py-0.5 rounded-full border border-amber-200/80">
+                        注册即享 100 免费次数
+                    </span>
+                </div>
+                <div class="flex items-center gap-1.5 text-[0.62rem] text-slate-400 font-mono">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>AUTH PORTAL</span>
+                </div>
+            </div>
 
-    // 1. Toast 统一调用宿主环境
-    function triggerHostToast(msg, type = 'info') {
-        if (typeof showToast === 'function') {
-            showToast(msg, type);
-            return;
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
+                <div class="md:col-span-5 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-xl p-4 text-white flex flex-col justify-between relative overflow-hidden shadow-sm">
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2 py-0.5 rounded text-[0.6rem] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                                新人礼遇
+                            </span>
+                            <span class="text-[0.65rem] text-slate-300">免密极速生成</span>
+                        </div>
+                        <h3 class="text-base font-black tracking-tight text-white">注册即享 100 免费次数</h3>
+                        <p class="text-[0.72rem] text-slate-300 mt-1.5 leading-relaxed">
+                            无需手机号与邮箱，前往门户一键即可生成专属 <code class="text-amber-300 font-mono bg-slate-800/90 px-1 rounded">alk-</code> 凭证，解锁 100 次算力。
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800 space-y-2 relative z-10">
+                        <button onclick="sendActionToHost('OPEN_PORTAL');" 
+                                class="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg text-xs font-bold shadow-md shadow-emerald-500/20 transition-all text-center cursor-pointer">
+                            前往控制台免费注册
+                        </button>
+                        <button onclick="copyPortalLink();" 
+                                class="w-full py-1.5 px-3 bg-slate-800/90 hover:bg-slate-700/90 text-slate-300 rounded-lg text-[0.68rem] transition-colors text-center border border-slate-700/60 cursor-pointer">
+                            复制网址: amigray.com/portal/
+                        </button>
+                    </div>
+                </div>
+
+                <div class="md:col-span-7 bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col justify-between gap-2 shadow-sm">
+                    <div class="text-[0.7rem] font-bold text-slate-700 mb-0.5">
+                        30 秒极速开通三步法
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50/70 border border-slate-100">
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white font-mono text-[0.65rem] font-bold shrink-0 mt-0.5">1</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-bold text-slate-800">打开用户控制台</div>
+                            <div class="text-[0.63rem] text-slate-500 mt-0.5">点击左侧绿色按钮或浏览器输入网址打开门户。</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50/70 border border-slate-100">
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white font-mono text-[0.65rem] font-bold shrink-0 mt-0.5">2</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>点击「一键免费注册」</span>
+                                <span class="text-[0.55rem] font-bold bg-amber-100 text-amber-800 px-1.5 rounded">免密极速</span>
+                            </div>
+                            <div class="text-[0.63rem] text-slate-500 mt-0.5">立即获得含 100 次额度的 Key，弹窗中点击复制。</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-2.5 p-2 rounded-lg bg-slate-50/70 border border-slate-100">
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white font-mono text-[0.65rem] font-bold shrink-0 mt-0.5">3</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-bold text-slate-800">粘贴回当前工作台</div>
+                            <div class="text-[0.63rem] text-slate-500 mt-0.5">填入左侧「Alchemist 访问密钥」，即可畅享 AI 流。</div>
+                        </div>
+                    </div>
+                    <div class="pt-1 flex items-center justify-between text-[0.65rem] text-slate-500 border-t border-slate-100">
+                        <span>已有 Key？</span>
+                        <button onclick="sendActionToHost('LOCATE_KEY');" class="text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer">
+                            定位到左侧输入框 →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== 状态 2: 密钥验证通过 -> 欢迎尊享看板 ===================== -->
+        <div id="alc-view-authenticated" class="hidden w-full bg-gradient-to-b from-indigo-50/50 via-white to-white rounded-2xl p-4 sm:p-5 border border-indigo-100 shadow-sm">
+            <div class="flex items-center justify-between pb-3.5 mb-3.5 border-b border-slate-100 flex-wrap gap-2">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-sm font-black text-slate-800">欢迎使用 Alchemist 深度中继工作台</h3>
+                        <span class="inline-flex items-center gap-1 text-[0.6rem] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>凭证已就绪</span>
+                        </span>
+                    </div>
+                    <p class="text-[0.65rem] text-slate-400 mt-0.5">
+                        绑定密钥：<span id="auth-key-name" class="font-bold text-slate-600">--</span>
+                        <span class="mx-1 text-slate-300">·</span>
+                        <code id="auth-key-val" class="font-mono text-indigo-500">alk-***</code>
+                    </p>
+                </div>
+                <button onclick="sendActionToHost('OPEN_PORTAL');" class="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer">
+                    管理控制台
+                </button>
+            </div>
+
+            <!-- 实时数据看板 -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3.5">
+                <div class="bg-gradient-to-br from-indigo-50/70 to-white rounded-xl p-3 border border-indigo-100/80">
+                    <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">剩余可用积分</div>
+                    <div class="text-xl font-black text-indigo-600 font-mono mt-0.5" id="auth-credits">--</div>
+                    <div class="text-[0.6rem] text-slate-400 mt-0.5">动态按 Token 结算</div>
+                </div>
+                <div class="bg-gradient-to-br from-slate-50 to-white rounded-xl p-3 border border-slate-200/70">
+                    <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">累计调用成功</div>
+                    <div class="text-xl font-black text-slate-700 font-mono mt-0.5" id="auth-calls">--</div>
+                    <div class="text-[0.6rem] text-slate-400 mt-0.5">次处理完成</div>
+                </div>
+                <div class="bg-gradient-to-br from-purple-50/50 to-white rounded-xl p-3 border border-purple-100/70">
+                    <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">当前算力时段</div>
+                    <div class="text-xl font-black text-purple-600 font-mono mt-0.5" id="auth-timeweight">1.0x</div>
+                    <div class="text-[0.6rem] text-purple-400 mt-0.5">分时价格优惠</div>
+                </div>
+                <div class="bg-gradient-to-br from-emerald-50/50 to-white rounded-xl p-3 border border-emerald-100/70 flex flex-col justify-between">
+                    <div>
+                        <div class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">额度充值</div>
+                        <div class="text-xs font-bold text-emerald-700 mt-0.5">卡密秒级兑换</div>
+                    </div>
+                    <button onclick="sendActionToHost('OPEN_PORTAL');" class="text-[0.65rem] text-emerald-600 hover:text-emerald-800 font-bold flex items-center gap-1 mt-1 cursor-pointer">
+                        <span>使用兑换码 →</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between text-[0.65rem] text-slate-400 pt-1">
+                <span class="text-slate-500">
+                    已连接至安全隔离中继网关，模型请求均已完成白牌封装保护。
+                </span>
+                <button onclick="recheckKeyState();" class="text-indigo-500 hover:text-indigo-700 transition-colors cursor-pointer font-medium">
+                    刷新数据
+                </button>
+            </div>
+        </div>
+
+        <!-- ===================== 状态 3: 密钥无效 / 伪造乱写 / 禁用 -> 救错警告 ===================== -->
+        <div id="alc-view-invalid" class="hidden w-full bg-gradient-to-b from-red-50/60 to-white rounded-2xl p-4 border border-red-200 shadow-sm">
+            <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-bold text-red-800">访问密钥校验未通过</h3>
+                    <span class="text-[0.6rem] font-bold text-red-600 bg-red-100/80 px-2 py-0.5 rounded-full">INVALID KEY</span>
+                </div>
+                <p id="invalid-reason-text" class="text-xs text-red-700/80 mt-1 leading-relaxed">
+                    检测到当前输入的 Access Key 不存在或已被禁用。随意输入的随机字符无法连接后端 AI 中继网关。
+                </p>
+
+                <div class="mt-3.5 flex items-center gap-2.5 flex-wrap">
+                    <button onclick="sendActionToHost('CLEAR_KEY');" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm shadow-red-200 cursor-pointer">
+                        清空并重新输入
+                    </button>
+                    <button onclick="sendActionToHost('OPEN_PORTAL');" class="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer">
+                        前往控制台免费生成有效 Key (送100次)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 存储宿主传入的上下文变量
+        let currentContext = {
+            accessKey: '',
+            relayBaseUrl: 'http://localhost:5000',
+            deviceId: ''
+        };
+
+        // 通知宿主动态自适应高度
+        function notifyHeight() {
+            setTimeout(() => {
+                const height = document.getElementById('widget-container').offsetHeight;
+                window.parent.postMessage({
+                    type: 'ALC_IFRAME_RESIZE',
+                    payload: { height: height + 10 }
+                }, '*');
+            }, 50);
         }
-        let box = document.getElementById('alc-modern-toast-box');
-        if (!box) {
-            box = document.createElement('div');
-            box.id = 'alc-modern-toast-box';
-            box.className = 'fixed top-6 left-1/2 -translate-x-1/2 z-[99999] flex flex-col items-center gap-2 pointer-events-none';
-            document.body.appendChild(box);
+
+        function showView(viewId) {
+            ['alc-view-loading', 'alc-view-unregistered', 'alc-view-authenticated', 'alc-view-invalid'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (id === viewId) el.classList.add('alc-view-active');
+                    else el.classList.remove('alc-view-active');
+                }
+            });
+            notifyHeight();
         }
-        const t = document.createElement('div');
-        t.className = 'pointer-events-auto bg-slate-900/90 backdrop-blur-xl text-white border border-slate-700/80 px-4 py-2 rounded-xl shadow-2xl text-xs font-semibold transform -translate-y-2 opacity-0 transition-all duration-300';
-        t.innerHTML = '<span>' + msg + '</span>';
-        box.appendChild(t);
-        requestAnimationFrame(() => { t.style.transform = 'translateY(0)'; t.style.opacity = '1'; });
-        setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-6px)'; setTimeout(() => t.remove(), 300); }, 3000);
-    }
 
-    // 2. 向 Iframe 传入最新的上下文状态 (Key, Relay 地址, 设备指纹)
-    function sendStateToIframe() {
-        if (!frame || !frame.contentWindow) return;
-        const key = inputKey ? inputKey.value.trim() : '';
-        const relayBase = (typeof RELAY_BASE_URL !== 'undefined') ? RELAY_BASE_URL : 'http://localhost:5000';
-        const devId = (typeof DEVICE_ID !== 'undefined') ? DEVICE_ID : '';
+        // 核心校验判定
+        async function recheckKeyState() {
+            const key = (currentContext.accessKey || '').trim();
 
-        frame.contentWindow.postMessage({
-            type: 'ALC_HOST_SYNC_STATE',
-            payload: {
-                accessKey: key,
-                relayBaseUrl: relayBase,
-                deviceId: devId
+            if (!key) {
+                showView('alc-view-unregistered');
+                return;
             }
-        }, '*');
-    }
 
-    // 3. 监听 Iframe 发送过来的指令与传出数据
-    window.addEventListener('message', function(e) {
-        const data = e.data;
-        if (!data || typeof data !== 'object') return;
+            if (!key.startsWith('alk-') || key.length < 10) {
+                document.getElementById('invalid-reason-text').textContent = 
+                    '密钥格式不合法：Alchemist 官方密钥必须以 "alk-" 开头。检测到非规范凭证，请核对后再试。';
+                showView('alc-view-invalid');
+                return;
+            }
 
-        switch(data.type) {
-            // Iframe 加载完成握手，请求当前工作台状态
-            case 'ALC_IFRAME_READY':
-                sendStateToIframe();
-                break;
+            showView('alc-view-loading');
 
-            // Iframe 自身内容高度自适应，防止出现双滚动条
-            case 'ALC_IFRAME_RESIZE':
-                if (data.payload && data.payload.height) {
-                    frame.style.height = Math.max(160, data.payload.height) + 'px';
+            try {
+                const res = await fetch(`${currentContext.relayBaseUrl}/api/v1/key-info`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + key,
+                        'X-Device-ID': currentContext.deviceId || ''
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (!data.is_active) {
+                        document.getElementById('invalid-reason-text').textContent = 
+                            '此 Access Key 已被系统管理员设为禁用状态，请联系管理员处理或重新注册新凭据。';
+                        showView('alc-view-invalid');
+                        return;
+                    }
+
+                    document.getElementById('auth-key-name').textContent = data.name || '默认接入端';
+                    document.getElementById('auth-key-val').textContent = data.key_value 
+                        ? (data.key_value.substring(0, 8) + '***' + data.key_value.slice(-4)) 
+                        : key;
+                    document.getElementById('auth-credits').textContent = Number(data.credits_balance).toLocaleString();
+                    document.getElementById('auth-calls').textContent = Number(data.total_calls || 0).toLocaleString();
+                    document.getElementById('auth-timeweight').textContent = (data.current_time_weight || 1.0) + 'x';
+
+                    showView('alc-view-authenticated');
+                } else {
+                    document.getElementById('invalid-reason-text').textContent = 
+                        '服务器拒绝验证：数据库中未找到该密钥记录，请确认是否包含多余空格或直接前往控制台注册。';
+                    showView('alc-view-invalid');
                 }
-                break;
-
-            // 定位到左侧 Key 输入框
-            case 'ALC_ACTION_LOCATE_KEY':
-                if (inputKey) {
-                    inputKey.focus();
-                    inputKey.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    inputKey.classList.add('alc-input-glow');
-                    setTimeout(() => inputKey.classList.remove('alc-input-glow'), 3500);
-                    triggerHostToast(data.payload?.msg || '已为你定位到左侧 Key 输入框！');
-                }
-                break;
-
-            // 清空左侧 Key
-            case 'ALC_ACTION_CLEAR_KEY':
-                if (inputKey) {
-                    inputKey.value = '';
-                    inputKey.focus();
-                    inputKey.dispatchEvent(new Event('input', { bubbles: true }));
-                    inputKey.dispatchEvent(new Event('change', { bubbles: true }));
-                    inputKey.classList.add('alc-input-glow');
-                    setTimeout(() => inputKey.classList.remove('alc-input-glow'), 3000);
-                }
-                triggerHostToast(data.payload?.msg || '已清空密钥输入框，请重新填入有效 Key！');
-                sendStateToIframe();
-                break;
-
-            // 写入/粘贴 Key 到工作台
-            case 'ALC_ACTION_FILL_KEY':
-                if (inputKey && data.payload?.key) {
-                    inputKey.value = data.payload.key;
-                    inputKey.dispatchEvent(new Event('input', { bubbles: true }));
-                    inputKey.dispatchEvent(new Event('change', { bubbles: true }));
-                    inputKey.classList.add('alc-input-glow');
-                    setTimeout(() => inputKey.classList.remove('alc-input-glow'), 3000);
-                    triggerHostToast('✅ 成功填入 Access Key 并激活工作台！', 'success');
-                    sendStateToIframe();
-                }
-                break;
-
-            // 宿主 Toast
-            case 'ALC_ACTION_TOAST':
-                triggerHostToast(data.payload?.msg, data.payload?.toastType || 'info');
-                break;
-
-            // 打开外链
-            case 'ALC_ACTION_OPEN_WINDOW':
-                if (data.payload?.url) {
-                    window.open(data.payload.url, '_blank');
-                    if (data.payload?.toastMsg) triggerHostToast(data.payload.toastMsg);
-                }
-                break;
+            } catch (err) {
+                document.getElementById('invalid-reason-text').textContent = 
+                    '无法连接到 Alchemist 中继服务器进行密钥认证，请检查本地服务状态。';
+                showView('alc-view-invalid');
+            }
         }
-    });
 
-    // 4. 当工作台的 Key 发生变化时，实时同步给 Iframe
-    if (inputKey) {
-        let timer = null;
-        inputKey.addEventListener('input', () => {
-            clearTimeout(timer);
-            timer = setTimeout(sendStateToIframe, 300);
+        // 统一向宿主派发指令
+        function sendActionToHost(actionType, extra = {}) {
+            switch(actionType) {
+                case 'LOCATE_KEY':
+                    window.parent.postMessage({ type: 'ALC_ACTION_LOCATE_KEY' }, '*');
+                    break;
+                case 'CLEAR_KEY':
+                    window.parent.postMessage({ type: 'ALC_ACTION_CLEAR_KEY' }, '*');
+                    break;
+                case 'OPEN_PORTAL':
+                    window.parent.postMessage({ 
+                        type: 'ALC_ACTION_OPEN_WINDOW',
+                        payload: { 
+                            url: 'https://amigray.com/portal/',
+                            toastMsg: '已在新标签页打开控制台，点击「一键免费注册」即可领取 100 次额度！'
+                        }
+                    }, '*');
+                    break;
+            }
+        }
+
+        function copyPortalLink() {
+            navigator.clipboard.writeText('https://amigray.com/portal/').then(() => {
+                window.parent.postMessage({
+                    type: 'ALC_ACTION_TOAST',
+                    payload: { msg: '注册网址已复制到剪贴板！', toastType: 'info' }
+                }, '*');
+            });
+        }
+
+        // 监听宿主工作台传入的属性变更
+        window.addEventListener('message', function(e) {
+            const data = e.data;
+            if (!data || data.type !== 'ALC_HOST_SYNC_STATE') return;
+            currentContext = Object.assign(currentContext, data.payload || {});
+            recheckKeyState();
         });
-        inputKey.addEventListener('change', sendStateToIframe);
-    }
 
-    // 初始化重试拉取
-    frame.addEventListener('load', () => {
-        setTimeout(sendStateToIframe, 150);
-    });
-})();
-</script>
+        // 页面就绪后，主动告知宿主“我准备好了，请推送初始 Key”
+        window.addEventListener('DOMContentLoaded', () => {
+            window.parent.postMessage({ type: 'ALC_IFRAME_READY' }, '*');
+        });
+        window.addEventListener('resize', notifyHeight);
+    </script>
+</body>
+</html>
