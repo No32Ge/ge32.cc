@@ -1,21 +1,35 @@
-// ==UserScript== / 宿主桥接脚本 bridge.js
+// ==UserScript== / 宿主桥接脚本 bridge.js (增强穿透版)
 (function() {
     'use strict';
-    // 防重复执行保护
-    if (window.__PIPELINE_BRIDGE_LOADED__) return;
-    window.__PIPELINE_BRIDGE_LOADED__ = true;
-
     console.log("⚡ [Pipeline Bridge] 正在装载管线桥接加载器...");
 
-    // 指向同目录下的 iframe 入口页面
     const IFRAME_SOURCE_URL = 'https://www.ge32.cc/alch/plug/iframe/pipeline/index.html';
-
-    // 存储当前激活的 iframe 引用与回滚快照
     const activeInstances = new Map();
+
+    // 安全穿透提取宿主顶层变量（兼容 let、const、var 及 window 属性）
+    function getHostVar(varName) {
+        try {
+            if (typeof window[varName] !== 'undefined') return window[varName];
+            return window.eval(`typeof ${varName} !== 'undefined' ? ${varName} : undefined`);
+        } catch (e) {
+            return undefined;
+        }
+    }
+
+    // 安全获取当前表格数据
+    function getTableData() {
+        const h = getHostVar('headers') || [];
+        const d = getHostVar('rawExcelData') || [];
+        return { headers: h, rawExcelData: d };
+    }
 
     // 1. 创建并挂载 iframe 卡片
     window.appendPreprocessCard = function() {
-        if (typeof rawExcelData === 'undefined' || !rawExcelData || rawExcelData.length === 0) return;
+        const { rawExcelData } = getTableData();
+        if (!rawExcelData || rawExcelData.length === 0) {
+            console.warn("[Pipeline Bridge] 暂无有效数据，等待数据加载...");
+            return;
+        }
 
         const cardId = 'pipeline-iframe-card-' + Date.now();
         const chatArea = document.getElementById('chatArea') || document.querySelector('.chat-messages') || document.body;
@@ -27,8 +41,8 @@
                 </div>
                 <div class="bubble border-indigo-100 bg-white shadow-lg" style="width: 100%; max-width: 800px; padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid #e0e7ff;">
                     <iframe id="${cardId}-iframe" 
-                            src="${IFRAME_SOURCE_URL}?cardId=${cardId}" 
-                            style="width: 100%; height: 500px; border: none; display: block;"
+                            src="${IFRAME_SOURCE_URL}?cardId=${cardId}&t=${Date.now()}" 
+                            style="width: 100%; height: 520px; border: none; display: block;"
                             allow="clipboard-read; clipboard-write">
                     </iframe>
                 </div>
@@ -42,7 +56,7 @@
         activeInstances.set(cardId, { iframeEl, rollbackSnapshot: null });
     };
 
-    // 2. 跨文档通信监听器 (与 iframe 双向通讯)
+    // 2. 跨文档通信
     window.addEventListener('message', function(e) {
         const data = e.data;
         if (!data || !data.action || !data.cardId) return;
@@ -51,22 +65,23 @@
         if (!instance) return;
 
         switch (data.action) {
-            // A. iframe 初始化完成，请求数据
-            case 'IFRAME_READY': {
+            // A. iframe 初始化完成，或主动索取数据
+            case 'IFRAME_READY':
+            case 'REQ_DATA': {
+                const { headers, rawExcelData } = getTableData();
                 instance.iframeEl.contentWindow.postMessage({
                     action: 'INIT_DATA',
                     cardId: data.cardId,
-                    headers: window.headers || [],
-                    rawExcelData: window.rawExcelData || []
+                    headers: headers,
+                    rawExcelData: rawExcelData
                 }, '*');
                 break;
             }
 
-            // B. 自适应高度同步 (避免内层出现双滚动条)
+            // B. 高度自适应
             case 'RESIZE_HEIGHT': {
                 if (data.height && data.height > 200) {
                     instance.iframeEl.style.height = `${data.height}px`;
-                    if (typeof scrollToBottom === 'function') scrollToBottom();
                 }
                 break;
             }
@@ -74,21 +89,31 @@
             // C. 执行全量数据追加写入
             case 'APPLY_CHANGES': {
                 const { compiledColNames, newRowsData, addedColCount } = data.payload;
+                const { headers, rawExcelData } = getTableData();
 
+                if (!Array.isArray(headers) || !Array.isArray(rawExcelData)) {
+                    alert("写入失败：未检测到宿主数据容器！");
+                    return;
+                }
+
+                // 记录快照
                 instance.rollbackSnapshot = {
                     prevHeaderLength: headers.length,
                     addedColCount: addedColCount
                 };
 
+                // 追加数据列
                 newRowsData.forEach((rowObj, idx) => {
-                    if (window.rawExcelData[idx]) {
+                    if (rawExcelData[idx] && Array.isArray(rawExcelData[idx].row)) {
                         compiledColNames.forEach(colName => {
-                            window.rawExcelData[idx].row.push(rowObj[colName] !== undefined ? rowObj[colName] : '');
+                            rawExcelData[idx].row.push(rowObj[colName] !== undefined ? rowObj[colName] : '');
                         });
                     }
                 });
 
-                compiledColNames.forEach(h => window.headers.push(h));
+                // 追加表头
+                compiledColNames.forEach(h => headers.push(h));
+
                 refreshHostDOM(compiledColNames);
 
                 instance.iframeEl.contentWindow.postMessage({
@@ -102,15 +127,20 @@
                 break;
             }
 
-            // D. 撤销数据追加
+            // D. 撤销
             case 'UNDO_CHANGES': {
                 if (!instance.rollbackSnapshot) return;
+                const { headers, rawExcelData } = getTableData();
                 const { prevHeaderLength } = instance.rollbackSnapshot;
 
-                window.headers.splice(prevHeaderLength);
-                window.rawExcelData.forEach(item => {
-                    item.row.splice(prevHeaderLength);
-                });
+                if (Array.isArray(headers)) headers.splice(prevHeaderLength);
+                if (Array.isArray(rawExcelData)) {
+                    rawExcelData.forEach(item => {
+                        if (item && Array.isArray(item.row)) {
+                            item.row.splice(prevHeaderLength);
+                        }
+                    });
+                }
 
                 instance.rollbackSnapshot = null;
                 refreshHostDOM([]);
@@ -126,12 +156,10 @@
                 break;
             }
 
-            // E. 代理宿主 Toast
+            // E. Toast
             case 'SHOW_TOAST': {
                 if (typeof showToast === 'function') {
                     showToast(data.message, data.level || 'info');
-                } else {
-                    console.log(`[Toast] [${data.level}] ${data.message}`);
                 }
                 break;
             }
@@ -139,9 +167,10 @@
     });
 
     function refreshHostDOM(newCols = []) {
+        const { headers } = getTableData();
         const fieldPreview = document.getElementById('fieldPreview');
-        if (fieldPreview && Array.isArray(window.headers)) {
-            fieldPreview.innerHTML = window.headers.map(h => h ? `
+        if (fieldPreview && Array.isArray(headers)) {
+            fieldPreview.innerHTML = headers.map(h => h ? `
                 <span draggable="true" ondragstart="dragVarStart(event, '${h}')" ondragend="dragVarEnd(event)" 
                       class="var-tag bg-white px-2 py-1 rounded shadow-sm mr-1.5 mb-1.5 inline-block text-[0.65rem] cursor-grab border border-indigo-100 font-semibold ${newCols.includes(h) ? '!border-emerald-400 !bg-emerald-50 text-emerald-700' : ''}">
                     <i class="fa-solid fa-grip-vertical text-slate-300 mr-1"></i>${h}
@@ -152,7 +181,7 @@
         }
     }
 
-    // 3. 上传文件拦截劫持
+    // 拦截文件上传完成事件
     const originalAppendSystemMessage = window.appendSystemMessage;
     window.appendSystemMessage = function(text) {
         if (typeof originalAppendSystemMessage === 'function') {
@@ -163,9 +192,10 @@
         }
     };
 
-    if (typeof rawExcelData !== 'undefined' && rawExcelData.length > 0) {
+    const { rawExcelData } = getTableData();
+    if (rawExcelData && rawExcelData.length > 0) {
         window.appendPreprocessCard();
     }
 
-    console.log("✅ [Pipeline Bridge] 桥接器装载完成！");
+    console.log("✅ [Pipeline Bridge] 增强桥接器就绪");
 })();
