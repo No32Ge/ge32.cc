@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Studio Iframe</title>
+    <!-- 引入样式库 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; margin: 0; padding: 12px; }
+        .workspace-input {
+            width: 100%; border-radius: 0.375rem; border: 1px solid #cbd5e1;
+            padding: 0.375rem 0.5rem; outline: none; transition: border-color 0.2s;
+        }
+        .workspace-input:focus { border-color: #6366f1; ring: 2px; ring-color: #e0e7ff; }
+        html { overflow-y: hidden; }
+    </style>
+</head>
+<body>
+    <div id="pipeline-root" class="max-w-3xl mx-auto">
+        <div class="bubble-header text-indigo-700 flex justify-between items-center mb-2">
+            <span class="font-bold flex items-center gap-1.5 text-xs">
+                <i class="fa-solid fa-cubes text-xs text-indigo-500"></i> 数据管线工作室 (V6.2 - iframe 独立容器版)
+            </span>
+            <span id="loadTime" class="font-normal text-[0.65rem] text-slate-400"></span>
+        </div>
+
+        <!-- 专区 1：远程原子配置直链载入区 -->
+        <div class="mb-2 p-2 bg-indigo-50/60 border border-indigo-200 rounded-lg">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-[0.68rem] font-bold text-indigo-900 flex items-center gap-1">
+                    <i class="fa-solid fa-cloud-arrow-down text-indigo-600"></i> 挂载远程业务配置：
+                </span>
+                <span class="text-[0.6rem] text-indigo-500 font-mono">1 链接 = 1 完整方案</span>
+            </div>
+            <div class="flex gap-1.5 items-center">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-link absolute left-2 top-2 text-[0.65rem] text-slate-400"></i>
+                    <input type="url" id="remoteConfigUrl" class="workspace-input !py-1 !pl-6 text-xs font-mono text-slate-700" 
+                           placeholder="https://.../pipeline.preset.xxx.js (服务器/OSS 方案直链)">
+                </div>
+                <button type="button" id="btnMountRemote" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shrink-0 flex items-center gap-1">
+                    <i class="fa-solid fa-plus"></i> 挂载方案
+                </button>
+            </div>
+        </div>
+
+        <!-- 专区 2：方案中心 -->
+        <div class="mb-2.5 p-2 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+            <div class="flex items-center justify-between">
+                <span class="text-[0.68rem] font-bold text-slate-700 flex items-center gap-1">
+                    <i class="fa-solid fa-bookmark text-indigo-500"></i> 当前方案：
+                </span>
+                <div class="flex items-center gap-1 flex-wrap">
+                    <button type="button" id="btnSaveCurrent" class="px-2 py-0.5 bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded text-[0.65rem] font-semibold flex items-center gap-1">
+                        <i class="fa-regular fa-floppy-disk"></i> 另存方案
+                    </button>
+                    <button type="button" id="btnExportJS" class="px-2 py-0.5 bg-amber-500 text-white hover:bg-amber-600 rounded text-[0.65rem] font-semibold flex items-center gap-1">
+                        <i class="fa-brands fa-js"></i> 导出原子 JS
+                    </button>
+                </div>
+            </div>
+            <div class="flex gap-1.5 items-center">
+                <select id="presetSelect" class="workspace-input !py-1 text-xs font-semibold text-slate-700 flex-1"></select>
+                <button type="button" id="btnLoadPreset" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shrink-0">载入激活</button>
+                <button type="button" id="btnDeletePreset" class="px-2 py-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 rounded text-xs shrink-0"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+        </div>
+
+        <!-- 专区 3：第三方库依赖池与污染嗅探 -->
+        <div class="mb-3 p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            <div class="flex justify-between items-center cursor-pointer" id="toggleScriptsHeader">
+                <span class="text-[0.68rem] font-bold text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-cubes-stacked text-indigo-500"></i> 调用的外部依赖库 (<span id="scriptCountBadge" class="font-mono">0</span>)
+                    <span id="scriptStatusBadge" class="text-[0.6rem] px-1.5 py-0.2 rounded bg-slate-200 text-slate-600 font-normal">检测就绪</span>
+                </span>
+                <span class="text-[0.63rem] text-indigo-600 hover:underline flex items-center gap-1">
+                    <span id="toggleText">展开详情与全局渗透检查</span>
+                    <i id="toggleArrow" class="fa-solid fa-chevron-down text-[0.6rem] transition-transform"></i>
+                </span>
+            </div>
+            
+            <div id="scriptsBody" class="mt-2 space-y-2 hidden">
+                <div class="p-2 bg-amber-50/70 border border-amber-200 rounded text-xs">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[0.65rem] font-bold text-amber-900 flex items-center gap-1">
+                            <i class="fa-solid fa-shield-halved text-amber-600"></i> window 全局变量注入嗅探器：
+                        </span>
+                    </div>
+                    <div id="injectedGlobalsBox" class="flex flex-wrap gap-1 text-[0.63rem]">
+                        <span class="text-slate-400 italic">暂无外部全局变量写入</span>
+                    </div>
+                </div>
+                <div id="scriptItemsContainer" class="space-y-1"></div>
+                <div class="flex items-center gap-2 pt-1">
+                    <button type="button" id="btnAddScriptUrl" class="px-2 py-0.5 bg-white border border-indigo-200 text-indigo-600 rounded text-[0.65rem] font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-plus text-[0.6rem]"></i> 添加依赖链接
+                    </button>
+                    <button type="button" id="btnTriggerLoadScripts" class="px-2 py-0.5 bg-indigo-600 text-white rounded text-[0.65rem] font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-bolt text-[0.6rem]"></i> 重新拉取与审计
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤卡片容器 -->
+        <div id="steps-list" class="space-y-2 mb-3"></div>
+        <div class="mb-3">
+            <button type="button" id="btnAddStep" class="w-full py-1.5 border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/20 text-indigo-600 font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-plus text-xs"></i> 插入处理步骤
+            </button>
+        </div>
+
+        <!-- 试跑表格 -->
+        <div class="p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+            <div class="flex justify-between items-center text-[0.65rem] text-slate-500 mb-1.5 flex-wrap gap-1">
+                <span class="font-bold flex items-center gap-1">
+                    <i class="fa-solid fa-table-cells text-indigo-500"></i> 前 3 行试跑效果：
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="btnToggleSandbox" class="px-2 py-0.5 rounded text-[0.62rem] font-bold border flex items-center gap-1">
+                        <i class="fa-solid fa-lock-open text-[0.6rem]"></i> <span>沙箱已解除</span>
+                    </button>
+                    <label class="inline-flex items-center cursor-pointer select-none text-[0.62rem] text-slate-600">
+                        <input type="checkbox" id="chkErrorTolerance" class="rounded border-slate-300 text-indigo-600 mr-1" checked> 单行容错
+                    </label>
+                    <span id="status" class="text-slate-400 font-mono">等待就绪...</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto max-h-56">
+                <table class="w-full text-left font-mono text-[0.68rem] border-collapse bg-white rounded border border-slate-200">
+                    <thead id="preview-thead"></thead>
+                    <tbody id="preview-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 提交操作与撤销栏 -->
+        <div class="mt-3 flex justify-between items-center flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-[0.62rem] text-slate-400 font-mono">iframe 独立计算沙箱</span>
+                <button type="button" id="btnUndo" class="hidden px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 rounded text-[0.65rem] font-medium flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left text-[0.6rem]"></i> 撤销上次写入
+                </button>
+            </div>
+            <button id="btnApply" class="bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-5 text-xs rounded-lg font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-play text-[0.65rem]"></i> 链式全量计算并写入
+            </button>
+        </div>
+    </div>
+
+    <!-- 核心逻辑控制 -->
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const CARD_ID = urlParams.get('cardId');
+        document.getElementById('loadTime').innerText = new Date().toLocaleTimeString();
+
+        let hostHeaders = [];
+        let hostRows = [];
+
+        function postToHost(action, payload = {}) {
+            if (window.parent) {
+                window.parent.postMessage({ cardId: CARD_ID, action, ...payload }, '*');
+            }
+        }
+        function emitToast(message, level = 'info') {
+            postToHost('SHOW_TOAST', { message, level });
+        }
+
+        // =========================================================================
+        // 核心一：挂载全局引擎注册中心 (让远程 pipeline.preset.xxx.js 可以自注册)
+        // =========================================================================
+        const GLOBAL_ENGINE_KEY = '__EXCEL_PIPELINE_ENGINE__';
+        const STORAGE_KEY = 'EXCEL_PIPELINE_CUSTOM_PRESETS_V6';
+        const internalRegistry = new Map();
+        const registryListeners = new Set();
+
+        const hubController = {
+            version: '6.2.0',
+            register(manifest) {
+                if (!manifest || !manifest.id || !manifest.name || !Array.isArray(manifest.steps)) {
+                    console.error(`[Pipeline Engine] 拒绝注册不合规配置:`, manifest);
+                    return false;
+                }
+                const cleanManifest = {
+                    id: String(manifest.id).trim(),
+                    name: String(manifest.name).trim(),
+                    version: manifest.version || '1.0.0',
+                    externalScripts: Array.isArray(manifest.externalScripts) ? manifest.externalScripts : [],
+                    steps: manifest.steps.map(s => ({ colName: String(s.colName || '').trim(), code: String(s.code || '') })),
+                    registeredAt: new Date().toISOString()
+                };
+
+                internalRegistry.set(cleanManifest.id, Object.freeze(cleanManifest));
+                console.log(`[Pipeline Engine] ✅ iframe 内成功挂载原子方案: 【${cleanManifest.name}】(${cleanManifest.id})`);
+
+                registryListeners.forEach(fn => {
+                    try { fn(cleanManifest); } catch(e) { console.error(e); }
+                });
+                return true;
+            },
+            get(id) { return internalRegistry.get(id); },
+            getAll() { return Array.from(internalRegistry.values()); },
+            subscribe(fn) {
+                registryListeners.add(fn);
+                return () => registryListeners.delete(fn);
+            }
+        };
+
+        // 挂载到当前 iframe 的 window 上
+        window[GLOBAL_ENGINE_KEY] = Object.freeze({
+            version: '6.2.0',
+            hub: hubController
+        });
+
+        // 检查是否有先于 Hub 加载的早期插件
+        if (window.__PIPELINE_EARLY_PLUGINS__ && Array.isArray(window.__PIPELINE_EARLY_PLUGINS__)) {
+            window.__PIPELINE_EARLY_PLUGINS__.forEach(p => hubController.register(p));
+            window.__PIPELINE_EARLY_PLUGINS__ = [];
+        }
+
+        // =========================================================================
+        // 高度自适应同步
+        // =========================================================================
+        const rootContainer = document.getElementById('pipeline-root');
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const h = Math.ceil(entry.contentRect.height + 30);
+                postToHost('RESIZE_HEIGHT', { height: h });
+            }
+        });
+        resizeObserver.observe(rootContainer);
+
+        // =========================================================================
+        // 沙箱与脚本嗅探加载器
+        // =========================================================================
+        let isSandboxActive = false;
+
+        function compileCodeEngine(codeStr, isSandbox) {
+            let code = (codeStr || '').trim();
+            if (!code) return null;
+            if (!code.includes('return')) code = 'return (' + code + ');';
+
+            if (!isSandbox) {
+                return new Function('row', 'index', 'rows', 'total', code);
+            }
+
+            const sandboxWrapperCode = `
+                with (sandboxScope) {
+                    return (function(row, index, rows, total) {
+                        ${code}
+                    })(row, index, rows, total);
+                }
+            `;
+            const compiledFn = new Function('sandboxScope', sandboxWrapperCode);
+            const SENSITIVE_GLOBALS = new Set([
+                'window', 'document', 'top', 'parent', 'self', 'globalThis',
+                'localStorage', 'sessionStorage', 'indexedDB', 'fetch', 'XMLHttpRequest', 'location'
+            ]);
+
+            return function(row, index, rows, total) {
+                const safeContext = {
+                    row, index, rows, total,
+                    Math, Date, Number, String, Boolean, Array, Object, RegExp, JSON,
+                    parseInt, parseFloat, isNaN, isFinite
+                };
+                const proxyScope = new Proxy(safeContext, {
+                    has() { return true; },
+                    get(t, p) {
+                        if (SENSITIVE_GLOBALS.has(p)) throw new Error(`[沙箱拦截] 严禁调用全局属性 "${p}"`);
+                        return p in t ? t[p] : undefined;
+                    }
+                });
+                return compiledFn(proxyScope);
+            };
+        }
+
+        const scriptAuditCache = new Map();
+        async function loadScriptWithPollutionAudit(url, timeoutMs = 8000) {
+            url = (url || '').trim();
+            if (!url || !/^https?:\/\//i.test(url)) return { url, status: 'invalid', message: 'URL 非法', injectedProps: [] };
+            if (scriptAuditCache.has(url)) return scriptAuditCache.get(url);
+
+            const beforeProps = new Set(Object.getOwnPropertyNames(window));
+            const p = new Promise((resolve) => {
+                const s = document.createElement('script');
+                s.src = url;
+                s.async = true;
+                s.crossOrigin = "anonymous";
+
+                let timer = setTimeout(() => {
+                    resolve({ url, status: 'timeout', message: '加载超时', injectedProps: [] });
+                }, timeoutMs);
+
+                s.onload = () => {
+                    clearTimeout(timer);
+                    const afterProps = Object.getOwnPropertyNames(window);
+                    const newlyInjected = afterProps.filter(prop => !beforeProps.has(prop));
+                    resolve({ url, status: 'loaded', injectedProps: newlyInjected });
+                };
+                s.onerror = () => {
+                    clearTimeout(timer);
+                    resolve({ url, status: 'error', message: '跨域 CORS 或网络错误', injectedProps: [] });
+                };
+                document.head.appendChild(s);
+            });
+
+            scriptAuditCache.set(url, p);
+            return p;
+        }
+
+        // =========================================================================
+        // 本地方案储存管理
+        // =========================================================================
+        const PresetStore = {
+            getCustomList() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    return raw ? JSON.parse(raw) : [];
+                } catch(e) { return []; }
+            },
+            saveCustom(name, steps, externalScripts = [], customId = '') {
+                const list = this.getCustomList();
+                const safeId = customId.trim() || 'custom-' + Date.now();
+                const newPreset = {
+                    id: safeId,
+                    name: name.trim(),
+                    createdAt: new Date().toISOString(),
+                    externalScripts: externalScripts.filter(url => url.trim()),
+                    steps: steps.map(s => ({ colName: s.colName, code: s.code }))
+                };
+                list.unshift(newPreset);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+                return newPreset;
+            },
+            deleteCustom(id) {
+                let list = this.getCustomList().filter(p => p.id !== id);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+            }
+        };
+
+        // =========================================================================
+        // UI 元素与方案下拉选单绑定
+        // =========================================================================
+        const stepsListEl = document.getElementById('steps-list');
+        const btnAddStep = document.getElementById('btnAddStep');
+        const previewThead = document.getElementById('preview-thead');
+        const previewTbody = document.getElementById('preview-tbody');
+        const statusEl = document.getElementById('status');
+        const btnApply = document.getElementById('btnApply');
+        const btnUndo = document.getElementById('btnUndo');
+        const chkErrorTolerance = document.getElementById('chkErrorTolerance');
+        const btnToggleSandbox = document.getElementById('btnToggleSandbox');
+        const scriptItemsContainer = document.getElementById('scriptItemsContainer');
+        const scriptCountBadge = document.getElementById('scriptCountBadge');
+        const scriptStatusBadge = document.getElementById('scriptStatusBadge');
+        const injectedGlobalsBox = document.getElementById('injectedGlobalsBox');
+        
+        const remoteConfigUrlInput = document.getElementById('remoteConfigUrl');
+        const btnMountRemote = document.getElementById('btnMountRemote');
+        const presetSelect = document.getElementById('presetSelect');
+        const btnLoadPreset = document.getElementById('btnLoadPreset');
+        const btnDeletePreset = document.getElementById('btnDeletePreset');
+        const btnSaveCurrent = document.getElementById('btnSaveCurrent');
+        const btnExportJS = document.getElementById('btnExportJS');
+
+        function buildFullRows() {
+            return hostRows.map(item => {
+                const obj = {};
+                hostHeaders.forEach((h, idx) => {
+                    if (h) obj[h] = item.row[idx] !== undefined ? item.row[idx] : '';
+                });
+                return obj;
+            });
+        }
+
+        function updateSandboxUI() {
+            if (isSandboxActive) {
+                btnToggleSandbox.className = "px-2 py-0.5 rounded text-[0.62rem] font-bold border flex items-center gap-1 bg-emerald-50 text-emerald-700 border-emerald-300";
+                btnToggleSandbox.innerHTML = `<i class="fa-solid fa-lock text-[0.6rem]"></i> <span>沙箱防护中</span>`;
+            } else {
+                btnToggleSandbox.className = "px-2 py-0.5 rounded text-[0.62rem] font-bold border flex items-center gap-1 bg-amber-50 text-amber-700 border-amber-300";
+                btnToggleSandbox.innerHTML = `<i class="fa-solid fa-lock-open text-[0.6rem]"></i> <span>沙箱已解除(放行 window)</span>`;
+            }
+            runPipelinePreview();
+        }
+        updateSandboxUI();
+
+        btnToggleSandbox.onclick = () => {
+            isSandboxActive = !isSandboxActive;
+            updateSandboxUI();
+            emitToast(isSandboxActive ? "🛡️ 已开启严格沙箱防护" : "⚠️ 已解除沙箱限制", 'info');
+        };
+
+        document.getElementById('toggleScriptsHeader').onclick = () => {
+            const body = document.getElementById('scriptsBody');
+            const isHidden = body.classList.toggle('hidden');
+            document.getElementById('toggleText').innerText = isHidden ? '展开详情与全局渗透检查' : '收起详情';
+            document.getElementById('toggleArrow').style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+        };
+
+        function addScriptUrlRow(url = '') {
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-1.5 script-url-row';
+            row.innerHTML = `
+                <input type="url" class="script-url-input workspace-input !py-1 text-xs font-mono text-slate-700 flex-1" value="${url}" placeholder="https://.../*.js">
+                <span class="script-item-status text-[0.65rem] text-slate-400 font-mono w-14 text-center shrink-0">待就绪</span>
+                <button type="button" class="btn-del-script text-slate-400 hover:text-red-500 p-1 text-xs shrink-0"><i class="fa-solid fa-xmark"></i></button>
+            `;
+            row.querySelector('.btn-del-script').onclick = () => { row.remove(); updateScriptStats(); ensureScriptsLoaded(); };
+            row.querySelector('.script-url-input').onchange = () => ensureScriptsLoaded();
+            scriptItemsContainer.appendChild(row);
+            updateScriptStats();
+        }
+
+        function updateScriptStats() {
+            scriptCountBadge.innerText = scriptItemsContainer.querySelectorAll('.script-url-row').length;
+        }
+
+        function getScriptUrls() {
+            return Array.from(scriptItemsContainer.querySelectorAll('.script-url-input')).map(i => i.value.trim()).filter(Boolean);
+        }
+
+        async function ensureScriptsLoaded() {
+            const rows = scriptItemsContainer.querySelectorAll('.script-url-row');
+            if (rows.length === 0) {
+                scriptStatusBadge.innerText = '无依赖';
+                injectedGlobalsBox.innerHTML = `<span class="text-slate-400 italic">暂无外部依赖注入</span>`;
+                runPipelinePreview();
+                return true;
+            }
+
+            let allOk = true;
+            const totalInjected = new Set();
+            for (const r of rows) {
+                const inp = r.querySelector('.script-url-input');
+                const statusSpan = r.querySelector('.script-item-status');
+                const url = inp.value.trim();
+                if (!url) continue;
+
+                statusSpan.innerText = '加载中...';
+                const res = await loadScriptWithPollutionAudit(url);
+                if (res.status === 'loaded') {
+                    statusSpan.innerText = '🟢 就绪';
+                    (res.injectedProps || []).forEach(p => totalInjected.add(p));
+                } else {
+                    allOk = false;
+                    statusSpan.innerText = '🔴 失败';
+                    statusSpan.title = res.message || '';
+                }
+            }
+
+            if (totalInjected.size > 0) {
+                injectedGlobalsBox.innerHTML = Array.from(totalInjected).map(prop => `
+                    <span class="px-1.5 py-0.5 rounded bg-white border border-amber-300 font-mono text-amber-800 shadow-2xs font-semibold">window.${prop}</span>
+                `).join('');
+            }
+            runPipelinePreview();
+            return allOk;
+        }
+
+        document.getElementById('btnAddScriptUrl').onclick = () => addScriptUrlRow('');
+        document.getElementById('btnTriggerLoadScripts').onclick = ensureScriptsLoaded;
+
+        // 步骤管理
+        function addStepDOM(colName = '', code = '') {
+            const item = document.createElement('div');
+            item.className = 'step-box p-2.5 bg-slate-50 border border-slate-200 rounded-lg relative';
+            item.innerHTML = `
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="step-badge text-[0.65rem] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">
+                        Step <span class="step-num">?</span>
+                    </span>
+                    <button type="button" class="btn-del-step text-slate-400 hover:text-red-500 p-0.5 text-xs"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div class="md:col-span-1">
+                        <label class="text-[0.63rem] font-bold text-slate-600 block mb-0.5">生成列名：</label>
+                        <input type="text" class="step-col-name workspace-input !py-1 text-xs font-semibold text-indigo-700" value="${colName}">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[0.63rem] font-bold text-slate-600 block mb-0.5">JS 转换逻辑：</label>
+                        <textarea class="step-code workspace-input !py-1 text-xs font-mono text-slate-800 h-14 resize-none leading-tight">${code}</textarea>
+                    </div>
+                </div>
+            `;
+            item.querySelector('.btn-del-step').onclick = () => { item.remove(); reindexSteps(); runPipelinePreview(); };
+            item.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', runPipelinePreview));
+            stepsListEl.appendChild(item);
+            reindexSteps();
+        }
+
+        function reindexSteps() {
+            stepsListEl.querySelectorAll('.step-box').forEach((box, i) => {
+                box.querySelector('.step-num').innerText = i + 1;
+            });
+        }
+
+        function getCurrentSteps() {
+            return Array.from(stepsListEl.querySelectorAll('.step-box')).map((b, idx) => ({
+                stepIndex: idx + 1,
+                colName: b.querySelector('.step-col-name').value.trim(),
+                code: b.querySelector('.step-code').value.trim()
+            }));
+        }
+
+        // =========================================================================
+        // 核心二：挂载远程直连方案逻辑
+        // =========================================================================
+        btnMountRemote.onclick = async () => {
+            const url = remoteConfigUrlInput.value.trim();
+            if (!url) return alert("请输入远程原子配置 JS 文件的完整 URL！");
+            if (!/^https?:\/\//i.test(url)) return alert("配置链接必须以 http:// 或 https:// 开头！");
+
+            btnMountRemote.disabled = true;
+            btnMountRemote.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 挂载中...`;
+
+            const prevCount = hubController.getAll().length;
+            const res = await loadScriptWithPollutionAudit(url, 10000);
+
+            btnMountRemote.disabled = false;
+            btnMountRemote.innerHTML = `<i class="fa-solid fa-plus"></i> 挂载方案`;
+
+            if (res.status !== 'loaded') {
+                return alert(`远程方案拉取失败: ${res.message}`);
+            }
+
+            const all = hubController.getAll();
+            const latestMounted = (all.length > prevCount) ? all[all.length - 1] : null;
+
+            if (latestMounted) {
+                emitToast(`🎉 成功挂载方案【${latestMounted.name}】！正在准备依赖...`, 'success');
+                refreshPresetDropdown(latestMounted.id);
+                await applyPresetToUI(latestMounted);
+                remoteConfigUrlInput.value = '';
+            } else {
+                alert("⚠️ 脚本未调用 window.__EXCEL_PIPELINE_ENGINE__.hub.register() 注册！请检查插件代码。");
+            }
+        };
+
+        // 订阅 Hub 注册事件，自动刷新下拉选单
+        hubController.subscribe((preset) => {
+            refreshPresetDropdown(preset.id);
+        });
+
+        function refreshPresetDropdown(selectedId = null) {
+            const hubPresets = hubController.getAll();
+            const customs = PresetStore.getCustomList();
+
+            let html = '';
+            if (hubPresets.length > 0) {
+                html += `<optgroup label="🌐 远程原子方案 (${hubPresets.length})">`;
+                hubPresets.forEach(p => {
+                    html += `<option value="${p.id}">[原子插件] ${p.name}</option>`;
+                });
+                html += `</optgroup>`;
+            }
+
+            if (customs.length > 0) {
+                html += `<optgroup label="👤 本地保存方案 (${customs.length})">`;
+                customs.forEach(p => {
+                    html += `<option value="${p.id}">${p.name} (${p.steps.length}步)</option>`;
+                });
+                html += `</optgroup>`;
+            }
+
+            if (!html) {
+                html = `<option value="">暂无方案，请挂载或新建</option>`;
+            }
+
+            presetSelect.innerHTML = html;
+            if (selectedId) presetSelect.value = selectedId;
+            btnDeletePreset.style.display = (presetSelect.value && presetSelect.value.startsWith('custom-')) ? 'inline-block' : 'none';
+        }
+
+        presetSelect.onchange = () => {
+            btnDeletePreset.style.display = (presetSelect.value && presetSelect.value.startsWith('custom-')) ? 'inline-block' : 'none';
+        };
+
+        async function applyPresetToUI(preset) {
+            scriptItemsContainer.innerHTML = '';
+            (preset.externalScripts || []).forEach(u => addScriptUrlRow(u));
+            stepsListEl.innerHTML = '';
+            (preset.steps || []).forEach(s => addStepDOM(s.colName, s.code));
+            await ensureScriptsLoaded();
+        }
+
+        btnLoadPreset.onclick = async () => {
+            const targetId = presetSelect.value;
+            if (!targetId) return;
+
+            const allPresets = [...hubController.getAll(), ...PresetStore.getCustomList()];
+            const found = allPresets.find(p => p.id === targetId);
+            if (found) {
+                emitToast(`正在载入方案【${found.name}】...`, 'info');
+                await applyPresetToUI(found);
+            }
+        };
+
+        btnSaveCurrent.onclick = () => {
+            const steps = getCurrentSteps();
+            if (steps.length === 0) return alert("当前卡片没有步骤，无法保存！");
+            const name = prompt("请输入方案显示名称：", "自定义业务清洗");
+            if (!name || !name.trim()) return;
+
+            const scripts = getScriptUrls();
+            const saved = PresetStore.saveCustom(name, steps, scripts);
+            refreshPresetDropdown(saved.id);
+            emitToast(`🎉 方案【${saved.name}】已成功保存在本地！`, 'success');
+        };
+
+        btnDeletePreset.onclick = () => {
+            const targetId = presetSelect.value;
+            if (!targetId || !targetId.startsWith('custom-')) return;
+            if (!confirm("确定要删除该本地方案吗？")) return;
+            PresetStore.deleteCustom(targetId);
+            refreshPresetDropdown();
+            emitToast("已删除方案", 'info');
+        };
+
+        // 试跑与计算
+        function runPipelinePreview() {
+            const steps = getCurrentSteps();
+            if (steps.length === 0 || hostRows.length === 0) {
+                previewThead.innerHTML = `<tr><th class="p-1.5 w-10 text-center">#</th><th class="p-1.5">原始快照</th></tr>`;
+                previewTbody.innerHTML = `<tr><td colspan="2" class="p-2 text-center text-slate-400">请配置步骤并等待数据同步</td></tr>`;
+                statusEl.innerText = "等待就绪...";
+                return;
+            }
+
+            try {
+                const fullSnapshot = buildFullRows();
+                const workingData = fullSnapshot.map(r => ({ ...r }));
+
+                for (let step of steps) {
+                    if (!step.colName || !step.code) continue;
+                    const fn = compileCodeEngine(step.code, isSandboxActive);
+                    for (let rIdx = 0; rIdx < workingData.length; rIdx++) {
+                        try {
+                            workingData[rIdx][step.colName] = fn(workingData[rIdx], rIdx, workingData, workingData.length);
+                        } catch (e) {
+                            if (!chkErrorTolerance.checked) throw e;
+                            workingData[rIdx][step.colName] = '';
+                        }
+                    }
+                }
+
+                previewThead.innerHTML = `<tr class="bg-slate-100 border-b border-slate-200 text-slate-600">
+                    <th class="p-1.5 w-10 text-center">#</th>
+                    <th class="p-1.5 min-w-[120px]">原始数据快照</th>
+                    ${steps.map(s => `<th class="p-1.5 text-indigo-600 bg-indigo-50/50">${s.colName || '未命名'}</th>`).join('')}
+                </tr>`;
+
+                previewTbody.innerHTML = workingData.slice(0, 3).map((row, idx) => {
+                    const snapTxt = Object.entries(fullSnapshot[idx]).slice(0, 2).map(([k, v]) => `${k}:${v}`).join(' | ');
+                    return `<tr class="border-b border-slate-100 last:border-none">
+                        <td class="p-1.5 text-center text-slate-400">#${idx + 1}</td>
+                        <td class="p-1.5 text-slate-500 truncate max-w-[150px]" title="${snapTxt}">${snapTxt || '—'}</td>
+                        ${steps.map(s => `<td class="p-1.5 font-bold text-indigo-600 bg-indigo-50/20">${row[s.colName] ?? ''}</td>`).join('')}
+                    </tr>`;
+                }).join('');
+
+                statusEl.innerText = `✅ 链路试跑通畅`;
+                statusEl.className = "text-emerald-600 font-semibold";
+            } catch (err) {
+                statusEl.innerText = `❌ 运行报错`;
+                statusEl.className = "text-red-500 font-semibold";
+                previewTbody.innerHTML = `<tr><td colspan="5" class="p-2 text-red-500 bg-red-50">${err.message}</td></tr>`;
+            }
+        }
+
+        btnAddStep.onclick = () => addStepDOM('', '');
+
+        btnApply.onclick = async () => {
+            const steps = getCurrentSteps();
+            if (steps.length === 0) return alert("请先配置步骤！");
+
+            btnApply.disabled = true;
+            btnApply.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> 计算中...`;
+
+            await ensureScriptsLoaded();
+
+            try {
+                const fullSnapshot = buildFullRows();
+                const workingData = fullSnapshot.map(r => ({ ...r }));
+
+                for (let step of steps) {
+                    const fn = compileCodeEngine(step.code, isSandboxActive);
+                    for (let rIdx = 0; rIdx < workingData.length; rIdx++) {
+                        workingData[rIdx][step.colName] = fn(workingData[rIdx], rIdx, workingData, workingData.length);
+                    }
+                }
+
+                postToHost('APPLY_CHANGES', {
+                    payload: {
+                        compiledColNames: steps.map(s => s.colName),
+                        newRowsData: workingData,
+                        addedColCount: steps.length
+                    }
+                });
+            } catch (e) {
+                alert("执行失败: " + e.message);
+                btnApply.disabled = false;
+                btnApply.innerHTML = `<i class="fa-solid fa-play text-[0.65rem]"></i> 链式全量计算并写入`;
+            }
+        };
+
+        btnUndo.onclick = () => {
+            postToHost('UNDO_CHANGES');
+        };
+
+        // =========================================================================
+        // 宿主消息通道
+        // =========================================================================
+        window.addEventListener('message', function(e) {
+            const data = e.data;
+            if (!data || !data.action) return;
+
+            switch (data.action) {
+                case 'INIT_DATA': {
+                    hostHeaders = data.headers || [];
+                    hostRows = data.rawExcelData || [];
+                    btnApply.innerHTML = `<i class="fa-solid fa-play text-[0.65rem]"></i> 链式全量计算并写入 (${hostRows.length} 行)`;
+                    refreshPresetDropdown();
+                    runPipelinePreview();
+                    break;
+                }
+                case 'APPLY_SUCCESS': {
+                    btnApply.className = "bg-emerald-100 text-emerald-700 py-1.5 px-5 text-xs rounded-lg cursor-default";
+                    btnApply.innerHTML = `<i class="fa-solid fa-check mr-1"></i> 已成功写入宿主`;
+                    btnUndo.classList.remove('hidden');
+                    break;
+                }
+                case 'UNDO_SUCCESS': {
+                    btnApply.disabled = false;
+                    btnApply.className = "bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-5 text-xs rounded-lg font-semibold";
+                    btnApply.innerHTML = `<i class="fa-solid fa-play text-[0.65rem]"></i> 链式全量计算并写入 (${hostRows.length} 行)`;
+                    btnUndo.classList.add('hidden');
+                    break;
+                }
+            }
+        });
+
+        // 告知父级 iframe 装载完毕
+        postToHost('IFRAME_READY');
+    </script>
+</body>
+</html>

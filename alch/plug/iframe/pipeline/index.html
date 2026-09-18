@@ -11,66 +11,115 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; margin: 0; padding: 12px; }
         .workspace-input {
             width: 100%; border-radius: 0.375rem; border: 1px solid #cbd5e1;
-            padding: 0.375rem 0.5rem; outline: none; transition: border-color 0.2s;
+            padding: 0.375rem 0.5rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .workspace-input:focus { border-color: #6366f1; ring: 2px; ring-color: #e0e7ff; }
+        .workspace-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff; }
         html { overflow-y: hidden; }
+
+        /* 微型平滑滚动条 */
+        .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* 步骤折叠与展开动画控制 */
+        .step-box.collapsed .step-body { display: none; }
+        .step-box.collapsed .step-code-preview { display: inline-block; }
+        .step-box.collapsed .step-chevron { transform: rotate(-90deg); }
+        .step-chevron { transition: transform 0.2s ease; }
     </style>
 </head>
 <body>
     <div id="pipeline-root" class="max-w-3xl mx-auto">
         <div class="bubble-header text-indigo-700 flex justify-between items-center mb-2">
             <span class="font-bold flex items-center gap-1.5 text-xs">
-                <i class="fa-solid fa-cubes text-xs text-indigo-500"></i> 数据管线工作室 (V6.2 - iframe 独立容器版)
+                <i class="fa-solid fa-cubes text-xs text-indigo-500"></i> 数据管线工作室 (V6.5 - 索引目录按需拉取版)
             </span>
             <span id="loadTime" class="font-normal text-[0.65rem] text-slate-400"></span>
         </div>
 
-        <!-- 专区 1：远程原子配置直链载入区 -->
-        <div class="mb-2 p-2 bg-indigo-50/60 border border-indigo-200 rounded-lg">
-            <div class="flex items-center justify-between mb-1">
-                <span class="text-[0.68rem] font-bold text-indigo-900 flex items-center gap-1">
-                    <i class="fa-solid fa-cloud-arrow-down text-indigo-600"></i> 挂载远程业务配置：
-                </span>
-                <span class="text-[0.6rem] text-indigo-500 font-mono">1 链接 = 1 完整方案</span>
+        <!-- 专区 1：远程方案索引目录 (Catalog) 状态条 -->
+        <div id="catalogStatusBar" class="hidden mb-2 p-2 bg-purple-50/70 border border-purple-200 rounded-lg flex items-center justify-between text-xs">
+            <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-sitemap text-purple-600 text-xs"></i>
+                <span class="text-[0.68rem] font-bold text-purple-900">URL 方案索引库已挂载：</span>
+                <span id="catalogCountTag" class="text-[0.62rem] font-mono bg-purple-200/80 text-purple-800 px-1.5 py-0.2 rounded font-semibold">0 个预方案待命</span>
             </div>
-            <div class="flex gap-1.5 items-center">
-                <div class="relative flex-1">
-                    <i class="fa-solid fa-link absolute left-2 top-2 text-[0.65rem] text-slate-400"></i>
-                    <input type="url" id="remoteConfigUrl" class="workspace-input !py-1 !pl-6 text-xs font-mono text-slate-700" 
-                           placeholder="https://.../pipeline.preset.xxx.js (服务器/OSS 方案直链)">
-                </div>
-                <button type="button" id="btnMountRemote" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shrink-0 flex items-center gap-1">
-                    <i class="fa-solid fa-plus"></i> 挂载方案
-                </button>
-            </div>
+            <span class="text-[0.6rem] text-purple-600 font-mono italic">按需触发时拉取实装</span>
         </div>
 
-        <!-- 专区 2：方案中心 -->
-        <div class="mb-2.5 p-2 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+        <!-- 专区 2：方案中心（无弹窗内嵌收集表单与本地导入） -->
+        <div class="mb-2 p-2 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
             <div class="flex items-center justify-between">
                 <span class="text-[0.68rem] font-bold text-slate-700 flex items-center gap-1">
-                    <i class="fa-solid fa-bookmark text-indigo-500"></i> 当前方案：
+                    <i class="fa-solid fa-bookmark text-indigo-500"></i> 当前激活方案：
                 </span>
                 <div class="flex items-center gap-1 flex-wrap">
-                    <button type="button" id="btnSaveCurrent" class="px-2 py-0.5 bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded text-[0.65rem] font-semibold flex items-center gap-1">
+                    <button type="button" id="btnSaveCurrent" class="px-2 py-0.5 bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded text-[0.65rem] font-semibold flex items-center gap-1 transition-colors">
                         <i class="fa-regular fa-floppy-disk"></i> 另存方案
                     </button>
-                    <button type="button" id="btnExportJS" class="px-2 py-0.5 bg-amber-500 text-white hover:bg-amber-600 rounded text-[0.65rem] font-semibold flex items-center gap-1">
+                    <!-- 触发内联导出面板 -->
+                    <button type="button" id="btnOpenExportPanel" class="px-2 py-0.5 bg-amber-500 text-white hover:bg-amber-600 rounded text-[0.65rem] font-semibold flex items-center gap-1 transition-colors">
                         <i class="fa-brands fa-js"></i> 导出原子 JS
+                    </button>
+                    <!-- 导入本地 JS 文件 -->
+                    <button type="button" id="btnTriggerImportFile" class="px-2 py-0.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded text-[0.65rem] font-semibold flex items-center gap-1 transition-colors">
+                        <i class="fa-solid fa-file-import text-indigo-600"></i> 导入本地 JS
+                    </button>
+                    <input type="file" id="fileImportJS" accept=".js" class="hidden">
+                </div>
+            </div>
+
+            <!-- 内联嵌入式「另存方案」就地输入行 -->
+            <div id="inlineSavePanel" class="hidden p-2 bg-white border border-indigo-100 rounded-md shadow-2xs space-y-1.5">
+                <div class="text-[0.63rem] font-bold text-indigo-800 flex items-center gap-1">
+                    <i class="fa-solid fa-floppy-disk text-indigo-500"></i> 保存当前配置到浏览器本地：
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <input type="text" id="inputLocalPresetName" class="workspace-input !py-1 text-xs text-slate-700 flex-1" placeholder="请输入方案显示名称，如: 沃尔玛日常清洗规整">
+                    <button type="button" id="btnConfirmSaveLocal" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shrink-0">确定保存</button>
+                    <button type="button" id="btnCancelSaveLocal" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-xs shrink-0">取消</button>
+                </div>
+            </div>
+
+            <!-- 内联嵌入式「导出原子 JS 插件」就地收集表单 (完全摆脱弹窗) -->
+            <div id="inlineExportPanel" class="hidden p-2.5 bg-amber-50/70 border border-amber-200 rounded-md shadow-2xs space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-[0.65rem] font-bold text-amber-900 flex items-center gap-1">
+                        <i class="fa-brands fa-js text-amber-600"></i> 导出独立原子 JS 插件包：
+                    </span>
+                    <span class="text-[0.58rem] text-amber-600">导出后可直接用于宿主环境或挂载到 Catalog 索引中</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[0.6rem] text-slate-600 mb-0.5 font-semibold">插件标识 Identifier (英文/数字/下划线):</label>
+                        <input type="text" id="exportPresetId" class="workspace-input !py-1 text-xs font-mono text-slate-700" placeholder="例如: walmart_cleaner_v1">
+                    </div>
+                    <div>
+                        <label class="block text-[0.6rem] text-slate-600 mb-0.5 font-semibold">方案中文展示名称:</label>
+                        <input type="text" id="exportPresetName" class="workspace-input !py-1 text-xs text-slate-700" placeholder="例如: 沃尔玛商品多规格清洗与定价">
+                    </div>
+                </div>
+                <div class="flex justify-end items-center gap-2 pt-1 border-t border-amber-100">
+                    <button type="button" id="btnCancelExport" class="px-2.5 py-0.5 text-xs text-slate-600 hover:bg-amber-100 rounded transition">取消</button>
+                    <button type="button" id="btnExecuteExportJS" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-xs transition">
+                        <i class="fa-solid fa-download"></i> 立即生成并下载 JS 文件
                     </button>
                 </div>
             </div>
+
             <div class="flex gap-1.5 items-center">
                 <select id="presetSelect" class="workspace-input !py-1 text-xs font-semibold text-slate-700 flex-1"></select>
-                <button type="button" id="btnLoadPreset" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shrink-0">载入激活</button>
-                <button type="button" id="btnDeletePreset" class="px-2 py-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 rounded text-xs shrink-0"><i class="fa-solid fa-trash-can"></i></button>
+                <button type="button" id="btnLoadPreset" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shrink-0 transition-colors flex items-center gap-1">
+                    <span id="txtLoadPreset">载入激活</span>
+                </button>
+                <button type="button" id="btnDeletePreset" class="px-2 py-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 rounded text-xs shrink-0 transition-colors" title="删除"><i class="fa-solid fa-trash-can"></i></button>
             </div>
         </div>
 
-        <!-- 专区 3：第三方库依赖池与污染嗅探 -->
-        <div class="mb-3 p-2 bg-slate-50 border border-slate-200 rounded-lg">
-            <div class="flex justify-between items-center cursor-pointer" id="toggleScriptsHeader">
+        <!-- 专区 3：第三方库依赖池 -->
+        <div class="mb-2.5 p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            <div class="flex justify-between items-center cursor-pointer select-none" id="toggleScriptsHeader">
                 <span class="text-[0.68rem] font-bold text-slate-700 flex items-center gap-1.5">
                     <i class="fa-solid fa-cubes-stacked text-indigo-500"></i> 调用的外部依赖库 (<span id="scriptCountBadge" class="font-mono">0</span>)
                     <span id="scriptStatusBadge" class="text-[0.6rem] px-1.5 py-0.2 rounded bg-slate-200 text-slate-600 font-normal">检测就绪</span>
@@ -104,12 +153,33 @@
             </div>
         </div>
 
-        <!-- 步骤卡片容器 -->
-        <div id="steps-list" class="space-y-2 mb-3"></div>
-        <div class="mb-3">
-            <button type="button" id="btnAddStep" class="w-full py-1.5 border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/20 text-indigo-600 font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5">
-                <i class="fa-solid fa-plus text-xs"></i> 插入处理步骤
-            </button>
+        <!-- 专区 4：步骤处理链容器 (无省略号列名 + 整体抽屉折叠 + 去边框 + 高度自适应) -->
+        <div class="mb-3 border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+            <!-- 步骤区域总控制头：即使有100个步骤也可瞬间收拢 -->
+            <div class="flex items-center justify-between px-3 py-2 bg-slate-100/80 cursor-pointer select-none border-b border-slate-200" id="stepsPanelHeader">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <i class="fa-solid fa-chevron-down text-[0.65rem] text-indigo-600 transition-transform duration-200" id="stepsPanelChevron"></i>
+                    <span class="text-[0.68rem] font-bold text-slate-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-sliders text-indigo-500"></i> 数据处理流水线
+                        <span id="stepsCountBadge" class="font-mono text-indigo-600 bg-indigo-100/70 px-1.5 py-0.2 rounded text-[0.62rem]">0</span>
+                    </span>
+                    <span id="stepsPanelSummary" class="text-[0.62rem] text-slate-400 truncate hidden font-mono"></span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
+                    <button type="button" id="btnToggleAllSteps" class="px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded text-[0.62rem] font-medium flex items-center gap-1 transition-colors">
+                        <i class="fa-solid fa-compress text-[0.55rem]" id="iconToggleAll"></i>
+                        <span id="txtToggleAll">全部收起</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 步骤列表主体容器：max-height 防暴涨并带微型滚动 -->
+            <div id="stepsPanelContent" class="p-2 space-y-2">
+                <div id="steps-list" class="space-y-1.5 max-h-[520px] overflow-y-auto pr-1 custom-scroll"></div>
+                <button type="button" id="btnAddStep" class="w-full py-1.5 border border-dashed border-indigo-300 hover:border-indigo-500 bg-white hover:bg-indigo-50/50 text-indigo-600 font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+                    <i class="fa-solid fa-plus text-xs"></i> 插入处理步骤
+                </button>
+            </div>
         </div>
 
         <!-- 试跑表格 -->
@@ -128,7 +198,7 @@
                     <span id="status" class="text-slate-400 font-mono">等待就绪...</span>
                 </div>
             </div>
-            <div class="overflow-x-auto max-h-56">
+            <div class="overflow-x-auto max-h-56 custom-scroll">
                 <table class="w-full text-left font-mono text-[0.68rem] border-collapse bg-white rounded border border-slate-200">
                     <thead id="preview-thead"></thead>
                     <tbody id="preview-tbody"></tbody>
@@ -144,13 +214,13 @@
                     <i class="fa-solid fa-rotate-left text-[0.6rem]"></i> 撤销上次写入
                 </button>
             </div>
-            <button id="btnApply" class="bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-5 text-xs rounded-lg font-semibold flex items-center gap-1">
+            <button id="btnApply" class="bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-5 text-xs rounded-lg font-semibold flex items-center gap-1 shadow-xs transition-colors">
                 <i class="fa-solid fa-play text-[0.65rem]"></i> 链式全量计算并写入
             </button>
         </div>
     </div>
 
-    <!-- 核心逻辑控制 -->
+    <!-- 核心逻辑脚本 -->
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const CARD_ID = urlParams.get('cardId');
@@ -169,15 +239,17 @@
         }
 
         // =========================================================================
-        // 核心一：挂载全局引擎注册中心 (让远程 pipeline.preset.xxx.js 可以自注册)
+        // 核心一：挂载全局引擎注册中心与 Catalog 索引库
         // =========================================================================
         const GLOBAL_ENGINE_KEY = '__EXCEL_PIPELINE_ENGINE__';
         const STORAGE_KEY = 'EXCEL_PIPELINE_CUSTOM_PRESETS_V6';
+        
         const internalRegistry = new Map();
         const registryListeners = new Set();
+        const lazyCatalogMap = new Map(); // 存储从索引目录读取到的预方案 { id: { id, name, url, status: 'pending'|'loaded'|'failed', error: '' } }
 
         const hubController = {
-            version: '6.2.0',
+            version: '6.5.0',
             register(manifest) {
                 if (!manifest || !manifest.id || !manifest.name || !Array.isArray(manifest.steps)) {
                     console.error(`[Pipeline Engine] 拒绝注册不合规配置:`, manifest);
@@ -193,12 +265,27 @@
                 };
 
                 internalRegistry.set(cleanManifest.id, Object.freeze(cleanManifest));
-                console.log(`[Pipeline Engine] ✅ iframe 内成功挂载原子方案: 【${cleanManifest.name}】(${cleanManifest.id})`);
-
                 registryListeners.forEach(fn => {
                     try { fn(cleanManifest); } catch(e) { console.error(e); }
                 });
                 return true;
+            },
+            // 支持注册预方案目录索引
+            registerCatalog(list) {
+                if (!Array.isArray(list)) return;
+                list.forEach(item => {
+                    if (item && item.id && item.url) {
+                        lazyCatalogMap.set(String(item.id).trim(), {
+                            id: String(item.id).trim(),
+                            name: String(item.name || item.id).trim(),
+                            url: String(item.url).trim(),
+                            status: 'pending', // pending, loaded, failed
+                            error: ''
+                        });
+                    }
+                });
+                updateCatalogUI();
+                refreshPresetDropdown();
             },
             get(id) { return internalRegistry.get(id); },
             getAll() { return Array.from(internalRegistry.values()); },
@@ -208,32 +295,85 @@
             }
         };
 
-        // 挂载到当前 iframe 的 window 上
         window[GLOBAL_ENGINE_KEY] = Object.freeze({
-            version: '6.2.0',
+            version: '6.5.0',
             hub: hubController
         });
 
-        // 检查是否有先于 Hub 加载的早期插件
         if (window.__PIPELINE_EARLY_PLUGINS__ && Array.isArray(window.__PIPELINE_EARLY_PLUGINS__)) {
             window.__PIPELINE_EARLY_PLUGINS__.forEach(p => hubController.register(p));
             window.__PIPELINE_EARLY_PLUGINS__ = [];
         }
 
         // =========================================================================
-        // 高度自适应同步
+        // 核心二：浏览器 URL 参数索引目录解析器 (按需懒加载机制)
         // =========================================================================
+        function updateCatalogUI() {
+            const bar = document.getElementById('catalogStatusBar');
+            const countTag = document.getElementById('catalogCountTag');
+            const count = lazyCatalogMap.size;
+            if (count > 0) {
+                bar.classList.remove('hidden');
+                countTag.innerText = `${count} 个远程预方案待命`;
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
+        async function initCatalogFromUrl() {
+            // 支持参数：?catalog=... 或 ?manifests=... 或 ?index=... 或 ?presets=...
+            const catalogUrl = urlParams.get('catalog') || urlParams.get('manifests') || urlParams.get('index') || urlParams.get('presets');
+            if (!catalogUrl) return;
+
+            console.log(`[Pipeline Engine] 正在从 URL 探测方案索引目录: ${catalogUrl}`);
+            try {
+                // 1. 先快照 window 属性
+                const beforeProps = new Set(Object.getOwnPropertyNames(window));
+                
+                // 加载索引 JS
+                const res = await loadScriptWithPollutionAudit(catalogUrl, 8000);
+                if (res.status === 'loaded') {
+                    // 检查标准挂载点 window.__PIPELINE_CATALOG__
+                    if (Array.isArray(window.__PIPELINE_CATALOG__)) {
+                        hubController.registerCatalog(window.__PIPELINE_CATALOG__);
+                        emitToast(`✅ 已通过 URL 成功连接索引库 (${window.__PIPELINE_CATALOG__.length} 个待选方案)`, 'success');
+                    } else {
+                        // 检查是否有直接注册到 hubController，或者查找新增的全局变量
+                        const afterProps = Object.getOwnPropertyNames(window);
+                        const newProp = afterProps.find(p => !beforeProps.has(p) && Array.isArray(window[p]));
+                        if (newProp) {
+                            hubController.registerCatalog(window[newProp]);
+                            emitToast(`✅ 索引库已挂载 (${window[newProp].length} 个预方案)`, 'success');
+                        }
+                    }
+                } else {
+                    emitToast(`⚠️ URL 索引库加载失败: ${res.message}`, 'warning');
+                }
+            } catch (err) {
+                console.error("解析 URL 索引失败:", err);
+            }
+        }
+
+        // 监听高度变化同步宿主
         const rootContainer = document.getElementById('pipeline-root');
         const resizeObserver = new ResizeObserver(entries => {
             for (let entry of entries) {
-                const h = Math.ceil(entry.contentRect.height + 30);
+                const h = Math.ceil(entry.contentRect.height + 25);
                 postToHost('RESIZE_HEIGHT', { height: h });
             }
         });
         resizeObserver.observe(rootContainer);
 
+        // 高度自适应撑开 textarea (代码多长展开多高)
+        function autoExpandTextarea(textarea) {
+            if (!textarea) return;
+            textarea.style.height = 'auto';
+            const targetHeight = Math.max(34, textarea.scrollHeight);
+            textarea.style.height = targetHeight + 'px';
+        }
+
         // =========================================================================
-        // 沙箱与脚本嗅探加载器
+        // 沙箱与脚本嗅探器
         // =========================================================================
         let isSandboxActive = false;
 
@@ -301,7 +441,7 @@
                 };
                 s.onerror = () => {
                     clearTimeout(timer);
-                    resolve({ url, status: 'error', message: '跨域 CORS 或网络错误', injectedProps: [] });
+                    resolve({ url, status: 'error', message: '跨域 CORS 或 404 不存在', injectedProps: [] });
                 };
                 document.head.appendChild(s);
             });
@@ -311,7 +451,7 @@
         }
 
         // =========================================================================
-        // 本地方案储存管理
+        // 本地方案存储与原子独立 JS 导出下载
         // =========================================================================
         const PresetStore = {
             getCustomList() {
@@ -337,14 +477,66 @@
             deleteCustom(id) {
                 let list = this.getCustomList().filter(p => p.id !== id);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+            },
+            compileToAtomicStandaloneJS(preset) {
+                const safeId = (preset.id || 'preset_' + Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const manifest = {
+                    id: safeId,
+                    name: preset.name,
+                    version: '1.0.0',
+                    createdAt: new Date().toISOString(),
+                    externalScripts: preset.externalScripts || [],
+                    steps: preset.steps || []
+                };
+
+                return `/**
+ * [Pipeline Atomic Preset Plugin] ${preset.name}
+ * ID: ${safeId}
+ */
+(function(global) {
+    'use strict';
+    const ENGINE_KEY = '${GLOBAL_ENGINE_KEY}';
+    const manifest = ${JSON.stringify(manifest, null, 4)};
+
+    if (global[ENGINE_KEY] && global[ENGINE_KEY].hub && typeof global[ENGINE_KEY].hub.register === 'function') {
+        global[ENGINE_KEY].hub.register(manifest);
+    } else {
+        global.__PIPELINE_EARLY_PLUGINS__ = global.__PIPELINE_EARLY_PLUGINS__ || [];
+        global.__PIPELINE_EARLY_PLUGINS__.push(manifest);
+    }
+})(typeof window !== 'undefined' ? window : this);
+`;
+            },
+            exportAsJSFile(preset) {
+                const jsContent = this.compileToAtomicStandaloneJS(preset);
+                const safeId = (preset.id || 'preset_' + Date.now()).replace(/[^a-zA-Z0-9_-]/g, '_');
+                const blob = new Blob([jsContent], { type: 'application/javascript;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pipeline.preset.${safeId}.js`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
         };
 
         // =========================================================================
-        // UI 元素与方案下拉选单绑定
+        // UI 元素定位
         // =========================================================================
         const stepsListEl = document.getElementById('steps-list');
         const btnAddStep = document.getElementById('btnAddStep');
+        const stepsCountBadge = document.getElementById('stepsCountBadge');
+        const btnToggleAllSteps = document.getElementById('btnToggleAllSteps');
+        const iconToggleAll = document.getElementById('iconToggleAll');
+        const txtToggleAll = document.getElementById('txtToggleAll');
+
+        const stepsPanelHeader = document.getElementById('stepsPanelHeader');
+        const stepsPanelContent = document.getElementById('stepsPanelContent');
+        const stepsPanelChevron = document.getElementById('stepsPanelChevron');
+        const stepsPanelSummary = document.getElementById('stepsPanelSummary');
+
         const previewThead = document.getElementById('preview-thead');
         const previewTbody = document.getElementById('preview-tbody');
         const statusEl = document.getElementById('status');
@@ -357,13 +549,30 @@
         const scriptStatusBadge = document.getElementById('scriptStatusBadge');
         const injectedGlobalsBox = document.getElementById('injectedGlobalsBox');
         
-        const remoteConfigUrlInput = document.getElementById('remoteConfigUrl');
-        const btnMountRemote = document.getElementById('btnMountRemote');
         const presetSelect = document.getElementById('presetSelect');
         const btnLoadPreset = document.getElementById('btnLoadPreset');
+        const txtLoadPreset = document.getElementById('txtLoadPreset');
         const btnDeletePreset = document.getElementById('btnDeletePreset');
+
+        // 内联导出/保存/导入控件
         const btnSaveCurrent = document.getElementById('btnSaveCurrent');
-        const btnExportJS = document.getElementById('btnExportJS');
+        const inlineSavePanel = document.getElementById('inlineSavePanel');
+        const inputLocalPresetName = document.getElementById('inputLocalPresetName');
+        const btnConfirmSaveLocal = document.getElementById('btnConfirmSaveLocal');
+        const btnCancelSaveLocal = document.getElementById('btnCancelSaveLocal');
+
+        const btnOpenExportPanel = document.getElementById('btnOpenExportPanel');
+        const inlineExportPanel = document.getElementById('inlineExportPanel');
+        const exportPresetId = document.getElementById('exportPresetId');
+        const exportPresetName = document.getElementById('exportPresetName');
+        const btnExecuteExportJS = document.getElementById('btnExecuteExportJS');
+        const btnCancelExport = document.getElementById('btnCancelExport');
+
+        const btnTriggerImportFile = document.getElementById('btnTriggerImportFile');
+        const fileImportJS = document.getElementById('fileImportJS');
+
+        let isAllCollapsedState = false;
+        let isStepsPanelCollapsed = false;
 
         function buildFullRows() {
             return hostRows.map(item => {
@@ -393,11 +602,29 @@
             emitToast(isSandboxActive ? "🛡️ 已开启严格沙箱防护" : "⚠️ 已解除沙箱限制", 'info');
         };
 
+        // 依赖面板折叠
         document.getElementById('toggleScriptsHeader').onclick = () => {
             const body = document.getElementById('scriptsBody');
             const isHidden = body.classList.toggle('hidden');
             document.getElementById('toggleText').innerText = isHidden ? '展开详情与全局渗透检查' : '收起详情';
             document.getElementById('toggleArrow').style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+        };
+
+        // 步骤流水线总面板折叠
+        stepsPanelHeader.onclick = () => {
+            isStepsPanelCollapsed = !isStepsPanelCollapsed;
+            stepsPanelContent.classList.toggle('hidden', isStepsPanelCollapsed);
+            stepsPanelChevron.style.transform = isStepsPanelCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+            
+            if (isStepsPanelCollapsed) {
+                const steps = getCurrentSteps();
+                const cols = steps.map(s => s.colName || '未命名').slice(0, 5).join(', ');
+                stepsPanelSummary.innerText = cols ? `[生成列: ${cols}${steps.length > 5 ? '...' : ''}]` : '[暂无步骤]';
+                stepsPanelSummary.classList.remove('hidden');
+            } else {
+                stepsPanelSummary.classList.add('hidden');
+                stepsListEl.querySelectorAll('.step-code').forEach(autoExpandTextarea);
+            }
         };
 
         function addScriptUrlRow(url = '') {
@@ -463,37 +690,130 @@
         document.getElementById('btnAddScriptUrl').onclick = () => addScriptUrlRow('');
         document.getElementById('btnTriggerLoadScripts').onclick = ensureScriptsLoaded;
 
-        // 步骤管理
-        function addStepDOM(colName = '', code = '') {
+        // =========================================================================
+        // 步骤卡片构建：保证列名文字百分之百完整呈现
+        // =========================================================================
+        function updateStepSummary(item) {
+            const colName = item.querySelector('.step-col-name').value.trim();
+            const code = item.querySelector('.step-code').value.trim();
+            const displayBadge = item.querySelector('.step-col-display');
+            const previewText = item.querySelector('.step-code-preview');
+
+            displayBadge.innerText = colName ? colName : '未命名列';
+            displayBadge.className = colName 
+                ? 'step-col-display shrink-0 whitespace-nowrap font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded text-xs' 
+                : 'step-col-display shrink-0 whitespace-nowrap font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded text-xs italic';
+
+            const singleLine = code.replace(/\s+/g, ' ');
+            previewText.innerText = singleLine ? `→ ${singleLine}` : '→ (无代码)';
+        }
+
+        function addStepDOM(colName = '', code = '', defaultCollapsed = false) {
             const item = document.createElement('div');
-            item.className = 'step-box p-2.5 bg-slate-50 border border-slate-200 rounded-lg relative';
+            item.className = 'step-box bg-white border border-slate-200/90 rounded-md transition-shadow duration-150 overflow-hidden shadow-2xs' + (defaultCollapsed ? ' collapsed' : '');
+
             item.innerHTML = `
-                <div class="flex justify-between items-center mb-1.5">
-                    <span class="step-badge text-[0.65rem] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">
-                        Step <span class="step-num">?</span>
-                    </span>
-                    <button type="button" class="btn-del-step text-slate-400 hover:text-red-500 p-0.5 text-xs"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div class="md:col-span-1">
-                        <label class="text-[0.63rem] font-bold text-slate-600 block mb-0.5">生成列名：</label>
-                        <input type="text" class="step-col-name workspace-input !py-1 text-xs font-semibold text-indigo-700" value="${colName}">
+                <div class="step-header flex items-center justify-between px-2.5 py-1.5 bg-slate-50/80 hover:bg-slate-100/80 cursor-pointer select-none transition-colors border-b border-slate-100 gap-2">
+                    <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+                        <i class="fa-solid fa-chevron-down text-[0.6rem] text-slate-400 step-chevron shrink-0"></i>
+                        <span class="step-badge text-[0.62rem] font-bold px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 font-mono shrink-0">
+                            Step <span class="step-num">?</span>
+                        </span>
+                        <!-- 完整呈现列名，绝不使用省略号 -->
+                        <span class="step-col-display"></span>
+                        <span class="step-code-preview text-[0.62rem] font-mono text-slate-400 truncate flex-1 min-w-0 hidden"></span>
                     </div>
-                    <div class="md:col-span-2">
-                        <label class="text-[0.63rem] font-bold text-slate-600 block mb-0.5">JS 转换逻辑：</label>
-                        <textarea class="step-code workspace-input !py-1 text-xs font-mono text-slate-800 h-14 resize-none leading-tight">${code}</textarea>
+                    <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
+                        <button type="button" title="上移" class="btn-move-up p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition text-xs"><i class="fa-solid fa-arrow-up text-[0.6rem]"></i></button>
+                        <button type="button" title="下移" class="btn-move-down p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition text-xs"><i class="fa-solid fa-arrow-down text-[0.6rem]"></i></button>
+                        <button type="button" title="删除" class="btn-del-step p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition text-xs"><i class="fa-solid fa-trash-can text-[0.6rem]"></i></button>
+                    </div>
+                </div>
+
+                <div class="step-body p-2.5 bg-white space-y-2">
+                    <div class="flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
+                        <span class="text-[0.63rem] font-bold text-slate-500 flex items-center gap-1 shrink-0 select-none">
+                            <i class="fa-solid fa-tag text-[0.58rem] text-indigo-400"></i> 生成新列名：
+                        </span>
+                        <input type="text" class="step-col-name flex-1 bg-transparent border-none outline-none focus:ring-0 text-xs font-bold text-indigo-700 placeholder:text-slate-300 placeholder:font-normal p-0" placeholder="点击直接输入完整列名，如: assembledProductLength" value="${colName}">
+                    </div>
+
+                    <div class="bg-slate-50/70 hover:bg-slate-50/90 rounded-md p-2 transition-colors">
+                        <div class="flex justify-between items-center text-[0.6rem] text-slate-400 mb-1 select-none">
+                            <span class="font-medium text-slate-600 flex items-center gap-1">
+                                <i class="fa-solid fa-code text-[0.6rem] text-indigo-500"></i> JS 转换逻辑
+                                <span class="text-[0.55rem] text-slate-400 font-normal">(高度随内容全自动撑开)</span>
+                            </span>
+                            <span class="font-mono text-[0.55rem] text-slate-400">可用: row, index, rows, total</span>
+                        </div>
+                        <textarea class="step-code w-full bg-transparent border-none outline-none focus:ring-0 p-0 text-xs font-mono text-slate-800 leading-relaxed overflow-hidden placeholder:text-slate-300 resize-none" rows="1" placeholder="例: return Number(row['单价'] || 0) * Number(row['数量'] || 0);">${code}</textarea>
                     </div>
                 </div>
             `;
-            item.querySelector('.btn-del-step').onclick = () => { item.remove(); reindexSteps(); runPipelinePreview(); };
-            item.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', runPipelinePreview));
+
+            const textarea = item.querySelector('.step-code');
+            const colInput = item.querySelector('.step-col-name');
+
+            item.querySelector('.step-header').onclick = () => {
+                const wasCollapsed = item.classList.contains('collapsed');
+                item.classList.toggle('collapsed', !wasCollapsed);
+                if (wasCollapsed) autoExpandTextarea(textarea);
+            };
+
+            item.querySelector('.btn-move-up').onclick = () => {
+                const prev = item.previousElementSibling;
+                if (prev) {
+                    stepsListEl.insertBefore(item, prev);
+                    reindexSteps();
+                    runPipelinePreview();
+                }
+            };
+            item.querySelector('.btn-move-down').onclick = () => {
+                const next = item.nextElementSibling;
+                if (next) {
+                    stepsListEl.insertBefore(next, item);
+                    reindexSteps();
+                    runPipelinePreview();
+                }
+            };
+            item.querySelector('.btn-del-step').onclick = () => {
+                item.remove();
+                reindexSteps();
+                runPipelinePreview();
+            };
+
+            colInput.addEventListener('input', () => {
+                updateStepSummary(item);
+                runPipelinePreview();
+            });
+
+            textarea.addEventListener('input', () => {
+                autoExpandTextarea(textarea);
+                updateStepSummary(item);
+                runPipelinePreview();
+            });
+
+            updateStepSummary(item);
             stepsListEl.appendChild(item);
             reindexSteps();
+
+            if (!defaultCollapsed) {
+                setTimeout(() => autoExpandTextarea(textarea), 0);
+            }
+            return item;
         }
 
         function reindexSteps() {
-            stepsListEl.querySelectorAll('.step-box').forEach((box, i) => {
+            const boxes = stepsListEl.querySelectorAll('.step-box');
+            stepsCountBadge.innerText = boxes.length;
+            boxes.forEach((box, i) => {
                 box.querySelector('.step-num').innerText = i + 1;
+                const btnUp = box.querySelector('.btn-move-up');
+                const btnDown = box.querySelector('.btn-move-down');
+                btnUp.style.opacity = (i === 0) ? '0.25' : '1';
+                btnUp.disabled = (i === 0);
+                btnDown.style.opacity = (i === boxes.length - 1) ? '0.25' : '1';
+                btnDown.disabled = (i === boxes.length - 1);
             });
         }
 
@@ -505,58 +825,173 @@
             }));
         }
 
-        // =========================================================================
-        // 核心二：挂载远程直连方案逻辑
-        // =========================================================================
-        btnMountRemote.onclick = async () => {
-            const url = remoteConfigUrlInput.value.trim();
-            if (!url) return alert("请输入远程原子配置 JS 文件的完整 URL！");
-            if (!/^https?:\/\//i.test(url)) return alert("配置链接必须以 http:// 或 https:// 开头！");
+        btnToggleAllSteps.onclick = () => {
+            const boxes = stepsListEl.querySelectorAll('.step-box');
+            if (boxes.length === 0) return;
 
-            btnMountRemote.disabled = true;
-            btnMountRemote.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 挂载中...`;
+            isAllCollapsedState = !isAllCollapsedState;
+            boxes.forEach(box => {
+                box.classList.toggle('collapsed', isAllCollapsedState);
+                if (!isAllCollapsedState) autoExpandTextarea(box.querySelector('.step-code'));
+            });
 
-            const prevCount = hubController.getAll().length;
-            const res = await loadScriptWithPollutionAudit(url, 10000);
-
-            btnMountRemote.disabled = false;
-            btnMountRemote.innerHTML = `<i class="fa-solid fa-plus"></i> 挂载方案`;
-
-            if (res.status !== 'loaded') {
-                return alert(`远程方案拉取失败: ${res.message}`);
-            }
-
-            const all = hubController.getAll();
-            const latestMounted = (all.length > prevCount) ? all[all.length - 1] : null;
-
-            if (latestMounted) {
-                emitToast(`🎉 成功挂载方案【${latestMounted.name}】！正在准备依赖...`, 'success');
-                refreshPresetDropdown(latestMounted.id);
-                await applyPresetToUI(latestMounted);
-                remoteConfigUrlInput.value = '';
+            if (isAllCollapsedState) {
+                iconToggleAll.className = "fa-solid fa-expand text-[0.55rem]";
+                txtToggleAll.innerText = "全部展开";
             } else {
-                alert("⚠️ 脚本未调用 window.__EXCEL_PIPELINE_ENGINE__.hub.register() 注册！请检查插件代码。");
+                iconToggleAll.className = "fa-solid fa-compress text-[0.55rem]";
+                txtToggleAll.innerText = "全部收起";
             }
         };
 
-        // 订阅 Hub 注册事件，自动刷新下拉选单
-        hubController.subscribe((preset) => {
-            refreshPresetDropdown(preset.id);
-        });
+        btnAddStep.onclick = () => {
+            if (isStepsPanelCollapsed) stepsPanelHeader.click();
+            const newCard = addStepDOM('', '', false);
+            stepsListEl.scrollTop = stepsListEl.scrollHeight;
+            newCard.querySelector('.step-col-name').focus();
+        };
 
+        // =========================================================================
+        // 专区：零弹窗内联「另存」与「导出原子 JS」与「本地 JS 导入」
+        // =========================================================================
+        btnSaveCurrent.onclick = () => {
+            const steps = getCurrentSteps();
+            if (steps.length === 0) return alert("当前没有配置步骤，无法保存！");
+            inlineSavePanel.classList.remove('hidden');
+            inlineExportPanel.classList.add('hidden');
+            inputLocalPresetName.value = `自定义业务规整 (${steps.length}步)`;
+            inputLocalPresetName.focus();
+        };
+
+        btnCancelSaveLocal.onclick = () => inlineSavePanel.classList.add('hidden');
+
+        btnConfirmSaveLocal.onclick = () => {
+            const name = inputLocalPresetName.value.trim();
+            if (!name) return alert("请输入方案名称！");
+            const steps = getCurrentSteps();
+            const scripts = getScriptUrls();
+            const saved = PresetStore.saveCustom(name, steps, scripts);
+            refreshPresetDropdown(saved.id);
+            inlineSavePanel.classList.add('hidden');
+            emitToast(`🎉 方案【${saved.name}】已成功归档保存在本地！`, 'success');
+        };
+
+        btnOpenExportPanel.onclick = () => {
+            const steps = getCurrentSteps();
+            if (steps.length === 0) return alert("当前暂无步骤可导出！");
+            if (steps.some(s => !s.colName || !s.code)) {
+                return alert("请确保所有步骤均已填写生成列名与代码！");
+            }
+            inlineExportPanel.classList.remove('hidden');
+            inlineSavePanel.classList.add('hidden');
+            exportPresetId.value = 'preset_' + Date.now().toString(36);
+            exportPresetName.value = '原子业务规整插件';
+            exportPresetName.focus();
+        };
+
+        btnCancelExport.onclick = () => inlineExportPanel.classList.add('hidden');
+
+        btnExecuteExportJS.onclick = () => {
+            const idVal = exportPresetId.value.trim();
+            const nameVal = exportPresetName.value.trim();
+            if (!idVal) return alert("请输入唯一 Identifier 标识！");
+            if (!nameVal) return alert("请输入方案中文展示名称！");
+
+            const safeId = idVal.replace(/[^a-zA-Z0-9_-]/g, '_');
+            const steps = getCurrentSteps();
+            const scripts = getScriptUrls();
+
+            const presetObj = {
+                id: safeId,
+                name: nameVal,
+                externalScripts: scripts,
+                steps: steps
+            };
+
+            PresetStore.exportAsJSFile(presetObj);
+            inlineExportPanel.classList.add('hidden');
+            emitToast(`📦 插件 pipeline.preset.${safeId}.js 已成功导出下载！`, 'success');
+        };
+
+        btnTriggerImportFile.onclick = () => {
+            fileImportJS.value = '';
+            fileImportJS.click();
+        };
+
+        fileImportJS.onchange = async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                const content = ev.target.result;
+                try {
+                    let manifest = null;
+                    const match = content.match(/const\s+manifest\s*=\s*(\{[\s\S]*?\});\s*(?:if\s*\(global|const\s+ENGINE_KEY|$)/);
+                    if (match && match[1]) {
+                        try {
+                            manifest = JSON.parse(match[1]);
+                        } catch (err) {
+                            manifest = new Function(`return (${match[1]});`)();
+                        }
+                    } else {
+                        const mockGlobal = {
+                            [GLOBAL_ENGINE_KEY]: {
+                                hub: { register(m) { manifest = m; } }
+                            }
+                        };
+                        new Function('global', 'window', content)(mockGlobal, mockGlobal);
+                    }
+
+                    if (!manifest || !manifest.id || !Array.isArray(manifest.steps)) {
+                        throw new Error("未能解析出符合规范的 manifest！");
+                    }
+
+                    hubController.register(manifest);
+                    refreshPresetDropdown(manifest.id);
+                    await applyPresetToUI(manifest);
+                    emitToast(`🎉 成功导入本地方案【${manifest.name}】！`, 'success');
+                } catch (err) {
+                    alert(`导入失败: ${err.message}`);
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        hubController.subscribe((preset) => refreshPresetDropdown(preset.id));
+
+        // =========================================================================
+        // 下拉菜单渲染：完美划分【预方案索引】/【已挂载原子插件】/【本地保存】
+        // =========================================================================
         function refreshPresetDropdown(selectedId = null) {
             const hubPresets = hubController.getAll();
             const customs = PresetStore.getCustomList();
+            const lazyItems = Array.from(lazyCatalogMap.values());
 
             let html = '';
-            if (hubPresets.length > 0) {
-                html += `<optgroup label="🌐 远程原子方案 (${hubPresets.length})">`;
-                hubPresets.forEach(p => {
-                    html += `<option value="${p.id}">[原子插件] ${p.name}</option>`;
+
+            // 1. 远程索引库预方案 (按需即时拉取)
+            if (lazyItems.length > 0) {
+                html += `<optgroup label="🌐 远程索引待命方案 (按需拉取)">`;
+                lazyItems.forEach(p => {
+                    let statusPrefix = '⚡ [预方案]';
+                    if (p.status === 'loaded') statusPrefix = '🟢 [已激活]';
+                    if (p.status === 'failed') statusPrefix = '🔴 [已失效]';
+                    html += `<option value="lazy::${p.id}">${statusPrefix} ${p.name}</option>`;
                 });
                 html += `</optgroup>`;
             }
 
+            // 2. 独立原子插件方案 (已加载并存在于引擎中)
+            if (hubPresets.length > 0) {
+                html += `<optgroup label="📦 独立原子插件方案 (${hubPresets.length})">`;
+                hubPresets.forEach(p => {
+                    html += `<option value="${p.id}">[原子方案] ${p.name}</option>`;
+                });
+                html += `</optgroup>`;
+            }
+
+            // 3. 本地保存方案
             if (customs.length > 0) {
                 html += `<optgroup label="👤 本地保存方案 (${customs.length})">`;
                 customs.forEach(p => {
@@ -565,49 +1000,95 @@
                 html += `</optgroup>`;
             }
 
-            if (!html) {
-                html = `<option value="">暂无方案，请挂载或新建</option>`;
-            }
+            if (!html) html = `<option value="">暂无方案，请配置或通过 URL 挂载</option>`;
 
             presetSelect.innerHTML = html;
             if (selectedId) presetSelect.value = selectedId;
-            btnDeletePreset.style.display = (presetSelect.value && presetSelect.value.startsWith('custom-')) ? 'inline-block' : 'none';
+            updateDeleteBtnState();
         }
 
-        presetSelect.onchange = () => {
-            btnDeletePreset.style.display = (presetSelect.value && presetSelect.value.startsWith('custom-')) ? 'inline-block' : 'none';
-        };
+        function updateDeleteBtnState() {
+            const val = presetSelect.value;
+            btnDeletePreset.style.display = (val && val.startsWith('custom-')) ? 'inline-block' : 'none';
+        }
+        presetSelect.onchange = updateDeleteBtnState;
 
         async function applyPresetToUI(preset) {
             scriptItemsContainer.innerHTML = '';
             (preset.externalScripts || []).forEach(u => addScriptUrlRow(u));
             stepsListEl.innerHTML = '';
-            (preset.steps || []).forEach(s => addStepDOM(s.colName, s.code));
+            
+            (preset.steps || []).forEach((s, idx) => {
+                const defaultCollapsed = (preset.steps.length >= 3) ? (idx > 0) : false;
+                addStepDOM(s.colName, s.code, defaultCollapsed);
+            });
             await ensureScriptsLoaded();
         }
 
+        // =========================================================================
+        // 核心三：点击载入激活时的「按需即时探活与拉取」
+        // =========================================================================
         btnLoadPreset.onclick = async () => {
-            const targetId = presetSelect.value;
-            if (!targetId) return;
+            const targetVal = presetSelect.value;
+            if (!targetVal) return;
 
+            // 场景 A：点击的是远程索引里的预方案
+            if (targetVal.startsWith('lazy::')) {
+                const lazyId = targetVal.replace('lazy::', '');
+                const lazyItem = lazyCatalogMap.get(lazyId);
+                if (!lazyItem) return;
+
+                // 检查是否已经提前加载过了
+                const alreadyRegistered = hubController.get(lazyId);
+                if (alreadyRegistered) {
+                    emitToast(`正在载入已激活方案【${alreadyRegistered.name}】...`, 'info');
+                    await applyPresetToUI(alreadyRegistered);
+                    return;
+                }
+
+                // 真正发起按需探活与远程拉取
+                btnLoadPreset.disabled = true;
+                txtLoadPreset.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> 即时拉取中...`;
+
+                const prevCount = hubController.getAll().length;
+                const res = await loadScriptWithPollutionAudit(lazyItem.url, 10000);
+
+                btnLoadPreset.disabled = false;
+                txtLoadPreset.innerText = `载入激活`;
+
+                if (res.status !== 'loaded') {
+                    // 标记失效状态
+                    lazyItem.status = 'failed';
+                    lazyItem.error = res.message || '网络连接或文件不存在';
+                    refreshPresetDropdown(targetVal);
+                    alert(`❌ 预方案【${lazyItem.name}】拉取失败或已失效！\n原因: ${lazyItem.error}\n链接: ${lazyItem.url}`);
+                    return;
+                }
+
+                // 验证该文件是否合规注册了 manifest
+                const all = hubController.getAll();
+                let mountedPreset = hubController.get(lazyId) || (all.length > prevCount ? all[all.length - 1] : null);
+
+                if (mountedPreset) {
+                    lazyItem.status = 'loaded';
+                    refreshPresetDropdown(targetVal);
+                    emitToast(`🎉 预方案【${lazyItem.name}】远程探活成功并已装载！`, 'success');
+                    await applyPresetToUI(mountedPreset);
+                } else {
+                    lazyItem.status = 'failed';
+                    refreshPresetDropdown(targetVal);
+                    alert(`⚠️ 预方案文件已拉取，但内部未调用引擎 register() 进行登记注册！`);
+                }
+                return;
+            }
+
+            // 场景 B：普通已载入方案 / 本地方案
             const allPresets = [...hubController.getAll(), ...PresetStore.getCustomList()];
-            const found = allPresets.find(p => p.id === targetId);
+            const found = allPresets.find(p => p.id === targetVal);
             if (found) {
                 emitToast(`正在载入方案【${found.name}】...`, 'info');
                 await applyPresetToUI(found);
             }
-        };
-
-        btnSaveCurrent.onclick = () => {
-            const steps = getCurrentSteps();
-            if (steps.length === 0) return alert("当前卡片没有步骤，无法保存！");
-            const name = prompt("请输入方案显示名称：", "自定义业务清洗");
-            if (!name || !name.trim()) return;
-
-            const scripts = getScriptUrls();
-            const saved = PresetStore.saveCustom(name, steps, scripts);
-            refreshPresetDropdown(saved.id);
-            emitToast(`🎉 方案【${saved.name}】已成功保存在本地！`, 'success');
         };
 
         btnDeletePreset.onclick = () => {
@@ -619,7 +1100,9 @@
             emitToast("已删除方案", 'info');
         };
 
-        // 试跑与计算
+        // =========================================================================
+        // 试跑与执行
+        // =========================================================================
         function runPipelinePreview() {
             const steps = getCurrentSteps();
             if (steps.length === 0 || hostRows.length === 0) {
@@ -646,10 +1129,11 @@
                     }
                 }
 
+                // 表头保持完整列名
                 previewThead.innerHTML = `<tr class="bg-slate-100 border-b border-slate-200 text-slate-600">
                     <th class="p-1.5 w-10 text-center">#</th>
                     <th class="p-1.5 min-w-[120px]">原始数据快照</th>
-                    ${steps.map(s => `<th class="p-1.5 text-indigo-600 bg-indigo-50/50">${s.colName || '未命名'}</th>`).join('')}
+                    ${steps.map(s => `<th class="p-1.5 text-indigo-600 bg-indigo-50/50 whitespace-nowrap font-mono">${s.colName || '未命名'}</th>`).join('')}
                 </tr>`;
 
                 previewTbody.innerHTML = workingData.slice(0, 3).map((row, idx) => {
@@ -657,7 +1141,7 @@
                     return `<tr class="border-b border-slate-100 last:border-none">
                         <td class="p-1.5 text-center text-slate-400">#${idx + 1}</td>
                         <td class="p-1.5 text-slate-500 truncate max-w-[150px]" title="${snapTxt}">${snapTxt || '—'}</td>
-                        ${steps.map(s => `<td class="p-1.5 font-bold text-indigo-600 bg-indigo-50/20">${row[s.colName] ?? ''}</td>`).join('')}
+                        ${steps.map(s => `<td class="p-1.5 font-bold text-indigo-600 bg-indigo-50/20 whitespace-nowrap">${row[s.colName] ?? ''}</td>`).join('')}
                     </tr>`;
                 }).join('');
 
@@ -669,8 +1153,6 @@
                 previewTbody.innerHTML = `<tr><td colspan="5" class="p-2 text-red-500 bg-red-50">${err.message}</td></tr>`;
             }
         }
-
-        btnAddStep.onclick = () => addStepDOM('', '');
 
         btnApply.onclick = async () => {
             const steps = getCurrentSteps();
@@ -706,12 +1188,10 @@
             }
         };
 
-        btnUndo.onclick = () => {
-            postToHost('UNDO_CHANGES');
-        };
+        btnUndo.onclick = () => postToHost('UNDO_CHANGES');
 
         // =========================================================================
-        // 宿主消息通道
+        // 宿主通信
         // =========================================================================
         window.addEventListener('message', function(e) {
             const data = e.data;
@@ -734,7 +1214,7 @@
                 }
                 case 'UNDO_SUCCESS': {
                     btnApply.disabled = false;
-                    btnApply.className = "bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-5 text-xs rounded-lg font-semibold";
+                    btnApply.className = "bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 px-5 text-xs rounded-lg font-semibold shadow-xs transition-colors";
                     btnApply.innerHTML = `<i class="fa-solid fa-play text-[0.65rem]"></i> 链式全量计算并写入 (${hostRows.length} 行)`;
                     btnUndo.classList.add('hidden');
                     break;
@@ -742,7 +1222,10 @@
             }
         });
 
-        // 告知父级 iframe 装载完毕
+        // 启动时优先尝试从 URL 初始化索引目录
+        initCatalogFromUrl();
+
+        // 握手告知宿主
         postToHost('IFRAME_READY');
     </script>
 </body>
