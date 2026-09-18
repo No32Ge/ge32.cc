@@ -1,0 +1,161 @@
+<div id="alc-dynamic-dashboard-card-wrapper" class="w-full select-none -my-1">
+    <style>
+        .system-message-body:has(#alc-dynamic-dashboard-card-wrapper) {
+            padding: 0 !important;
+            margin-top: 6px !important;
+        }
+        .bubble:has(#alc-dynamic-dashboard-card-wrapper) {
+            background: #ffffff !important;
+            box-shadow: 0 12px 36px -6px rgba(15, 23, 42, 0.08) !important;
+            border: 1px solid #e2e8f0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+        }
+        @keyframes alcGlowBorder {
+            0%, 100% { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); }
+            50% { border-color: #4f46e5; box-shadow: 0 0 0 6px rgba(99,102,241,0.45); }
+        }
+        .alc-input-glow {
+            animation: alcGlowBorder 1.6s ease-in-out infinite;
+        }
+    </style>
+
+    <!-- 独立的仪表盘 Iframe 视口 -->
+    <iframe id="alc-dashboard-iframe"
+            src="https://ge32.cc/alch/dashboard-card/v1"
+            class="w-full border-0 block"
+            style="min-height: 180px; height: 260px; transition: height 0.25s ease;"
+            allow="clipboard-read; clipboard-write">
+    </iframe>
+</div>
+
+<script>
+(function initAlcIframeBridge() {
+    const frame = document.getElementById('alc-dashboard-iframe');
+    const inputKey = document.getElementById('cfgAccessKey');
+
+    // 1. Toast 统一调用宿主环境
+    function triggerHostToast(msg, type = 'info') {
+        if (typeof showToast === 'function') {
+            showToast(msg, type);
+            return;
+        }
+        let box = document.getElementById('alc-modern-toast-box');
+        if (!box) {
+            box = document.createElement('div');
+            box.id = 'alc-modern-toast-box';
+            box.className = 'fixed top-6 left-1/2 -translate-x-1/2 z-[99999] flex flex-col items-center gap-2 pointer-events-none';
+            document.body.appendChild(box);
+        }
+        const t = document.createElement('div');
+        t.className = 'pointer-events-auto bg-slate-900/90 backdrop-blur-xl text-white border border-slate-700/80 px-4 py-2 rounded-xl shadow-2xl text-xs font-semibold transform -translate-y-2 opacity-0 transition-all duration-300';
+        t.innerHTML = '<span>' + msg + '</span>';
+        box.appendChild(t);
+        requestAnimationFrame(() => { t.style.transform = 'translateY(0)'; t.style.opacity = '1'; });
+        setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-6px)'; setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    // 2. 向 Iframe 传入最新的上下文状态 (Key, Relay 地址, 设备指纹)
+    function sendStateToIframe() {
+        if (!frame || !frame.contentWindow) return;
+        const key = inputKey ? inputKey.value.trim() : '';
+        const relayBase = (typeof RELAY_BASE_URL !== 'undefined') ? RELAY_BASE_URL : 'http://localhost:5000';
+        const devId = (typeof DEVICE_ID !== 'undefined') ? DEVICE_ID : '';
+
+        frame.contentWindow.postMessage({
+            type: 'ALC_HOST_SYNC_STATE',
+            payload: {
+                accessKey: key,
+                relayBaseUrl: relayBase,
+                deviceId: devId
+            }
+        }, '*');
+    }
+
+    // 3. 监听 Iframe 发送过来的指令与传出数据
+    window.addEventListener('message', function(e) {
+        const data = e.data;
+        if (!data || typeof data !== 'object') return;
+
+        switch(data.type) {
+            // Iframe 加载完成握手，请求当前工作台状态
+            case 'ALC_IFRAME_READY':
+                sendStateToIframe();
+                break;
+
+            // Iframe 自身内容高度自适应，防止出现双滚动条
+            case 'ALC_IFRAME_RESIZE':
+                if (data.payload && data.payload.height) {
+                    frame.style.height = Math.max(160, data.payload.height) + 'px';
+                }
+                break;
+
+            // 定位到左侧 Key 输入框
+            case 'ALC_ACTION_LOCATE_KEY':
+                if (inputKey) {
+                    inputKey.focus();
+                    inputKey.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    inputKey.classList.add('alc-input-glow');
+                    setTimeout(() => inputKey.classList.remove('alc-input-glow'), 3500);
+                    triggerHostToast(data.payload?.msg || '已为你定位到左侧 Key 输入框！');
+                }
+                break;
+
+            // 清空左侧 Key
+            case 'ALC_ACTION_CLEAR_KEY':
+                if (inputKey) {
+                    inputKey.value = '';
+                    inputKey.focus();
+                    inputKey.dispatchEvent(new Event('input', { bubbles: true }));
+                    inputKey.dispatchEvent(new Event('change', { bubbles: true }));
+                    inputKey.classList.add('alc-input-glow');
+                    setTimeout(() => inputKey.classList.remove('alc-input-glow'), 3000);
+                }
+                triggerHostToast(data.payload?.msg || '已清空密钥输入框，请重新填入有效 Key！');
+                sendStateToIframe();
+                break;
+
+            // 写入/粘贴 Key 到工作台
+            case 'ALC_ACTION_FILL_KEY':
+                if (inputKey && data.payload?.key) {
+                    inputKey.value = data.payload.key;
+                    inputKey.dispatchEvent(new Event('input', { bubbles: true }));
+                    inputKey.dispatchEvent(new Event('change', { bubbles: true }));
+                    inputKey.classList.add('alc-input-glow');
+                    setTimeout(() => inputKey.classList.remove('alc-input-glow'), 3000);
+                    triggerHostToast('✅ 成功填入 Access Key 并激活工作台！', 'success');
+                    sendStateToIframe();
+                }
+                break;
+
+            // 宿主 Toast
+            case 'ALC_ACTION_TOAST':
+                triggerHostToast(data.payload?.msg, data.payload?.toastType || 'info');
+                break;
+
+            // 打开外链
+            case 'ALC_ACTION_OPEN_WINDOW':
+                if (data.payload?.url) {
+                    window.open(data.payload.url, '_blank');
+                    if (data.payload?.toastMsg) triggerHostToast(data.payload.toastMsg);
+                }
+                break;
+        }
+    });
+
+    // 4. 当工作台的 Key 发生变化时，实时同步给 Iframe
+    if (inputKey) {
+        let timer = null;
+        inputKey.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(sendStateToIframe, 300);
+        });
+        inputKey.addEventListener('change', sendStateToIframe);
+    }
+
+    // 初始化重试拉取
+    frame.addEventListener('load', () => {
+        setTimeout(sendStateToIframe, 150);
+    });
+})();
+</script>
