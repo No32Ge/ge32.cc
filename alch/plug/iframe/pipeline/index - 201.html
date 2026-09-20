@@ -16,10 +16,6 @@
         .workspace-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff; }
         html { overflow-y: hidden; }
 
-        /* 全屏模式下的微调 */
-        body.is-fullscreen { padding: 16px 24px; background: #f8fafc; height: 100vh; overflow-y: auto; }
-        body.is-fullscreen #pipeline-root { max-width: 100% !important; }
-
         /* 微型平滑滚动条 */
         .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
         .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
@@ -37,16 +33,9 @@
     <div id="pipeline-root" class="max-w-3xl mx-auto">
         <div class="bubble-header text-indigo-700 flex justify-between items-center mb-2">
             <span class="font-bold flex items-center gap-1.5 text-xs">
-                <i class="fa-solid fa-cubes text-xs text-indigo-500"></i> 数据管线工作室 (V6.5 - 紧凑全屏版)
+                <i class="fa-solid fa-cubes text-xs text-indigo-500"></i> 数据管线工作室 (V6.5 - 索引目录按需拉取版)
             </span>
-            <div class="flex items-center gap-2">
-                <span id="loadTime" class="font-normal text-[0.65rem] text-slate-400"></span>
-                <!-- 全屏切换按钮 -->
-                <button type="button" id="btnToggleFullscreen" class="px-2 py-0.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 rounded text-[0.62rem] font-semibold flex items-center gap-1 transition-colors" title="切换全屏模式 (Esc 退出)">
-                    <i class="fa-solid fa-expand text-[0.6rem]" id="iconFullscreen"></i>
-                    <span id="txtFullscreen">全屏</span>
-                </button>
-            </div>
+            <span id="loadTime" class="font-normal text-[0.65rem] text-slate-400"></span>
         </div>
 
         <!-- 专区 1：远程方案索引目录 (Catalog) 状态条 -->
@@ -164,8 +153,9 @@
             </div>
         </div>
 
-        <!-- 专区 4：步骤处理链容器 -->
+        <!-- 专区 4：步骤处理链容器 (无省略号列名 + 整体抽屉折叠 + 去边框 + 高度自适应) -->
         <div class="mb-3 border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+            <!-- 步骤区域总控制头：即使有100个步骤也可瞬间收拢 -->
             <div class="flex items-center justify-between px-3 py-2 bg-slate-100/80 cursor-pointer select-none border-b border-slate-200" id="stepsPanelHeader">
                 <div class="flex items-center gap-2 min-w-0 flex-1">
                     <i class="fa-solid fa-chevron-down text-[0.65rem] text-indigo-600 transition-transform duration-200" id="stepsPanelChevron"></i>
@@ -177,13 +167,13 @@
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
                     <button type="button" id="btnToggleAllSteps" class="px-2 py-0.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded text-[0.62rem] font-medium flex items-center gap-1 transition-colors">
-                        <i class="fa-solid fa-expand text-[0.55rem]" id="iconToggleAll"></i>
-                        <span id="txtToggleAll">全部展开</span>
+                        <i class="fa-solid fa-compress text-[0.55rem]" id="iconToggleAll"></i>
+                        <span id="txtToggleAll">全部收起</span>
                     </button>
                 </div>
             </div>
 
-            <!-- 步骤列表主体容器 -->
+            <!-- 步骤列表主体容器：max-height 防暴涨并带微型滚动 -->
             <div id="stepsPanelContent" class="p-2 space-y-2">
                 <div id="steps-list" class="space-y-1.5 max-h-[520px] overflow-y-auto pr-1 custom-scroll"></div>
                 <button type="button" id="btnAddStep" class="w-full py-1.5 border border-dashed border-indigo-300 hover:border-indigo-500 bg-white hover:bg-indigo-50/50 text-indigo-600 font-semibold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-colors">
@@ -238,7 +228,6 @@
 
         let hostHeaders = [];
         let hostRows = [];
-        let isFullscreenState = false;
 
         function postToHost(action, payload = {}) {
             if (window.parent) {
@@ -250,40 +239,6 @@
         }
 
         // =========================================================================
-        // 全屏模式控制
-        // =========================================================================
-        const btnToggleFullscreen = document.getElementById('btnToggleFullscreen');
-        const iconFullscreen = document.getElementById('iconFullscreen');
-        const txtFullscreen = document.getElementById('txtFullscreen');
-
-        function toggleFullscreen(forceState = null) {
-            isFullscreenState = forceState !== null ? forceState : !isFullscreenState;
-            document.body.classList.toggle('is-fullscreen', isFullscreenState);
-            document.documentElement.style.overflowY = isFullscreenState ? 'auto' : 'hidden';
-
-            if (isFullscreenState) {
-                iconFullscreen.className = 'fa-solid fa-compress text-[0.6rem]';
-                txtFullscreen.innerText = '退出全屏';
-                btnToggleFullscreen.className = "px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-300 rounded text-[0.62rem] font-semibold flex items-center gap-1 transition-colors";
-            } else {
-                iconFullscreen.className = 'fa-solid fa-expand text-[0.6rem]';
-                txtFullscreen.innerText = '全屏';
-                btnToggleFullscreen.className = "px-2 py-0.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 rounded text-[0.62rem] font-semibold flex items-center gap-1 transition-colors";
-            }
-
-            postToHost('TOGGLE_FULLSCREEN', { isFullscreen: isFullscreenState });
-        }
-
-        btnToggleFullscreen.onclick = () => toggleFullscreen();
-
-        // 监听 Esc 快捷退出全屏
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && isFullscreenState) {
-                toggleFullscreen(false);
-            }
-        });
-
-        // =========================================================================
         // 核心一：挂载全局引擎注册中心与 Catalog 索引库
         // =========================================================================
         const GLOBAL_ENGINE_KEY = '__EXCEL_PIPELINE_ENGINE__';
@@ -291,7 +246,7 @@
         
         const internalRegistry = new Map();
         const registryListeners = new Set();
-        const lazyCatalogMap = new Map();
+        const lazyCatalogMap = new Map(); // 存储从索引目录读取到的预方案 { id: { id, name, url, status: 'pending'|'loaded'|'failed', error: '' } }
 
         const hubController = {
             version: '6.5.0',
@@ -315,6 +270,7 @@
                 });
                 return true;
             },
+            // 支持注册预方案目录索引
             registerCatalog(list) {
                 if (!Array.isArray(list)) return;
                 list.forEach(item => {
@@ -323,7 +279,7 @@
                             id: String(item.id).trim(),
                             name: String(item.name || item.id).trim(),
                             url: String(item.url).trim(),
-                            status: 'pending',
+                            status: 'pending', // pending, loaded, failed
                             error: ''
                         });
                     }
@@ -349,6 +305,9 @@
             window.__PIPELINE_EARLY_PLUGINS__ = [];
         }
 
+        // =========================================================================
+        // 核心二：浏览器 URL 参数索引目录解析器 (按需懒加载机制)
+        // =========================================================================
         function updateCatalogUI() {
             const bar = document.getElementById('catalogStatusBar');
             const countTag = document.getElementById('catalogCountTag');
@@ -362,17 +321,24 @@
         }
 
         async function initCatalogFromUrl() {
+            // 支持参数：?catalog=... 或 ?manifests=... 或 ?index=... 或 ?presets=...
             const catalogUrl = urlParams.get('catalog') || urlParams.get('manifests') || urlParams.get('index') || urlParams.get('presets');
             if (!catalogUrl) return;
 
+            console.log(`[Pipeline Engine] 正在从 URL 探测方案索引目录: ${catalogUrl}`);
             try {
+                // 1. 先快照 window 属性
                 const beforeProps = new Set(Object.getOwnPropertyNames(window));
+                
+                // 加载索引 JS
                 const res = await loadScriptWithPollutionAudit(catalogUrl, 8000);
                 if (res.status === 'loaded') {
+                    // 检查标准挂载点 window.__PIPELINE_CATALOG__
                     if (Array.isArray(window.__PIPELINE_CATALOG__)) {
                         hubController.registerCatalog(window.__PIPELINE_CATALOG__);
                         emitToast(`✅ 已通过 URL 成功连接索引库 (${window.__PIPELINE_CATALOG__.length} 个待选方案)`, 'success');
                     } else {
+                        // 检查是否有直接注册到 hubController，或者查找新增的全局变量
                         const afterProps = Object.getOwnPropertyNames(window);
                         const newProp = afterProps.find(p => !beforeProps.has(p) && Array.isArray(window[p]));
                         if (newProp) {
@@ -388,10 +354,9 @@
             }
         }
 
-        // 监听高度变化同步宿主（非全屏时自适应）
+        // 监听高度变化同步宿主
         const rootContainer = document.getElementById('pipeline-root');
         const resizeObserver = new ResizeObserver(entries => {
-            if (isFullscreenState) return; // 全屏状态由宿主掌控高度
             for (let entry of entries) {
                 const h = Math.ceil(entry.contentRect.height + 25);
                 postToHost('RESIZE_HEIGHT', { height: h });
@@ -399,6 +364,7 @@
         });
         resizeObserver.observe(rootContainer);
 
+        // 高度自适应撑开 textarea (代码多长展开多高)
         function autoExpandTextarea(textarea) {
             if (!textarea) return;
             textarea.style.height = 'auto';
@@ -485,7 +451,7 @@
         }
 
         // =========================================================================
-        // 本地方案存储与独立 JS 导出
+        // 本地方案存储与原子独立 JS 导出下载
         // =========================================================================
         const PresetStore = {
             getCustomList() {
@@ -588,6 +554,7 @@
         const txtLoadPreset = document.getElementById('txtLoadPreset');
         const btnDeletePreset = document.getElementById('btnDeletePreset');
 
+        // 内联导出/保存/导入控件
         const btnSaveCurrent = document.getElementById('btnSaveCurrent');
         const inlineSavePanel = document.getElementById('inlineSavePanel');
         const inputLocalPresetName = document.getElementById('inputLocalPresetName');
@@ -604,8 +571,7 @@
         const btnTriggerImportFile = document.getElementById('btnTriggerImportFile');
         const fileImportJS = document.getElementById('fileImportJS');
 
-        // 默认状态设为已折叠，因此总控按钮默认为“全部展开”
-        let isAllCollapsedState = true;
+        let isAllCollapsedState = false;
         let isStepsPanelCollapsed = false;
 
         function buildFullRows() {
@@ -636,6 +602,7 @@
             emitToast(isSandboxActive ? "🛡️ 已开启严格沙箱防护" : "⚠️ 已解除沙箱限制", 'info');
         };
 
+        // 依赖面板折叠
         document.getElementById('toggleScriptsHeader').onclick = () => {
             const body = document.getElementById('scriptsBody');
             const isHidden = body.classList.toggle('hidden');
@@ -643,6 +610,7 @@
             document.getElementById('toggleArrow').style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
         };
 
+        // 步骤流水线总面板折叠
         stepsPanelHeader.onclick = () => {
             isStepsPanelCollapsed = !isStepsPanelCollapsed;
             stepsPanelContent.classList.toggle('hidden', isStepsPanelCollapsed);
@@ -655,7 +623,7 @@
                 stepsPanelSummary.classList.remove('hidden');
             } else {
                 stepsPanelSummary.classList.add('hidden');
-                stepsListEl.querySelectorAll('.step-box:not(.collapsed) .step-code').forEach(autoExpandTextarea);
+                stepsListEl.querySelectorAll('.step-code').forEach(autoExpandTextarea);
             }
         };
 
@@ -722,6 +690,9 @@
         document.getElementById('btnAddScriptUrl').onclick = () => addScriptUrlRow('');
         document.getElementById('btnTriggerLoadScripts').onclick = ensureScriptsLoaded;
 
+        // =========================================================================
+        // 步骤卡片构建：保证列名文字百分之百完整呈现
+        // =========================================================================
         function updateStepSummary(item) {
             const colName = item.querySelector('.step-col-name').value.trim();
             const code = item.querySelector('.step-code').value.trim();
@@ -737,7 +708,7 @@
             previewText.innerText = singleLine ? `→ ${singleLine}` : '→ (无代码)';
         }
 
-        function addStepDOM(colName = '', code = '', defaultCollapsed = true) {
+        function addStepDOM(colName = '', code = '', defaultCollapsed = false) {
             const item = document.createElement('div');
             item.className = 'step-box bg-white border border-slate-200/90 rounded-md transition-shadow duration-150 overflow-hidden shadow-2xs' + (defaultCollapsed ? ' collapsed' : '');
 
@@ -748,6 +719,7 @@
                         <span class="step-badge text-[0.62rem] font-bold px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 font-mono shrink-0">
                             Step <span class="step-num">?</span>
                         </span>
+                        <!-- 完整呈现列名，绝不使用省略号 -->
                         <span class="step-col-display"></span>
                         <span class="step-code-preview text-[0.62rem] font-mono text-slate-400 truncate flex-1 min-w-0 hidden"></span>
                     </div>
@@ -857,7 +829,6 @@
             const boxes = stepsListEl.querySelectorAll('.step-box');
             if (boxes.length === 0) return;
 
-            // 切换状态
             isAllCollapsedState = !isAllCollapsedState;
             boxes.forEach(box => {
                 box.classList.toggle('collapsed', isAllCollapsedState);
@@ -880,6 +851,9 @@
             newCard.querySelector('.step-col-name').focus();
         };
 
+        // =========================================================================
+        // 专区：零弹窗内联「另存」与「导出原子 JS」与「本地 JS 导入」
+        // =========================================================================
         btnSaveCurrent.onclick = () => {
             const steps = getCurrentSteps();
             if (steps.length === 0) return alert("当前没有配置步骤，无法保存！");
@@ -986,6 +960,9 @@
 
         hubController.subscribe((preset) => refreshPresetDropdown(preset.id));
 
+        // =========================================================================
+        // 下拉菜单渲染：完美划分【预方案索引】/【已挂载原子插件】/【本地保存】
+        // =========================================================================
         function refreshPresetDropdown(selectedId = null) {
             const hubPresets = hubController.getAll();
             const customs = PresetStore.getCustomList();
@@ -993,6 +970,7 @@
 
             let html = '';
 
+            // 1. 远程索引库预方案 (按需即时拉取)
             if (lazyItems.length > 0) {
                 html += `<optgroup label="🌐 远程索引待命方案 (按需拉取)">`;
                 lazyItems.forEach(p => {
@@ -1004,6 +982,7 @@
                 html += `</optgroup>`;
             }
 
+            // 2. 独立原子插件方案 (已加载并存在于引擎中)
             if (hubPresets.length > 0) {
                 html += `<optgroup label="📦 独立原子插件方案 (${hubPresets.length})">`;
                 hubPresets.forEach(p => {
@@ -1012,6 +991,7 @@
                 html += `</optgroup>`;
             }
 
+            // 3. 本地保存方案
             if (customs.length > 0) {
                 html += `<optgroup label="👤 本地保存方案 (${customs.length})">`;
                 customs.forEach(p => {
@@ -1033,34 +1013,32 @@
         }
         presetSelect.onchange = updateDeleteBtnState;
 
-        // 【关键改动点 1】：应用方案时，步骤默认全部折叠，界面清爽整洁
         async function applyPresetToUI(preset) {
             scriptItemsContainer.innerHTML = '';
             (preset.externalScripts || []).forEach(u => addScriptUrlRow(u));
             stepsListEl.innerHTML = '';
             
-            (preset.steps || []).forEach((s) => {
-                // 全部默认折叠收起
-                addStepDOM(s.colName, s.code, true);
+            (preset.steps || []).forEach((s, idx) => {
+                const defaultCollapsed = (preset.steps.length >= 3) ? (idx > 0) : false;
+                addStepDOM(s.colName, s.code, defaultCollapsed);
             });
-
-            // 统一将控制条重置为“全部展开”
-            isAllCollapsedState = true;
-            iconToggleAll.className = "fa-solid fa-expand text-[0.55rem]";
-            txtToggleAll.innerText = "全部展开";
-
             await ensureScriptsLoaded();
         }
 
+        // =========================================================================
+        // 核心三：点击载入激活时的「按需即时探活与拉取」
+        // =========================================================================
         btnLoadPreset.onclick = async () => {
             const targetVal = presetSelect.value;
             if (!targetVal) return;
 
+            // 场景 A：点击的是远程索引里的预方案
             if (targetVal.startsWith('lazy::')) {
                 const lazyId = targetVal.replace('lazy::', '');
                 const lazyItem = lazyCatalogMap.get(lazyId);
                 if (!lazyItem) return;
 
+                // 检查是否已经提前加载过了
                 const alreadyRegistered = hubController.get(lazyId);
                 if (alreadyRegistered) {
                     emitToast(`正在载入已激活方案【${alreadyRegistered.name}】...`, 'info');
@@ -1068,6 +1046,7 @@
                     return;
                 }
 
+                // 真正发起按需探活与远程拉取
                 btnLoadPreset.disabled = true;
                 txtLoadPreset.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> 即时拉取中...`;
 
@@ -1078,6 +1057,7 @@
                 txtLoadPreset.innerText = `载入激活`;
 
                 if (res.status !== 'loaded') {
+                    // 标记失效状态
                     lazyItem.status = 'failed';
                     lazyItem.error = res.message || '网络连接或文件不存在';
                     refreshPresetDropdown(targetVal);
@@ -1085,6 +1065,7 @@
                     return;
                 }
 
+                // 验证该文件是否合规注册了 manifest
                 const all = hubController.getAll();
                 let mountedPreset = hubController.get(lazyId) || (all.length > prevCount ? all[all.length - 1] : null);
 
@@ -1101,6 +1082,7 @@
                 return;
             }
 
+            // 场景 B：普通已载入方案 / 本地方案
             const allPresets = [...hubController.getAll(), ...PresetStore.getCustomList()];
             const found = allPresets.find(p => p.id === targetVal);
             if (found) {
@@ -1118,6 +1100,9 @@
             emitToast("已删除方案", 'info');
         };
 
+        // =========================================================================
+        // 试跑与执行
+        // =========================================================================
         function runPipelinePreview() {
             const steps = getCurrentSteps();
             if (steps.length === 0 || hostRows.length === 0) {
@@ -1144,6 +1129,7 @@
                     }
                 }
 
+                // 表头保持完整列名
                 previewThead.innerHTML = `<tr class="bg-slate-100 border-b border-slate-200 text-slate-600">
                     <th class="p-1.5 w-10 text-center">#</th>
                     <th class="p-1.5 min-w-[120px]">原始数据快照</th>
@@ -1233,15 +1219,13 @@
                     btnUndo.classList.add('hidden');
                     break;
                 }
-                case 'HOST_EXIT_FULLSCREEN': {
-                    // 宿主端按下 ESC 或触发退出全屏
-                    toggleFullscreen(false);
-                    break;
-                }
             }
         });
 
+        // 启动时优先尝试从 URL 初始化索引目录
         initCatalogFromUrl();
+
+        // 握手告知宿主
         postToHost('IFRAME_READY');
     </script>
 </body>

@@ -1,4 +1,4 @@
-// ==UserScript== / 宿主桥接脚本 bridge.js (修复参数拼接与握手版 + 全屏模式支持)
+// ==UserScript== / 宿主桥接脚本 bridge.js (修复参数拼接与握手版)
 (function() {
     'use strict';
     console.log("⚡ [Pipeline Bridge] 正在装载管线桥接加载器...");
@@ -36,6 +36,7 @@
         const cardId = 'pipeline-iframe-card-' + Date.now();
         const chatArea = document.getElementById('chatArea') || document.querySelector('.chat-messages') || document.body;
 
+        // 【关键修复】：使用 URL 与 URLSearchParams 安全拼接参数，杜绝双问号破坏 cardId
         const targetUrl = new URL(IFRAME_BASE_URL, window.location.href);
         targetUrl.searchParams.set('catalog', CATALOG_URL);
         targetUrl.searchParams.set('cardId', cardId);
@@ -46,7 +47,7 @@
                 <div class="avatar" style="background: linear-gradient(135deg, #4f46e5, #06b6d4); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
                     <i class="fa-solid fa-wand-magic-sparkles" style="font-size:14px;"></i>
                 </div>
-                <div class="bubble border-indigo-100 bg-white shadow-lg pipeline-card-bubble" style="width: 100%; max-width: 800px; padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid #e0e7ff; transition: all 0.25s ease;">
+                <div class="bubble border-indigo-100 bg-white shadow-lg" style="width: 100%; max-width: 800px; padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid #e0e7ff;">
                     <iframe id="${cardId}-iframe" 
                             src="${targetUrl.toString()}" 
                             style="width: 100%; height: 520px; border: none; display: block;"
@@ -59,12 +60,10 @@
         chatArea.insertAdjacentHTML('beforeend', cardHTML);
         if (typeof scrollToBottom === 'function') scrollToBottom();
 
-        const cardEl = document.getElementById(cardId);
         const iframeEl = document.getElementById(`${cardId}-iframe`);
-        const bubbleEl = cardEl.querySelector('.pipeline-card-bubble');
+        activeInstances.set(cardId, { iframeEl, rollbackSnapshot: null });
 
-        activeInstances.set(cardId, { cardEl, bubbleEl, iframeEl, rollbackSnapshot: null, isFullscreen: false, lastHeight: 520 });
-
+        // iframe 加载完成后的保底数据推送
         iframeEl.onload = () => {
             setTimeout(() => {
                 const { headers, rawExcelData } = getTableData();
@@ -89,7 +88,7 @@
         if (!instance) return;
 
         switch (data.action) {
-            // A. iframe 初始化完成或主动索取数据
+            // A. iframe 初始化完成，或主动索取数据
             case 'IFRAME_READY':
             case 'REQ_DATA': {
                 const { headers, rawExcelData } = getTableData();
@@ -104,48 +103,8 @@
 
             // B. 高度自适应
             case 'RESIZE_HEIGHT': {
-                if (!instance.isFullscreen && data.height && data.height > 200) {
-                    instance.lastHeight = data.height;
+                if (data.height && data.height > 200) {
                     instance.iframeEl.style.height = `${data.height}px`;
-                }
-                break;
-            }
-
-            // 【新增支持】：全屏模式切换
-            case 'TOGGLE_FULLSCREEN': {
-                instance.isFullscreen = Boolean(data.isFullscreen);
-                if (instance.isFullscreen) {
-                    // 全屏样式：全屏浮层覆盖整个宿主页面
-                    Object.assign(instance.bubbleEl.style, {
-                        position: 'fixed',
-                        top: '0px',
-                        left: '0px',
-                        width: '100vw',
-                        height: '100vh',
-                        maxWidth: '100vw',
-                        maxHeight: '100vh',
-                        zIndex: '999999',
-                        borderRadius: '0px',
-                        border: 'none',
-                        boxShadow: 'none'
-                    });
-                    instance.iframeEl.style.height = '100vh';
-                } else {
-                    // 恢复常规卡片样式
-                    Object.assign(instance.bubbleEl.style, {
-                        position: '',
-                        top: '',
-                        left: '',
-                        width: '100%',
-                        height: '',
-                        maxWidth: '800px',
-                        maxHeight: '',
-                        zIndex: '',
-                        borderRadius: '12px',
-                        border: '1px solid #e0e7ff',
-                        boxShadow: ''
-                    });
-                    instance.iframeEl.style.height = `${instance.lastHeight || 520}px`;
                 }
                 break;
             }
@@ -227,20 +186,6 @@
                 }
                 break;
             }
-        }
-    });
-
-    // 宿主按 Esc 键兜底通知当前处于全屏的 iframe 退出全屏
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            activeInstances.forEach((inst, cardId) => {
-                if (inst.isFullscreen && inst.iframeEl && inst.iframeEl.contentWindow) {
-                    inst.iframeEl.contentWindow.postMessage({
-                        action: 'HOST_EXIT_FULLSCREEN',
-                        cardId: cardId
-                    }, '*');
-                }
-            });
         }
     });
 
