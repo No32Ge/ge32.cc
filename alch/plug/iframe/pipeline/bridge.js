@@ -4,7 +4,7 @@
     console.log("⚡ [Pipeline Bridge] 正在装载管线桥接加载器...");
 
     const IFRAME_BASE_URL = 'https://www.ge32.cc/alch/plug/iframe/pipeline/';
-    const CATALOG_URL = 'https://www.ge32.cc/cdn/ge/pipeline/pipeline.catalog.js';
+    const CATALOG_URL = 'https://www.ge32.cc/alch/plug/iframe/pipeline/hub/pipeline.catalog.js';
 
     const activeInstances = new Map();
 
