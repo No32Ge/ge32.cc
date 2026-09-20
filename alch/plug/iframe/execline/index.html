@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>ExecLine 动态诊断工作台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Inter', -apple-system, sans-serif; background: #ffffff; color: #0f172a; margin: 0; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .unit-tab.active { background: #ffffff; color: #4f46e5; border-color: #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-weight: 700; }
+        .map-row.drag-over { border-color: #6366f1 !important; background-color: #eef2ff !important; }
+        
+        .status-matched { border-color: #a7f3d0 !important; background-color: #f0fdf4 !important; }
+        .status-unmatched { border-color: #fecdd3 !important; background-color: #fff1f2 !important; }
+        .status-constant { border-color: #e9d5ff !important; background-color: #faf5ff !important; }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col bg-slate-50/50 text-xs">
+
+    <datalist id="hostFieldsList"></datalist>
+
+    <!-- 顶部操作条与单元选项卡 (Tabs) -->
+    <header class="bg-white border-b border-slate-200 shrink-0 px-3 pt-2 pb-1.5 flex flex-col gap-1.5">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span id="livePulseDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="font-bold text-slate-800 text-[0.75rem] tracking-tight">ExecLine 动态诊断工作台</span>
+                <span id="dataStatusTag" class="text-[0.62rem] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-mono">连接中...</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-2 mr-2 text-[0.6rem] font-medium select-none">
+                    <span class="flex items-center gap-1 text-emerald-600"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> 匹配成功</span>
+                    <span class="flex items-center gap-1 text-rose-600"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> 缺失字段</span>
+                    <span class="flex items-center gap-1 text-purple-600"><span class="w-2 h-2 rounded-full bg-purple-500 inline-block"></span> 固定常数</span>
+                </div>
+                <button onclick="exportConfigJSON()" class="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded text-[0.65rem] font-semibold text-slate-600 flex items-center gap-1 shadow-xs transition-all">
+                    <i class="fa-solid fa-file-export text-slate-400"></i> 导出配置
+                </button>
+                <button onclick="document.getElementById('cfgFileInput').click()" class="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded text-[0.65rem] font-semibold text-slate-600 flex items-center gap-1 shadow-xs transition-all">
+                    <i class="fa-solid fa-file-import text-slate-400"></i> 导入配置
+                </button>
+                <input type="file" id="cfgFileInput" accept=".json" class="hidden" onchange="importConfigJSON(event)">
+                <button onclick="executeConvertAll()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[0.65rem] font-bold flex items-center gap-1 shadow-xs transition-all">
+                    <i class="fa-solid fa-play text-[0.6rem]"></i> 导出 Excel
+                </button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-1 overflow-x-auto pb-0.5 select-none" id="tabsBar">
+            <div id="unitTabsList" class="flex items-center gap-1.5 flex-1 min-w-0"></div>
+            <button onclick="addNewUnitPrompt()" class="px-2 py-1 rounded border border-dashed border-slate-300 hover:border-indigo-400 text-indigo-600 hover:bg-indigo-50 text-[0.65rem] font-bold shrink-0 flex items-center gap-1 transition-all">
+                <i class="fa-solid fa-plus text-[0.6rem]"></i> 新增单元
+            </button>
+        </div>
+    </header>
+
+    <!-- 主体上下切分 -->
+    <main class="flex-1 flex flex-col overflow-hidden min-h-0 p-2.5 gap-2">
+        
+        <!-- 上部：映射配置卡片 -->
+        <section class="h-[44%] bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden shrink-0">
+            <div class="px-3 py-1.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-right-arrow-left text-indigo-500 text-[0.7rem]"></i>
+                    <span class="font-bold text-[0.7rem] text-slate-700">字段映射流水线</span>
+                    <span id="mappingStats" class="text-[0.65rem] text-slate-400">0 项规则</span>
+                    <span id="diagnosticAlertBadge" class="hidden text-[0.6rem] px-1.5 py-0.2 rounded font-bold bg-rose-100 text-rose-600 border border-rose-200"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="addMappingRow()" class="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded text-indigo-600 font-bold text-[0.65rem] flex items-center gap-1 transition-all">
+                        <i class="fa-solid fa-plus text-[0.6rem]"></i> 添加映射列
+                    </button>
+                </div>
+            </div>
+
+            <div id="mappingRowsContainer" class="flex-1 overflow-y-auto p-2 space-y-1.5"></div>
+        </section>
+
+        <!-- 下部：实时转化预览卡片 -->
+        <section class="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-0">
+            <div class="px-3 py-1.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span class="font-bold text-[0.7rem] text-slate-700">实时转化数据透视 (Live Preview)</span>
+                    <span id="previewSubtitle" class="text-[0.65rem] text-slate-400 font-mono">动态跟随宿主</span>
+                </div>
+                <div id="previewRowCountTag" class="text-[0.62rem] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                    0 行就绪
+                </div>
+            </div>
+
+            <div id="livePreviewTableBox" class="flex-1 overflow-auto bg-slate-50/30 font-mono text-[0.65rem] relative"></div>
+
+            <div class="px-3 py-1 border-t border-slate-100 bg-white flex items-center justify-between text-[0.6rem] text-slate-400 font-mono shrink-0">
+                <span id="footerInfo">就绪</span>
+                <span id="lastUpdatedTime">--:--:--</span>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const STORAGE_KEY = 'execline_reactive_config_v3';
+
+        let config = {
+            units: [
+                {
+                    id: 'u_default_1',
+                    name: '电商输出标准表',
+                    enabled: true,
+                    mappings: [
+                        { srcType: 'field', srcField: 'SKU', outField: '商品编码', outType: 'source', customVal: '' },
+                        { srcType: 'field', srcField: 'Title', outField: '英文标题', outType: 'source', customVal: '' },
+                        { srcType: 'none', srcField: '', outField: '数据批次', outType: 'custom', customVal: 'BATCH_2026' }
+                    ]
+                }
+            ]
+        };
+        let activeUnitId = 'u_default_1';
+        let hostData = { headers: [], rows: [], fileName: 'Data' };
+        let draggedIndex = null;
+
+        function saveConfig() {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch(e){}
+        }
+        function loadConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if(raw) {
+                    const parsed = JSON.parse(raw);
+                    if(parsed.units && Array.isArray(parsed.units) && parsed.units.length > 0) {
+                        config = parsed;
+                    }
+                }
+            } catch(e){}
+            if(!config.units.find(u => u.id === activeUnitId)) activeUnitId = config.units[0].id;
+        }
+
+        function getActiveUnit() {
+            return config.units.find(u => u.id === activeUnitId) || config.units[0];
+        }
+
+        function checkFieldHealth(mapping) {
+            if (mapping.srcType === 'none') {
+                return { status: 'constant', label: '固定常数', colorClass: 'status-constant', badgeBg: 'bg-purple-100 text-purple-700 border-purple-200' };
+            }
+            const fieldName = (mapping.srcField || '').trim();
+            if (!fieldName) {
+                return { status: 'unmatched', label: '未填源字段', colorClass: 'status-unmatched', badgeBg: 'bg-rose-100 text-rose-700 border-rose-200' };
+            }
+
+            const normField = fieldName.toLowerCase().replace(/\s+/g, '');
+            const isMatched = hostData.headers.some(h => String(h).toLowerCase().replace(/\s+/g, '') === normField);
+
+            if (isMatched) {
+                return { status: 'matched', label: '已匹配', colorClass: 'status-matched', badgeBg: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+            } else {
+                return { status: 'unmatched', label: '源列缺失', colorClass: 'status-unmatched', badgeBg: 'bg-rose-100 text-rose-700 border-rose-200' };
+            }
+        }
+
+        function updateDatalist() {
+            const dl = document.getElementById('hostFieldsList');
+            dl.innerHTML = hostData.headers.map(h => `<option value="${escapeHtml(h)}">`).join('');
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('unitTabsList');
+            container.innerHTML = '';
+
+            config.units.forEach(u => {
+                const isActive = u.id === activeUnitId;
+                const tab = document.createElement('div');
+                tab.className = `unit-tab group px-2.5 py-1 rounded-lg border text-[0.7rem] cursor-pointer flex items-center gap-1.5 transition-all ${
+                    isActive 
+                        ? 'active bg-white text-indigo-600 border-indigo-200 shadow-xs font-bold' 
+                        : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200/70'
+                }`;
+
+                tab.innerHTML = `
+                    <input type="checkbox" ${u.enabled ? 'checked' : ''} class="unit-check rounded text-indigo-600 border-slate-300 focus:ring-0 cursor-pointer">
+                    <span class="unit-name truncate max-w-[120px]">${escapeHtml(u.name)}</span>
+                    <button class="btn-ren text-slate-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-pen text-[0.55rem]"></i></button>
+                    <button class="btn-del text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-xmark text-[0.6rem]"></i></button>
+                `;
+
+                tab.onclick = (e) => {
+                    if (e.target.closest('input') || e.target.closest('button')) return;
+                    activeUnitId = u.id;
+                    renderTabs();
+                    renderMappings();
+                    renderLivePreview();
+                };
+
+                const chk = tab.querySelector('.unit-check');
+                chk.onchange = (e) => { e.stopPropagation(); u.enabled = chk.checked; saveConfig(); };
+
+                tab.querySelector('.btn-ren').onclick = (e) => {
+                    e.stopPropagation();
+                    const n = prompt('重命名单元:', u.name);
+                    if(n && n.trim()) { u.name = n.trim(); saveConfig(); renderTabs(); }
+                };
+
+                tab.querySelector('.btn-del').onclick = (e) => {
+                    e.stopPropagation();
+                    if(config.units.length <= 1) return alert('需至少保留一个单元！');
+                    if(confirm(`确定删除单元「${u.name}」？`)) {
+                        config.units = config.units.filter(x => x.id !== u.id);
+                        activeUnitId = config.units[0].id;
+                        saveConfig();
+                        renderTabs(); renderMappings(); renderLivePreview();
+                    }
+                };
+
+                container.appendChild(tab);
+            });
+        }
+
+        function addNewUnitPrompt() {
+            const n = prompt('新单元名称:', '转化单元 ' + (config.units.length + 1));
+            if(!n || !n.trim()) return;
+            const newU = {
+                id: 'u_' + Date.now(),
+                name: n.trim(),
+                enabled: true,
+                mappings: [
+                    { srcType: 'field', srcField: hostData.headers[0] || '', outField: hostData.headers[0] || '', outType: 'source', customVal: '' }
+                ]
+            };
+            config.units.push(newU);
+            activeUnitId = newU.id;
+            saveConfig();
+            renderTabs(); renderMappings(); renderLivePreview();
+        }
+
+        function renderMappings() {
+            const u = getActiveUnit();
+            const container = document.getElementById('mappingRowsContainer');
+            const stats = document.getElementById('mappingStats');
+            const alertBadge = document.getElementById('diagnosticAlertBadge');
+            container.innerHTML = '';
+
+            if(!u) return;
+            stats.innerText = `${u.mappings.length} 项规则`;
+
+            let unmatchedCount = 0;
+
+            if(u.mappings.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">当前单元尚未添加任何规则，请点击上方按钮添加</div>`;
+                alertBadge.classList.add('hidden');
+                return;
+            }
+
+            u.mappings.forEach((m, idx) => {
+                const health = checkFieldHealth(m);
+                if (health.status === 'unmatched') unmatchedCount++;
+
+                const row = document.createElement('div');
+                row.className = `map-row border rounded-lg p-1.5 px-2.5 flex items-center gap-2 shadow-xs transition-all ${health.colorClass}`;
+                row.draggable = true;
+
+                const isNone = m.srcType === 'none';
+                const isSrcOut = m.outType === 'source';
+
+                row.innerHTML = `
+                    <i class="fa-solid fa-grip-vertical text-slate-300 hover:text-slate-500 cursor-grab text-[0.65rem] shrink-0"></i>
+                    <span class="font-mono text-slate-400 text-[0.6rem] w-4 shrink-0">#${idx + 1}</span>
+
+                    <span class="text-[0.6rem] px-1.5 py-0.5 rounded font-bold border shrink-0 ${health.badgeBg}">
+                        ${health.label}
+                    </span>
+
+                    <div class="flex items-center gap-1">
+                        <select class="src-type bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[0.65rem] font-medium outline-none">
+                            <option value="field" ${!isNone ? 'selected' : ''}>源字段</option>
+                            <option value="none" ${isNone ? 'selected' : ''}>固定常数</option>
+                        </select>
+                        <input list="hostFieldsList" type="text" class="src-field bg-white border border-slate-200 rounded px-2 py-0.5 text-[0.65rem] w-36 font-mono ${isNone ? 'opacity-30 bg-slate-100' : ''}" placeholder="选择或输入原列名" value="${escapeHtml(m.srcField)}" ${isNone ? 'disabled' : ''}>
+                    </div>
+
+                    <span class="text-slate-300 text-[0.7rem] shrink-0">➔</span>
+
+                    <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                        <span class="text-slate-400 font-semibold text-[0.65rem]">导出为:</span>
+                        <input type="text" class="out-field bg-white border border-slate-200 rounded px-2 py-0.5 text-[0.65rem] w-36 font-bold text-slate-700" placeholder="导出表头名" value="${escapeHtml(m.outField)}">
+
+                        <select class="out-type bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[0.65rem] outline-none ml-1 ${isNone ? 'opacity-30' : ''}" ${isNone ? 'disabled' : ''}>
+                            <option value="source" ${isSrcOut ? 'selected' : ''}>继承源值</option>
+                            <option value="custom" ${!isSrcOut ? 'selected' : ''}>覆写填充</option>
+                        </select>
+
+                        <input type="text" class="out-val flex-1 bg-white border border-slate-200 rounded px-2 py-0.5 text-[0.65rem] text-slate-600 ${isSrcOut && !isNone ? 'opacity-30 bg-slate-100' : ''}" placeholder="${isSrcOut && !isNone ? '(取源数据)' : '固定内容'}" value="${escapeHtml(m.customVal || '')}" ${isSrcOut && !isNone ? 'disabled' : ''}>
+                    </div>
+
+                    <button class="btn-del text-slate-300 hover:text-red-500 p-1 shrink-0"><i class="fa-solid fa-trash-can text-[0.65rem]"></i></button>
+                `;
+
+                row.ondragstart = () => { draggedIndex = idx; };
+                row.ondragover = (e) => { e.preventDefault(); row.classList.add('drag-over'); };
+                row.ondragleave = () => row.classList.remove('drag-over');
+                row.ondrop = (e) => {
+                    e.preventDefault();
+                    row.classList.remove('drag-over');
+                    if (draggedIndex !== null && draggedIndex !== idx) {
+                        const [target] = u.mappings.splice(draggedIndex, 1);
+                        u.mappings.splice(idx, 0, target);
+                        saveConfig();
+                        renderMappings();
+                        renderLivePreview();
+                    }
+                };
+
+                const srcType = row.querySelector('.src-type');
+                const srcField = row.querySelector('.src-field');
+                const outField = row.querySelector('.out-field');
+                const outType = row.querySelector('.out-type');
+                const outVal = row.querySelector('.out-val');
+
+                srcType.onchange = () => {
+                    m.srcType = srcType.value;
+                    if(m.srcType === 'none') { m.outType = 'custom'; m.srcField = ''; }
+                    saveConfig(); renderMappings(); renderLivePreview();
+                };
+                srcField.oninput = () => {
+                    const prev = m.srcField;
+                    m.srcField = srcField.value.trim();
+                    if(!m.outField || m.outField === prev) { m.outField = m.srcField; outField.value = m.outField; }
+                    saveConfig();
+                    renderMappings();
+                    renderLivePreview();
+                };
+                outField.oninput = () => { m.outField = outField.value.trim(); saveConfig(); renderLivePreview(); };
+                outType.onchange = () => { m.outType = outType.value; saveConfig(); renderMappings(); renderLivePreview(); };
+                outVal.oninput = () => { m.customVal = outVal.value; saveConfig(); renderLivePreview(); };
+
+                row.querySelector('.btn-del').onclick = () => {
+                    u.mappings.splice(idx, 1);
+                    saveConfig(); renderMappings(); renderLivePreview();
+                };
+
+                container.appendChild(row);
+            });
+
+            if (unmatchedCount > 0) {
+                alertBadge.innerText = `⚠ 发现 ${unmatchedCount} 个字段在源表中不存在`;
+                alertBadge.classList.remove('hidden');
+            } else {
+                alertBadge.classList.add('hidden');
+            }
+        }
+
+        function addMappingRow() {
+            const u = getActiveUnit();
+            if(!u) return;
+
+            const used = u.mappings.map(m => m.srcField);
+            const nextField = hostData.headers.find(h => !used.includes(h)) || '';
+
+            u.mappings.push({
+                srcType: nextField ? 'field' : 'none',
+                srcField: nextField,
+                outField: nextField || '新列',
+                outType: nextField ? 'source' : 'custom',
+                customVal: ''
+            });
+            saveConfig(); renderMappings(); renderLivePreview();
+        }
+
+        function renderLivePreview() {
+            const box = document.getElementById('livePreviewTableBox');
+            const countTag = document.getElementById('previewRowCountTag');
+            const u = getActiveUnit();
+
+            if (!hostData.rows || hostData.rows.length === 0) {
+                box.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-slate-400 gap-1.5 text-xs">
+                        <i class="fa-solid fa-satellite-dish text-slate-300 text-lg animate-bounce"></i>
+                        <span>等待宿主传入数据，在左侧点击“解析提取”即可实时传输</span>
+                    </div>`;
+                countTag.innerText = '0 行就绪';
+                return;
+            }
+
+            if (!u || u.mappings.length === 0) {
+                box.innerHTML = `<div class="h-full flex items-center justify-center text-slate-400 text-xs">无映射规则</div>`;
+                countTag.innerText = '0 列规则';
+                return;
+            }
+
+            const previewLimit = Math.min(hostData.rows.length, 25);
+            countTag.innerText = `实时渲染前 ${previewLimit} 行 / 共 ${hostData.rows.length} 行`;
+
+            let tableHtml = `
+                <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 bg-white border-b border-slate-200 z-10 shadow-xs">
+                        <tr>
+                            <th class="p-1.5 border-r border-slate-200 text-slate-400 text-center w-8 bg-slate-50">#</th>
+            `;
+
+            u.mappings.forEach(m => {
+                const health = checkFieldHealth(m);
+                let colBg = 'bg-slate-50 text-slate-700';
+                if (health.status === 'matched') colBg = 'bg-emerald-50/80 text-emerald-800 border-b-2 border-emerald-400';
+                if (health.status === 'unmatched') colBg = 'bg-rose-50/90 text-rose-800 border-b-2 border-rose-400';
+                if (health.status === 'constant') colBg = 'bg-purple-50/80 text-purple-800 border-b-2 border-purple-400';
+
+                const title = m.outField || m.srcField || '未命名列';
+                tableHtml += `
+                    <th class="p-1.5 border-r border-slate-200 font-bold truncate max-w-[180px] ${colBg}">
+                        <div class="flex items-center gap-1">
+                            <span>${escapeHtml(title)}</span>
+                            <span class="text-[0.55rem] font-normal opacity-70">(${health.label})</span>
+                        </div>
+                    </th>
+                `;
+            });
+
+            tableHtml += '</tr></thead><tbody class="divide-y divide-slate-100 bg-white">';
+
+            for (let r = 0; r < previewLimit; r++) {
+                const originRow = hostData.rows[r];
+                tableHtml += `<tr class="hover:bg-indigo-50/20"><td class="p-1.5 text-center text-slate-400 bg-slate-50/70 border-r border-slate-200 text-[0.6rem]">${r + 1}</td>`;
+
+                u.mappings.forEach(m => {
+                    const health = checkFieldHealth(m);
+                    let val = '';
+                    let cellStyle = 'text-slate-600';
+
+                    if (health.status === 'constant') {
+                        val = m.customVal || '';
+                        cellStyle = 'text-purple-600 font-medium';
+                    } else if (health.status === 'unmatched') {
+                        val = '[缺失原字段: ' + (m.srcField || '未填') + ']';
+                        cellStyle = 'text-rose-400 italic bg-rose-50/20';
+                    } else {
+                        const normField = (m.srcField || '').toLowerCase().replace(/\s+/g, '');
+                        const idx = hostData.headers.findIndex(h => String(h).toLowerCase().replace(/\s+/g, '') === normField);
+                        if (idx !== -1 && originRow[idx] !== undefined) {
+                            val = String(originRow[idx]);
+                        }
+                        if (m.outType === 'custom') {
+                            val = m.customVal || '';
+                            cellStyle = 'text-purple-600';
+                        }
+                    }
+
+                    tableHtml += `<td class="p-1.5 border-r border-slate-100 truncate max-w-[200px] ${cellStyle}" title="${escapeHtml(val)}">${escapeHtml(val)}</td>`;
+                });
+
+                tableHtml += '</tr>';
+            }
+
+            tableHtml += '</tbody></table>';
+            box.innerHTML = tableHtml;
+        }
+
+        window.addEventListener('message', (e) => {
+            if (!e.data || e.data.target !== 'ExecLine') return;
+
+            if (e.data.action === 'UPDATE_HOST_DATA') {
+                const p = e.data.payload || {};
+                hostData.headers = p.headers || [];
+                hostData.rows = p.rows || [];
+                hostData.fileName = p.fileName || 'Data';
+
+                document.getElementById('dataStatusTag').innerHTML = `<i class="fa-solid fa-circle text-emerald-500 text-[0.5rem] mr-1"></i>实时在线 (${hostData.rows.length} 行)`;
+                document.getElementById('lastUpdatedTime').innerText = '最后同步: ' + new Date().toLocaleTimeString();
+                document.getElementById('footerInfo').innerText = `✓ 响应式总线已更新: ${hostData.fileName} (${hostData.headers.length} 字段, ${hostData.rows.length} 行)`;
+
+                updateDatalist();
+                renderMappings();
+                renderLivePreview();
+            }
+        });
+
+        function executeConvertAll() {
+            if (!hostData.rows || hostData.rows.length === 0) return alert('当前没有可导出的数据，请先在工作台上传并解析数据！');
+
+            const activeUnits = config.units.filter(u => u.enabled);
+            if (activeUnits.length === 0) return alert('未勾选任何启用的单元！');
+
+            let cnt = 0;
+            activeUnits.forEach(u => {
+                if (u.mappings.length === 0) return;
+                const headers = u.mappings.map(m => m.outField || m.srcField || 'Column');
+                const rows = [];
+
+                hostData.rows.forEach(r => {
+                    const row = [];
+                    u.mappings.forEach(m => {
+                        const health = checkFieldHealth(m);
+                        if (health.status === 'constant') {
+                            row.push(m.customVal || '');
+                        } else if (health.status === 'unmatched') {
+                            row.push('');
+                        } else {
+                            const norm = (m.srcField || '').toLowerCase().replace(/\s+/g, '');
+                            const idx = hostData.headers.findIndex(h => String(h).toLowerCase().replace(/\s+/g, '') === norm);
+                            const srcVal = (idx !== -1 && r[idx] !== undefined) ? String(r[idx]) : '';
+                            row.push(m.outType === 'source' ? srcVal : (m.customVal || ''));
+                        }
+                    });
+                    rows.push(row);
+                });
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                ws['!cols'] = headers.map(h => ({ wch: Math.max(String(h).length * 2, 12) }));
+                XLSX.utils.book_append_sheet(wb, ws, u.name.substring(0, 28));
+                XLSX.writeFile(wb, `${hostData.fileName}_${u.name}.xlsx`);
+                cnt++;
+            });
+
+            if (window.parent) {
+                window.parent.postMessage({
+                    plugin: 'ExecLine',
+                    action: 'CONVERT_DONE',
+                    payload: { count: cnt, fileName: hostData.fileName }
+                }, '*');
+            }
+        }
+
+        function exportConfigJSON() {
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `ExecLine_Rules_${Date.now()}.json`; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importConfigJSON(e) {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = (evt) => {
+                try {
+                    const d = JSON.parse(evt.target.result);
+                    if (d.units && Array.isArray(d.units)) {
+                        config = d;
+                        activeUnitId = config.units[0].id;
+                        saveConfig();
+                        renderTabs(); renderMappings(); renderLivePreview();
+                        alert('✅ 规则已成功载入！');
+                    }
+                } catch(err) { alert('❌ JSON 解析失败'); }
+            };
+            r.readAsText(f);
+            e.target.value = '';
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        loadConfig();
+        renderTabs();
+        renderMappings();
+        renderLivePreview();
+    </script>
+</body>
+</html>
