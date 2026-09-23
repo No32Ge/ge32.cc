@@ -25,6 +25,16 @@
 
             // 该原子插件的真实网络链接 (点击激活时才会动态拉取)
             url: 'https://www.ge32.cc/alch/plug/iframe/pipeline/hub/rules/pipeline.preset.preset_orbix.js'
+        },
+        {
+            // 方案的唯一英文标识 (建议与文件名后缀保持一致)
+            id: 'Max_SKUDone',
+
+            // 在系统下拉列表里显示的名称 (可自定义更清晰的业务中文名)
+            name: '📦 Max(Obrix) 采集方案适配',
+
+            // 该原子插件的真实网络链接 (点击激活时才会动态拉取)
+            url: 'https://www.ge32.cc/alch/plug/iframe/pipeline/hub/rules/pipeline.preset.preset_max.js'
         }
     ];
 
