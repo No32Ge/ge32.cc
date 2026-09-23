@@ -1,15 +1,15 @@
 /**
- * [Pipeline Atomic Preset Plugin] MAX_Obrix
- * ID: preset_mudijmb5
+ * [Pipeline Atomic Preset Plugin] MAX定制方案
+ * ID: preset_mudrns5k
  */
 (function(global) {
     'use strict';
     const ENGINE_KEY = '__EXCEL_PIPELINE_ENGINE__';
     const manifest = {
-    "id": "preset_mudijmb5",
-    "name": "MAX_Obrix",
+    "id": "preset_mudrns5k",
+    "name": "MAX定制方案",
     "version": "1.0.0",
-    "createdAt": "2026-09-23T02:58:30.344Z",
+    "createdAt": "2026-09-23T07:14:05.169Z",
     "externalScripts": [],
     "steps": [
         {
@@ -39,7 +39,7 @@
         },
         {
             "stepIndex": 6,
-            "colName": "\"发货中心\"",
+            "colName": "发货中心",
             "code": "// 下面这个引号里面可以填上你自己的物流中心\n\"填写你的发货中心ID\""
         }
     ]
