@@ -12,6 +12,6 @@ window.__EXECLINE_PRESET_INDEX__ = [
         name: 'OBRIX 插件沃尔玛上架模板表（美国UPC）',
         desc: '组合成符合沃尔玛上架的结构（美国UPC）',
         // 实际的大体积 JSON 路径（占位符）
-        url: 'https://www.ge32.cc/alch/plug/iframe/execline/hub/rules/Orbix_USA_UPC.json.json'
-    }
+        url: 'https://www.ge32.cc/alch/plug/iframe/execline/hub/rules/Orbix_USA_UPC.json'
+    }json
 ];
