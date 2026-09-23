@@ -13,6 +13,7 @@
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .unit-tab.active { background: #ffffff; color: #4f46e5; border-color: #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-weight: 700; }
         .map-row.drag-over { border-color: #6366f1 !important; background-color: #eef2ff !important; }
         .status-matched { border-color: #a7f3d0 !important; background-color: #f0fdf4 !important; }
         .status-unmatched { border-color: #fecdd3 !important; background-color: #fff1f2 !important; }
@@ -62,17 +63,16 @@
                 </button>
                 <input type="file" id="cfgFileInput" accept=".json" class="hidden" onchange="importConfigJSON(event)">
                 
-                <button onclick="executeConvertAll()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[0.65rem] font-bold flex items-center gap-1 shadow-xs transition-all" title="导出当前激活方案">
-                    <i class="fa-solid fa-play text-[0.6rem]"></i> 导出当前方案 Excel
+                <button onclick="executeConvertAll()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[0.65rem] font-bold flex items-center gap-1 shadow-xs transition-all">
+                    <i class="fa-solid fa-play text-[0.6rem]"></i> 导出 Excel
                 </button>
             </div>
         </div>
 
-        <!-- 方案 Tab 栏：去除了模糊的勾选项，激活方案呈现深色高亮与圆点指示 -->
         <div class="flex items-center gap-1 overflow-x-auto pb-0.5 select-none" id="tabsBar">
             <div id="unitTabsList" class="flex items-center gap-1.5 flex-1 min-w-0"></div>
             <button onclick="addNewUnitPrompt()" class="px-2 py-1 rounded border border-dashed border-slate-300 hover:border-indigo-400 text-indigo-600 hover:bg-indigo-50 text-[0.65rem] font-bold shrink-0 flex items-center gap-1 transition-all">
-                <i class="fa-solid fa-plus text-[0.6rem]"></i> 新增方案
+                <i class="fa-solid fa-plus text-[0.6rem]"></i> 新增单元
             </button>
         </div>
     </header>
@@ -137,12 +137,13 @@
         let draggedIndex = null;
         let presetManifest = [];
 
-        // ================= ⚡ 异步按需加载引擎 =================
+        // ================= ⚡ 异步按需加载引擎 (URL 参数解析与预设加载) =================
         function initPresetEngineFromUrl() {
             const urlParams = new URLSearchParams(window.location.search);
             const presetsJsUrl = urlParams.get('presets');
             if (!presetsJsUrl) return;
 
+            // 动态挂载轻量 JS 文件，不阻塞 DOM
             const script = document.createElement('script');
             script.src = presetsJsUrl;
             script.async = true;
@@ -163,6 +164,7 @@
             dd.classList.toggle('hidden');
         }
 
+        // 点击外部自动收起下拉
         document.addEventListener('click', (e) => {
             const wrapper = document.getElementById('presetMenuWrapper');
             if (wrapper && !wrapper.contains(e.target)) {
@@ -189,6 +191,7 @@
                     </div>
                     ${item.desc ? `<p class="text-[0.58rem] text-slate-400 line-clamp-1">${escapeHtml(item.desc)}</p>` : ''}
                 `;
+                // 关键点：点击时才通过 fetch 拉取对应的 JSON
                 row.onclick = () => loadSinglePresetOnDemand(item);
                 container.appendChild(row);
             });
@@ -203,6 +206,7 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
 
+                // 兼容单个单元配置或整套配置
                 let loadedUnit = null;
                 if (data.mappings && Array.isArray(data.mappings)) {
                     loadedUnit = {
@@ -239,7 +243,6 @@
         function saveConfig() {
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch(e){}
         }
-
         function loadConfig() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
@@ -280,7 +283,6 @@
             dl.innerHTML = hostData.headers.map(h => `<option value="${escapeHtml(h)}">`).join('');
         }
 
-        // 重新渲染 Tab：去掉 Checkbox，当前选中的 Tab 采用高亮激活态样式
         function renderTabs() {
             const container = document.getElementById('unitTabsList');
             container.innerHTML = '';
@@ -288,28 +290,27 @@
             config.units.forEach(u => {
                 const isActive = u.id === activeUnitId;
                 const tab = document.createElement('div');
-                
-                // 激活与未激活的鲜明颜色对比
-                tab.className = `unit-tab group px-3 py-1 rounded-lg border text-[0.7rem] cursor-pointer flex items-center gap-1.5 transition-all select-none ${
+                tab.className = `unit-tab group px-2.5 py-1 rounded-lg border text-[0.7rem] cursor-pointer flex items-center gap-1.5 transition-all ${
                     isActive 
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm font-bold ring-2 ring-indigo-200 ring-offset-1' 
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                        ? 'active bg-white text-indigo-600 border-indigo-200 shadow-xs font-bold' 
+                        : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200/70'
                 }`;
 
                 tab.innerHTML = `
-                    <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-white shadow' : 'bg-slate-300'} shrink-0"></span>
-                    <span class="unit-name truncate max-w-[130px]">${escapeHtml(u.name)}</span>
-                    <button class="btn-ren ${isActive ? 'text-indigo-200 hover:text-white' : 'text-slate-300 hover:text-indigo-600'} opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" title="重命名"><i class="fa-solid fa-pen text-[0.55rem]"></i></button>
-                    <button class="btn-del ${isActive ? 'text-indigo-200 hover:text-rose-200' : 'text-slate-300 hover:text-rose-500'} opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" title="删除"><i class="fa-solid fa-xmark text-[0.6rem]"></i></button>
+                    <input type="checkbox" ${u.enabled ? 'checked' : ''} class="unit-check rounded text-indigo-600 border-slate-300 focus:ring-0 cursor-pointer">
+                    <span class="unit-name truncate max-w-[120px]">${escapeHtml(u.name)}</span>
+                    <button class="btn-ren text-slate-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-pen text-[0.55rem]"></i></button>
+                    <button class="btn-del text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-xmark text-[0.6rem]"></i></button>
                 `;
 
                 tab.onclick = (e) => {
-                    if (e.target.closest('button')) return;
+                    if (e.target.closest('input') || e.target.closest('button')) return;
                     activeUnitId = u.id;
-                    renderTabs(); 
-                    renderMappings(); 
-                    renderLivePreview();
+                    renderTabs(); renderMappings(); renderLivePreview();
                 };
+
+                const chk = tab.querySelector('.unit-check');
+                chk.onchange = (e) => { e.stopPropagation(); u.enabled = chk.checked; saveConfig(); };
 
                 tab.querySelector('.btn-ren').onclick = (e) => {
                     e.stopPropagation();
@@ -320,13 +321,11 @@
                 tab.querySelector('.btn-del').onclick = (e) => {
                     e.stopPropagation();
                     if(config.units.length <= 1) return alert('需至少保留一个单元！');
-                    if(confirm(`确定删除方案「${u.name}」？`)) {
+                    if(confirm(`确定删除单元「${u.name}」？`)) {
                         config.units = config.units.filter(x => x.id !== u.id);
                         activeUnitId = config.units[0].id;
                         saveConfig();
-                        renderTabs(); 
-                        renderMappings(); 
-                        renderLivePreview();
+                        renderTabs(); renderMappings(); renderLivePreview();
                     }
                 };
 
@@ -335,7 +334,7 @@
         }
 
         function addNewUnitPrompt() {
-            const n = prompt('新方案名称:', '转化单元 ' + (config.units.length + 1));
+            const n = prompt('新单元名称:', '转化单元 ' + (config.units.length + 1));
             if(!n || !n.trim()) return;
             const newU = {
                 id: 'u_' + Date.now(),
@@ -348,57 +347,31 @@
             config.units.push(newU);
             activeUnitId = newU.id;
             saveConfig();
-            renderTabs(); 
-            renderMappings(); 
-            renderLivePreview();
-        }
-
-        // 更新顶部未匹配错误统计角标（不触动输入 DOM）
-        function updateStatsBadge() {
-            const u = getActiveUnit();
-            const alertBadge = document.getElementById('diagnosticAlertBadge');
-            const stats = document.getElementById('mappingStats');
-            if (!u) return;
-
-            stats.innerText = `${u.mappings.length} 项规则`;
-            const unmatchedCount = u.mappings.filter(m => checkFieldHealth(m).status === 'unmatched').length;
-            if (unmatchedCount > 0) {
-                alertBadge.innerText = `⚠ 发现 ${unmatchedCount} 个字段在源表中不存在`;
-                alertBadge.classList.remove('hidden');
-            } else {
-                alertBadge.classList.add('hidden');
-            }
-        }
-
-        // 单行状态无刷新局部响应（解决输入框打字导致 DOM 重绘失焦的根源）
-        function updateRowHealth(row, mapping) {
-            const health = checkFieldHealth(mapping);
-            row.classList.remove('status-matched', 'status-unmatched', 'status-constant');
-            row.classList.add(health.colorClass);
-
-            const badge = row.querySelector('.row-health-badge');
-            if (badge) {
-                badge.className = `row-health-badge text-[0.6rem] px-1.5 py-0.5 rounded font-bold border shrink-0 ${health.badgeBg}`;
-                badge.innerText = health.label;
-            }
-            updateStatsBadge();
+            renderTabs(); renderMappings(); renderLivePreview();
         }
 
         function renderMappings() {
             const u = getActiveUnit();
             const container = document.getElementById('mappingRowsContainer');
+            const stats = document.getElementById('mappingStats');
+            const alertBadge = document.getElementById('diagnosticAlertBadge');
             container.innerHTML = '';
 
             if(!u) return;
-            updateStatsBadge();
+            stats.innerText = `${u.mappings.length} 项规则`;
+
+            let unmatchedCount = 0;
 
             if(u.mappings.length === 0) {
-                container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">当前方案尚未添加任何规则，请点击上方按钮添加</div>`;
+                container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">当前单元尚未添加任何规则，请点击上方按钮添加</div>`;
+                alertBadge.classList.add('hidden');
                 return;
             }
 
             u.mappings.forEach((m, idx) => {
                 const health = checkFieldHealth(m);
+                if (health.status === 'unmatched') unmatchedCount++;
+
                 const row = document.createElement('div');
                 row.className = `map-row border rounded-lg p-1.5 px-2.5 flex items-center gap-2 shadow-xs transition-all ${health.colorClass}`;
                 row.draggable = true;
@@ -410,7 +383,7 @@
                     <i class="fa-solid fa-grip-vertical text-slate-300 hover:text-slate-500 cursor-grab text-[0.65rem] shrink-0"></i>
                     <span class="font-mono text-slate-400 text-[0.6rem] w-4 shrink-0">#${idx + 1}</span>
 
-                    <span class="row-health-badge text-[0.6rem] px-1.5 py-0.5 rounded font-bold border shrink-0 ${health.badgeBg}">
+                    <span class="text-[0.6rem] px-1.5 py-0.5 rounded font-bold border shrink-0 ${health.badgeBg}">
                         ${health.label}
                     </span>
 
@@ -448,9 +421,7 @@
                     if (draggedIndex !== null && draggedIndex !== idx) {
                         const [target] = u.mappings.splice(draggedIndex, 1);
                         u.mappings.splice(idx, 0, target);
-                        saveConfig(); 
-                        renderMappings(); 
-                        renderLivePreview();
+                        saveConfig(); renderMappings(); renderLivePreview();
                     }
                 };
 
@@ -463,52 +434,32 @@
                 srcType.onchange = () => {
                     m.srcType = srcType.value;
                     if(m.srcType === 'none') { m.outType = 'custom'; m.srcField = ''; }
-                    saveConfig(); 
-                    renderMappings(); 
-                    renderLivePreview();
+                    saveConfig(); renderMappings(); renderLivePreview();
                 };
-
-                // 核心修复点：打字输入期间严禁全量调用 renderMappings()，改为局部刷新状态及预览表格
                 srcField.oninput = () => {
                     const prev = m.srcField;
-                    m.srcField = srcField.value; // 输入期间不强行 trim，方便打字
-                    if(!m.outField || m.outField === prev) { 
-                        m.outField = m.srcField; 
-                        outField.value = m.outField; 
-                    }
-                    updateRowHealth(row, m);
-                    saveConfig();
-                    renderLivePreview();
+                    m.srcField = srcField.value.trim();
+                    if(!m.outField || m.outField === prev) { m.outField = m.srcField; outField.value = m.outField; }
+                    saveConfig(); renderMappings(); renderLivePreview();
                 };
-
-                outField.oninput = () => { 
-                    m.outField = outField.value; 
-                    saveConfig(); 
-                    renderLivePreview(); 
-                };
-
-                outType.onchange = () => { 
-                    m.outType = outType.value; 
-                    saveConfig(); 
-                    renderMappings(); 
-                    renderLivePreview(); 
-                };
-
-                outVal.oninput = () => { 
-                    m.customVal = outVal.value; 
-                    saveConfig(); 
-                    renderLivePreview(); 
-                };
+                outField.oninput = () => { m.outField = outField.value.trim(); saveConfig(); renderLivePreview(); };
+                outType.onchange = () => { m.outType = outType.value; saveConfig(); renderMappings(); renderLivePreview(); };
+                outVal.oninput = () => { m.customVal = outVal.value; saveConfig(); renderLivePreview(); };
 
                 row.querySelector('.btn-del').onclick = () => {
                     u.mappings.splice(idx, 1);
-                    saveConfig(); 
-                    renderMappings(); 
-                    renderLivePreview();
+                    saveConfig(); renderMappings(); renderLivePreview();
                 };
 
                 container.appendChild(row);
             });
+
+            if (unmatchedCount > 0) {
+                alertBadge.innerText = `⚠ 发现 ${unmatchedCount} 个字段在源表中不存在`;
+                alertBadge.classList.remove('hidden');
+            } else {
+                alertBadge.classList.add('hidden');
+            }
         }
 
         function addMappingRow() {
@@ -523,9 +474,7 @@
                 outType: nextField ? 'source' : 'custom',
                 customVal: ''
             });
-            saveConfig(); 
-            renderMappings(); 
-            renderLivePreview();
+            saveConfig(); renderMappings(); renderLivePreview();
         }
 
         function renderLivePreview() {
@@ -544,7 +493,7 @@
             }
 
             if (!u || u.mappings.length === 0) {
-                box.innerHTML = `<div class="h-full flex items-center justify-center text-slate-400 text-xs">当前方案无映射规则</div>`;
+                box.innerHTML = `<div class="h-full flex items-center justify-center text-slate-400 text-xs">无映射规则</div>`;
                 countTag.innerText = '0 列规则';
                 return;
             }
@@ -633,44 +582,48 @@
             }
         });
 
-        // 导出 Excel：直接导出当前选中的方案
         function executeConvertAll() {
             if (!hostData.rows || hostData.rows.length === 0) return alert('当前没有可导出的数据，请先在工作台上传并解析数据！');
-            const u = getActiveUnit();
-            if (!u || !u.mappings || u.mappings.length === 0) return alert('当前选中的方案尚未配置任何映射规则！');
+            const activeUnits = config.units.filter(u => u.enabled);
+            if (activeUnits.length === 0) return alert('未勾选任何启用的单元！');
 
-            const headers = u.mappings.map(m => m.outField || m.srcField || 'Column');
-            const rows = [];
+            let cnt = 0;
+            activeUnits.forEach(u => {
+                if (u.mappings.length === 0) return;
+                const headers = u.mappings.map(m => m.outField || m.srcField || 'Column');
+                const rows = [];
 
-            hostData.rows.forEach(r => {
-                const row = [];
-                u.mappings.forEach(m => {
-                    const health = checkFieldHealth(m);
-                    if (health.status === 'constant') {
-                        row.push(m.customVal || '');
-                    } else if (health.status === 'unmatched') {
-                        row.push('');
-                    } else {
-                        const norm = (m.srcField || '').toLowerCase().replace(/\s+/g, '');
-                        const idx = hostData.headers.findIndex(h => String(h).toLowerCase().replace(/\s+/g, '') === norm);
-                        const srcVal = (idx !== -1 && r[idx] !== undefined) ? String(r[idx]) : '';
-                        row.push(m.outType === 'source' ? srcVal : (m.customVal || ''));
-                    }
+                hostData.rows.forEach(r => {
+                    const row = [];
+                    u.mappings.forEach(m => {
+                        const health = checkFieldHealth(m);
+                        if (health.status === 'constant') {
+                            row.push(m.customVal || '');
+                        } else if (health.status === 'unmatched') {
+                            row.push('');
+                        } else {
+                            const norm = (m.srcField || '').toLowerCase().replace(/\s+/g, '');
+                            const idx = hostData.headers.findIndex(h => String(h).toLowerCase().replace(/\s+/g, '') === norm);
+                            const srcVal = (idx !== -1 && r[idx] !== undefined) ? String(r[idx]) : '';
+                            row.push(m.outType === 'source' ? srcVal : (m.customVal || ''));
+                        }
+                    });
+                    rows.push(row);
                 });
-                rows.push(row);
-            });
 
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-            ws['!cols'] = headers.map(h => ({ wch: Math.max(String(h).length * 2, 12) }));
-            XLSX.utils.book_append_sheet(wb, ws, u.name.substring(0, 28));
-            XLSX.writeFile(wb, `${hostData.fileName}_${u.name}.xlsx`);
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                ws['!cols'] = headers.map(h => ({ wch: Math.max(String(h).length * 2, 12) }));
+                XLSX.utils.book_append_sheet(wb, ws, u.name.substring(0, 28));
+                XLSX.writeFile(wb, `${hostData.fileName}_${u.name}.xlsx`);
+                cnt++;
+            });
 
             if (window.parent) {
                 window.parent.postMessage({
                     plugin: 'ExecLine',
                     action: 'CONVERT_DONE',
-                    payload: { count: 1, fileName: hostData.fileName, unitName: u.name }
+                    payload: { count: cnt, fileName: hostData.fileName }
                 }, '*');
             }
         }
@@ -694,9 +647,7 @@
                         config = d;
                         activeUnitId = config.units[0].id;
                         saveConfig();
-                        renderTabs(); 
-                        renderMappings(); 
-                        renderLivePreview();
+                        renderTabs(); renderMappings(); renderLivePreview();
                         alert('✅ 规则已成功载入！');
                     }
                 } catch(err) { alert('❌ JSON 解析失败'); }
